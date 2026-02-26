@@ -44,6 +44,11 @@
                 </a>
             </div>
 
+            <!-- เพิ่มเมนูโปรไฟล์ของฉันตรงนี้ ให้เข้าถึงได้ทุกคน -->
+            <a href="profile.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors text-blue-300 hover:text-blue-100">
+                <i class="fa-solid fa-id-badge w-6"></i> โปรไฟล์ของฉัน
+            </a>
+
             <a href="time.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
                 <i class="fa-solid fa-clock w-6"></i> เวลาทำงาน & กะ
             </a>
@@ -89,13 +94,14 @@
                 
                 <div class="h-8 w-px bg-slate-200"></div>
 
-                <div class="flex items-center space-x-3">
-                    <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="profile-img-top" alt="User Avatar" class="w-9 h-9 rounded-full">
+                <!-- เปลี่ยนจาก div ธรรมดาเป็น a href เพื่อให้คลิกไปหน้า profile.html ได้ -->
+                <a href="profile.html" class="flex items-center space-x-3 hover:bg-slate-50 p-2 rounded-lg transition-colors cursor-pointer">
+                    <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="profile-img-top" alt="User Avatar" class="w-9 h-9 rounded-full object-cover">
                     <div class="text-sm">
                         <p class="font-medium text-slate-700" id="current-user-name">กำลังโหลด...</p>
                         <p class="text-xs text-slate-500" id="current-user-role">-</p>
                     </div>
-                </div>
+                </a>
 
                 <div class="h-8 w-px bg-slate-200"></div>
 
@@ -319,7 +325,10 @@
             // อัปเดตข้อมูล UI
             document.getElementById('current-user-name').textContent = userProfile.name;
             document.getElementById('current-user-role').textContent = userProfile.role.toUpperCase();
-            document.getElementById('profile-img-top').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=0D8ABC&color=fff`;
+            
+            // เช็คว่ามีรูปโปรไฟล์ (photoURL) ที่ตั้งไว้ไหม ถ้ามีให้ดึงมาใช้ ถ้าไม่มีให้ใช้รูปตัวอักษรตั้งต้น
+            const avatarUrl = userProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=0D8ABC&color=fff&size=128`;
+            document.getElementById('profile-img-top').src = avatarUrl;
 
             // จัดการสิทธิ์การมองเห็นเมนู
             if (userProfile.role === 'admin') {
