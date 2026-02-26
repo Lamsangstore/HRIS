@@ -3,233 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>หน้าหลัก - BizHRIS</title>
-    <!-- Tailwind CSS สำหรับการจัดการ Layout และความสวยงาม -->
+    <title>เข้าสู่ระบบ - Lamsang Group</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js สำหรับการแสดงผลกราฟแดชบอร์ดผู้บริหาร -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Font Awesome สำหรับไอคอน -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Prompt -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
-        /* สไตล์สำหรับ Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { font-family: 'Prompt', sans-serif; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="bg-zinc-900 flex flex-col items-center justify-center h-screen overflow-hidden selection:bg-yellow-500 selection:text-zinc-900">
 
-    <!-- ========================================== -->
-    <!-- 1. SIDEBAR (เมนูด้านข้าง) -->
-    <!-- ========================================== -->
-    <aside class="w-64 bg-slate-800 text-white flex flex-col transition-all duration-300">
-        <div class="p-5 flex items-center justify-center border-b border-slate-700">
-            <i class="fa-solid fa-users-gear text-3xl text-blue-400 mr-3"></i>
-            <h1 class="text-xl font-bold tracking-wider">Biz<span class="text-blue-400">HRIS</span></h1>
+    <!-- พื้นหลังตกแต่ง (วงกลมสีทองเบลอๆ) -->
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+
+    <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative z-10 border-t-4 border-yellow-500">
+        <div class="text-center mb-8">
+            <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Lamsang Logo" class="h-28 w-auto mx-auto mb-4 object-contain drop-shadow-sm">
+            <h2 class="text-3xl font-bold text-zinc-800 tracking-wide">Lamsang Group</h2>
+            <p class="text-zinc-500 text-sm mt-2">ระบบจัดการทรัพยากรบุคคล (HRIS)</p>
         </div>
         
-        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto" id="sidebar-nav">
-            <!-- เมนูตอนนี้ใช้ <a href="..."> เพื่อเปิดไปยังไฟล์แยกจริงๆ (Multi-page) -->
-            <a href="index.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors bg-blue-600">
-                <i class="fa-solid fa-chart-pie w-6"></i> แดชบอร์ด
-            </a>
+        <div class="space-y-5">
+            <div id="login-loading" class="hidden text-center text-yellow-600 mb-4 py-4">
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl"></i>
+                <p class="mt-4 text-sm font-medium text-zinc-600" id="login-loading-text">กำลังตรวจสอบข้อมูล...</p>
+            </div>
             
-            <div id="menu-executive" class="hidden">
-                <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
-                    <i class="fa-solid fa-chart-line w-6"></i> แดชบอร์ดผู้บริหาร
-                </a>
-            </div>
-
-            <!-- เพิ่มเมนูโปรไฟล์ของฉันตรงนี้ ให้เข้าถึงได้ทุกคน -->
-            <a href="profile.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors text-blue-300 hover:text-blue-100">
-                <i class="fa-solid fa-id-badge w-6"></i> โปรไฟล์ของฉัน
-            </a>
-
-            <a href="time.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
-                <i class="fa-solid fa-clock w-6"></i> เวลาทำงาน & กะ
-            </a>
-
-            <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
-                <i class="fa-solid fa-calendar-check w-6"></i> การอนุมัติ & วันลา
-            </a>
-
-            <div id="menu-admin" class="hidden space-y-2 mt-2 pt-2 border-t border-slate-700">
-                <p class="px-4 text-xs text-slate-400 uppercase tracking-wider mb-2">ส่วนการจัดการ</p>
-                <!-- เพิ่มเมนูสำหรับเพิ่มพนักงานใหม่ตรงนี้ -->
-                <a href="add-employee.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors text-green-400 hover:text-green-300">
-                    <i class="fa-solid fa-user-plus w-6"></i> เพิ่มพนักงานใหม่
-                </a>
-                <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
-                    <i class="fa-solid fa-file-invoice-dollar w-6"></i> จัดการเงินเดือน
-                </a>
-                <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
-                    <i class="fa-solid fa-shield-halved w-6"></i> จัดการสิทธิ์ผู้ใช้งาน
-                </a>
-            </div>
-        </nav>
-
-        <div class="p-4 border-t border-slate-700 text-sm text-slate-400 text-center">
-            &copy; 2026 BizHRIS System
-        </div>
-    </aside>
-
-    <!-- ========================================== -->
-    <!-- 2. MAIN CONTENT (พื้นที่แสดงข้อมูลหลัก) -->
-    <!-- ========================================== -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        
-        <!-- Header / Topbar -->
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10">
-            <h2 class="text-xl font-semibold text-slate-800">แดชบอร์ดภาพรวม</h2>
-            
-            <div class="flex items-center space-x-4">
-                <button class="text-slate-500 hover:text-blue-600 relative">
-                    <i class="fa-regular fa-bell text-xl"></i>
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">3</span>
+            <div id="login-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">อีเมล (Email)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-envelope text-zinc-400"></i>
+                        </div>
+                        <input type="email" id="login-email" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 transition-colors" placeholder="employee@lamsang.com">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-zinc-700 mb-1">รหัสผ่าน (Password)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-lock text-zinc-400"></i>
+                        </div>
+                        <input type="password" id="login-password" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 bg-white transition-colors" placeholder="••••••••">
+                    </div>
+                </div>
+                <!-- ปุ่มสีทอง ตัวหนังสือสีเทาเข้ม -->
+                <button onclick="handleLogin()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
                 </button>
-                
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <!-- เปลี่ยนจาก div ธรรมดาเป็น a href เพื่อให้คลิกไปหน้า profile.html ได้ -->
-                <a href="profile.html" class="flex items-center space-x-3 hover:bg-slate-50 p-2 rounded-lg transition-colors cursor-pointer">
-                    <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="profile-img-top" alt="User Avatar" class="w-9 h-9 rounded-full object-cover">
-                    <div class="text-sm">
-                        <p class="font-medium text-slate-700" id="current-user-name">กำลังโหลด...</p>
-                        <p class="text-xs text-slate-500" id="current-user-role">-</p>
-                    </div>
-                </a>
-
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <!-- ปุ่มออกจากระบบ -->
-                <button onclick="handleLogout()" class="text-sm text-red-500 hover:text-red-700 font-medium flex items-center transition-colors">
-                    <i class="fa-solid fa-right-from-bracket mr-2"></i> ออกจากระบบ
-                </button>
-            </div>
-        </header>
-
-        <!-- พื้นที่แสดงเนื้อหา Dashboard -->
-        <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 border-l-4 border-l-blue-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-500 mb-1">พนักงานทั้งหมด</p>
-                            <h3 class="text-3xl font-bold text-slate-800">42</h3>
-                        </div>
-                        <div class="bg-blue-100 p-3 rounded-lg text-blue-600"><i class="fa-solid fa-users"></i></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 border-l-4 border-l-green-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-500 mb-1">มาทำงานวันนี้</p>
-                            <h3 class="text-3xl font-bold text-slate-800">38</h3>
-                        </div>
-                        <div class="bg-green-100 p-3 rounded-lg text-green-600"><i class="fa-solid fa-user-check"></i></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 border-l-4 border-l-orange-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-500 mb-1">ลางาน/ขาด</p>
-                            <h3 class="text-3xl font-bold text-slate-800">4</h3>
-                        </div>
-                        <div class="bg-orange-100 p-3 rounded-lg text-orange-600"><i class="fa-solid fa-user-clock"></i></div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 border-l-4 border-l-purple-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm text-slate-500 mb-1">รออนุมัติ</p>
-                            <h3 class="text-3xl font-bold text-slate-800">7</h3>
-                        </div>
-                        <div class="bg-purple-100 p-3 rounded-lg text-purple-600"><i class="fa-solid fa-file-signature"></i></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ส่วน Executive Dashboard (จะแสดงเฉพาะ Admin) -->
-            <div id="dashboard-executive" class="hidden">
-                <h3 class="text-lg font-semibold text-slate-800 mb-4 mt-8 border-b pb-2">สถิติสำหรับผู้บริหาร</h3>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4">สัดส่วนการมาทำงานวันนี้</h3>
-                        <div class="relative h-64 w-full flex justify-center">
-                            <canvas id="attendanceChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4">สรุปค่าใช้จ่ายเงินเดือน 6 เดือนย้อนหลัง</h3>
-                        <div class="relative h-64 w-full">
-                            <canvas id="payrollChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mt-6">
-                <h3 class="text-lg font-semibold text-slate-800 mb-4">ประกาศองค์กร (Announcements)</h3>
-                <div class="space-y-4">
-                    <div class="p-4 bg-blue-50 text-blue-800 rounded-lg border border-blue-100 flex items-start">
-                        <i class="fa-solid fa-bullhorn mt-1 mr-3"></i>
-                        <div>
-                            <h4 class="font-semibold">อัปเดตนโยบายการเบิก OT เดือนนี้</h4>
-                            <p class="text-sm mt-1">กรุณาส่งเอกสารขอทำ OT ภายในวันที่ 25 ของทุกเดือนเพื่อให้ระบบ Payroll คำนวณได้ทันเวลา</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- ========================================== -->
-    <!-- หน้าจอ Login (เชื่อมต่อ Firebase) -->
-    <!-- ========================================== -->
-    <div id="view-login" class="absolute inset-0 z-50 bg-slate-800 flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4">
-            <div class="text-center mb-8">
-                <i class="fa-solid fa-users-gear text-5xl text-blue-600 mb-4"></i>
-                <h2 class="text-3xl font-bold text-slate-800 tracking-wide">Biz<span class="text-blue-500">HRIS</span></h2>
-                <p class="text-slate-500 text-sm mt-2">ลงชื่อเข้าใช้ระบบ (ผูกกับ Firebase Database)</p>
-            </div>
-            <div class="space-y-5">
-                <div id="login-loading" class="hidden text-center text-blue-600 mb-4 py-4">
-                    <i class="fa-solid fa-circle-notch fa-spin text-4xl"></i>
-                    <p class="mt-4 text-sm font-medium" id="login-loading-text">กำลังเชื่อมต่อฐานข้อมูล...</p>
-                </div>
-                <div id="login-form">
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">อีเมล (Email)</label>
-                        <input type="email" id="login-email" class="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="employee@company.com">
-                    </div>
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน (Password)</label>
-                        <input type="password" id="login-password" class="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors" placeholder="••••••••">
-                    </div>
-                    <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center">
-                        <i class="fa-solid fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
-                    </button>
-                </div>
             </div>
         </div>
     </div>
+    
+    <div class="text-zinc-500 text-sm mt-8 relative z-10">
+        &copy; 2026 Lamsang Group All Rights Reserved.
+    </div>
 
-    <!-- ========================================== -->
-    <!-- JAVASCRIPT LOGIC (Firebase Integration) -->
-    <!-- ========================================== -->
+    <!-- JAVASCRIPT LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 1. Firebase Config ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY",
             authDomain: "hris-21093.firebaseapp.com",
@@ -243,42 +83,36 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
         const appId = 'bizhris-phichit';
-        let currentUser = null;
-        let userProfile = null;
 
-        // 2. ติดตามสถานะผู้ใช้
+        // เช็คว่าล็อกอินค้างไว้หรือเปล่า ถ้าใช่ให้เด้งไปหน้า home.html เลย
         onAuthStateChanged(auth, async (user) => {
-            currentUser = user;
             if (user) {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('login-loading').classList.remove('hidden');
+                
                 const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
                 try {
                     const docSnap = await getDoc(userRef);
                     if (docSnap.exists()) {
-                        userProfile = docSnap.data();
-                        loginSuccess(); // ซ่อนหน้า Login
+                        window.location.href = 'home.html'; // เตะไปหน้าหลัก
                     } else {
-                        // กรณีมีบัญชีล็อกอินได้ แต่ยังไม่มีข้อมูลโปรไฟล์ (ชื่อ/สิทธิ์) ใน Database
-                        alert("ล็อกอินสำเร็จ แต่ไม่พบข้อมูลโปรไฟล์พนักงานในระบบ กรุณาติดต่อ HR");
+                        alert("ไม่พบข้อมูลโปรไฟล์ กรุณาติดต่อ HR");
                         signOut(auth);
+                        resetForm();
                     }
                 } catch (e) {
-                    console.error("Error:", e);
-                    if (e.message && e.message.includes('offline')) {
-                        console.warn("⚠️ Client is offline: กรุณา Create Database ใน Firestore");
-                    }
+                    resetForm();
+                    if (e.message.includes('offline')) alert("⚠️ กรุณา Create Database ใน Firestore");
                 }
-            } else {
-                // ถ้ายังไม่ได้ล็อกอิน ให้แสดงหน้า Login
-                document.getElementById('view-login').style.display = 'flex';
-                document.getElementById('view-login').style.opacity = '1';
-                document.getElementById('login-form').classList.remove('hidden');
-                document.getElementById('login-loading').classList.add('hidden');
             }
         });
 
-        // 3. ฟังก์ชัน Login (แก้ไขให้ใช้อีเมลและรหัสผ่าน)
+        function resetForm() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('login-loading').classList.add('hidden');
+        }
+
         window.handleLogin = async function() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -288,76 +122,15 @@
             document.getElementById('login-loading').classList.remove('hidden');
 
             try {
-                // ล็อกอินด้วย Email & Password ของ Firebase
                 await signInWithEmailAndPassword(auth, email, password);
-                // เมื่อล็อกอินผ่าน ระบบจะไปเรียก onAuthStateChanged อัตโนมัติ
+                // พอผ่าน โค้ด onAuthStateChanged ด้านบนจะทำงานและพาไปหน้า home.html เอง
             } catch (error) {
-                console.error(error);
-                document.getElementById('login-form').classList.remove('hidden');
-                document.getElementById('login-loading').classList.add('hidden');
-                
-                // ดักจับและแปล Error ให้เป็นภาษาไทย
+                resetForm();
                 if(error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                     alert("❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-                } else if(error.message.includes('offline')) {
-                    alert("❌ ไปกด Create Database ใน Firebase ก่อนครับ!");
                 } else {
                     alert("Error: " + error.message);
                 }
-            }
-        }
-
-        // 4. ฟังก์ชันออกจากระบบ
-        window.handleLogout = function() {
-            if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                signOut(auth).then(() => {
-                    window.location.reload();
-                });
-            }
-        }
-
-        // 5. เมื่อ Login สำเร็จ
-        function loginSuccess() {
-            const loginScreen = document.getElementById('view-login');
-            loginScreen.style.opacity = '0';
-            setTimeout(() => { loginScreen.style.display = 'none'; }, 500);
-            
-            // อัปเดตข้อมูล UI
-            document.getElementById('current-user-name').textContent = userProfile.name;
-            document.getElementById('current-user-role').textContent = userProfile.role.toUpperCase();
-            
-            // เช็คว่ามีรูปโปรไฟล์ (photoURL) ที่ตั้งไว้ไหม ถ้ามีให้ดึงมาใช้ ถ้าไม่มีให้ใช้รูปตัวอักษรตั้งต้น
-            const avatarUrl = userProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=0D8ABC&color=fff&size=128`;
-            document.getElementById('profile-img-top').src = avatarUrl;
-
-            // จัดการสิทธิ์การมองเห็นเมนู
-            if (userProfile.role === 'admin') {
-                document.getElementById('menu-admin').classList.remove('hidden');
-                document.getElementById('menu-executive').classList.remove('hidden');
-                document.getElementById('dashboard-executive').classList.remove('hidden');
-                renderCharts(); // โหลดกราฟเฉพาะเมื่อเป็น Admin
-            } else if (userProfile.role === 'manager') {
-                document.getElementById('menu-admin').classList.remove('hidden');
-            }
-        }
-
-        // เรนเดอร์กราฟ (ฟังก์ชันเดิม)
-        function renderCharts() {
-            const ctxAttendance = document.getElementById('attendanceChart');
-            if(ctxAttendance) {
-                new Chart(ctxAttendance.getContext('2d'), {
-                    type: 'doughnut',
-                    data: { labels: ['มาทำงาน', 'ลางาน', 'ขาดงาน'], datasets: [{ data: [38, 2, 2], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
-                });
-            }
-            const ctxPayroll = document.getElementById('payrollChart');
-            if(ctxPayroll) {
-                new Chart(ctxPayroll.getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: ['ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.'], datasets: [{ label: 'เงินเดือนฐาน', data: [850000, 855000, 860000, 920000, 870000, 885000], backgroundColor: '#3b82f6', borderRadius: 4 }, { label: 'โอที & โบนัส', data: [45000, 50000, 48000, 150000, 42000, 55000], backgroundColor: '#8b5cf6', borderRadius: 4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: v => '฿' + (v/1000) + 'k' } } }, plugins: { legend: { position: 'bottom' } } }
-                });
             }
         }
     </script>
