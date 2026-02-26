@@ -3,181 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรไฟล์ส่วนตัว - BizHRIS</title>
-    <!-- Tailwind CSS -->
+    <title>โปรไฟล์ส่วนตัว - Lamsang Group</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        /* สไตล์สำหรับปุ่มเปลี่ยนรูปโปรไฟล์ */
+        body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden text-zinc-800">
 
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-slate-800 text-white flex flex-col transition-all duration-300">
-        <div class="p-5 flex items-center justify-center border-b border-slate-700">
-            <i class="fa-solid fa-users-gear text-3xl text-blue-400 mr-3"></i>
-            <h1 class="text-xl font-bold tracking-wider">Biz<span class="text-blue-400">HRIS</span></h1>
+    <aside class="w-64 bg-zinc-900 text-zinc-300 flex flex-col transition-all duration-300 shadow-xl z-20">
+        <div class="p-5 flex items-center justify-center border-b border-zinc-800">
+            <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Lamsang Logo" class="h-10 w-10 object-contain rounded bg-white p-1 mr-3">
+            <h1 class="text-lg font-bold tracking-wider truncate text-white">Lamsang Group</h1>
         </div>
-        
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            <a href="index.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
-                <i class="fa-solid fa-chart-pie w-6"></i> แดชบอร์ด
+            <a href="home.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
+                <i class="fa-solid fa-house w-6"></i> หน้าหลัก
             </a>
-            <a href="time.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
+            <a href="time.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
                 <i class="fa-solid fa-clock w-6"></i> เวลาทำงาน & กะ
             </a>
-            
-            <!-- เมนูโปรไฟล์ (ไฮไลท์สีน้ำเงิน) -->
-            <a href="profile.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors bg-blue-600">
+            <a href="profile.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-colors bg-yellow-500 text-zinc-900 font-semibold shadow-sm">
                 <i class="fa-solid fa-id-badge w-6"></i> โปรไฟล์ของฉัน
             </a>
-
-            <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
+            <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
                 <i class="fa-solid fa-calendar-check w-6"></i> การอนุมัติ & วันลา
             </a>
-
-            <!-- ส่วนของ Admin -->
-            <div id="menu-admin" class="hidden space-y-2 mt-2 pt-2 border-t border-slate-700">
-                <p class="px-4 text-xs text-slate-400 uppercase tracking-wider mb-2">ส่วนการจัดการ</p>
-                <a href="add-employee.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
+            <div id="menu-admin" class="hidden space-y-2 mt-4 pt-4 border-t border-zinc-800">
+                <p class="px-4 text-xs text-zinc-500 uppercase tracking-wider mb-2 font-semibold">ส่วนการจัดการ</p>
+                <a href="add-employee.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors text-yellow-500">
                     <i class="fa-solid fa-user-plus w-6"></i> เพิ่มพนักงานใหม่
                 </a>
             </div>
         </nav>
     </aside>
 
-    <!-- MAIN CONTENT -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        <!-- Topbar -->
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10">
-            <h2 class="text-xl font-semibold text-slate-800">โปรไฟล์ส่วนตัว</h2>
-            
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
+        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200">
+            <h2 class="text-xl font-bold text-zinc-800">โปรไฟล์ส่วนตัว</h2>
             <div class="flex items-center space-x-4">
-                <a href="profile.html" class="flex items-center space-x-3 hover:bg-slate-50 p-2 rounded-lg transition-colors">
-                    <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="profile-img-top" class="w-9 h-9 rounded-full object-cover">
+                <div class="flex items-center space-x-3">
+                    <img src="" id="profile-img-top" class="w-9 h-9 rounded-full object-cover border border-zinc-200">
                     <div class="text-sm">
-                        <p class="font-medium text-slate-700" id="current-user-name">กำลังโหลด...</p>
-                        <p class="text-xs text-slate-500" id="current-user-role">-</p>
+                        <p class="font-semibold text-zinc-800" id="current-user-name">กำลังโหลด...</p>
+                        <p class="text-xs text-zinc-500" id="current-user-role">-</p>
                     </div>
-                </a>
+                </div>
             </div>
         </header>
 
-        <!-- Profile Content -->
-        <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
-            <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- คอลัมน์ซ้าย: รูปภาพและข้อมูลย่อ -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8 bg-zinc-50">
+            <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="md:col-span-1">
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 text-center relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-                        
-                        <!-- คอนเทนเนอร์รูปภาพ เปลี่ยนเป็นการเรียกฟังก์ชันกรอก URL แทน -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-8 text-center relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-24 bg-zinc-900"></div>
                         <div class="relative w-32 h-32 mx-auto mt-8 mb-4 avatar-container cursor-pointer rounded-full border-4 border-white shadow-md group">
-                            <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="main-profile-img" class="w-full h-full rounded-full object-cover">
-                            
-                            <!-- Overlay เปลี่ยนรูปภาพ -->
+                            <img src="" id="main-profile-img" class="w-full h-full rounded-full object-cover">
                             <div class="avatar-overlay absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 transition-opacity duration-300" onclick="changeProfilePicture()">
-                                <div class="text-white flex flex-col items-center">
-                                    <i class="fa-solid fa-link text-xl"></i>
-                                    <span class="text-[10px] mt-1">แปะลิงก์รูป</span>
-                                </div>
+                                <i class="fa-solid fa-link text-white text-xl"></i>
                             </div>
                         </div>
-
-                        <h3 class="text-xl font-bold text-slate-800" id="display-name">-</h3>
-                        <p class="text-sm text-blue-600 font-medium mb-1" id="display-role">-</p>
-                        <p class="text-xs text-slate-500 mb-4" id="display-branch"><i class="fa-solid fa-location-dot mr-1"></i> -</p>
-
-                        <div class="border-t border-slate-100 pt-4 text-left text-sm space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">รหัสพนักงาน:</span>
-                                <span class="font-medium text-slate-800" id="display-emp-code">-</span>
+                        <h3 class="text-xl font-black text-zinc-800" id="display-name">-</h3>
+                        <p class="text-sm text-yellow-600 font-bold mb-1" id="display-role">-</p>
+                        <p class="text-xs text-zinc-400 mb-6" id="display-branch">-</p>
+                        <div class="border-t border-zinc-100 pt-6 text-left text-sm space-y-4">
+                            <div class="flex justify-between font-medium">
+                                <span class="text-zinc-400">รหัสพนักงาน:</span>
+                                <span id="display-emp-code">-</span>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">เริ่มงานเมื่อ:</span>
-                                <span class="font-medium text-slate-800" id="display-start-date">-</span>
+                            <div class="flex justify-between font-medium">
+                                <span class="text-zinc-400">เริ่มงานเมื่อ:</span>
+                                <span id="display-start-date">-</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- คอลัมน์ขวา: ฟอร์มแก้ไขข้อมูล -->
                 <div class="md:col-span-2">
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                        <div class="border-b border-slate-100 px-6 py-4 flex justify-between items-center">
-                            <h3 class="text-lg font-semibold text-slate-800">จัดการข้อมูลส่วนตัว</h3>
-                        </div>
-
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
+                        <div class="bg-zinc-900 px-6 py-4"><h3 class="text-lg font-bold text-white">จัดการข้อมูลส่วนตัว</h3></div>
                         <form id="profile-form" class="p-6">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                <!-- ส่วนที่แก้ไขได้ -->
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
-                                    <input type="text" id="edit-name" required class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:border-blue-500">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1">ลิงก์รูปโปรไฟล์ (URL)</label>
+                                    <input type="url" id="edit-photo-url" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500" placeholder="https://...">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">เบอร์โทรศัพท์</label>
-                                    <input type="tel" id="edit-phone" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
+                                    <input type="text" id="edit-name" required class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1">เบอร์โทรศัพท์</label>
+                                    <input type="tel" id="edit-phone" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500">
                                 </div>
                                 <div class="sm:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">ลิงก์รูปโปรไฟล์ (URL จากที่อื่น)</label>
-                                    <input type="url" id="edit-photo-url" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://...">
-                                    <p class="text-xs text-slate-500 mt-1">วิธีใช้ Google Drive: ฝากรูป > เปิดแชร์ Anyone > นำลิงก์มาวางในช่องนี้</p>
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1">ที่อยู่ปัจจุบัน</label>
+                                    <textarea id="edit-address" rows="3" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
                                 </div>
-                                <div class="sm:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">ที่อยู่ปัจจุบัน</label>
-                                    <textarea id="edit-address" rows="3" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                                </div>
-
-                                <!-- ส่วนที่แก้ไขไม่ได้ (Read-only) -->
-                                <div class="sm:col-span-2 mt-4 pt-4 border-t border-slate-100">
-                                    <p class="text-sm font-medium text-slate-500 mb-4"><i class="fa-solid fa-lock mr-2"></i>ข้อมูลระบบ (แก้ไขได้เฉพาะ HR)</p>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">อีเมลติดต่อ (ล็อกอิน)</label>
-                                    <input type="text" id="edit-email" readonly class="w-full border border-slate-200 bg-slate-50 text-slate-500 rounded-lg px-4 py-2 cursor-not-allowed">
+                                <div class="sm:col-span-2 pt-4 border-t border-zinc-100">
+                                    <p class="text-xs font-bold text-zinc-400 mb-4 uppercase tracking-widest">ข้อมูลระบบ (แก้ไขไม่ได้)</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">รหัสบัตรประชาชน</label>
-                                    <input type="text" id="edit-idcard" readonly class="w-full border border-slate-200 bg-slate-50 text-slate-500 rounded-lg px-4 py-2 cursor-not-allowed">
+                                    <label class="block text-sm font-bold text-zinc-400 mb-1">อีเมลติดต่อ</label>
+                                    <input type="text" id="edit-email" readonly class="w-full border border-zinc-200 bg-zinc-50 text-zinc-400 rounded-xl px-4 py-3 cursor-not-allowed">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">ฐานเงินเดือน (บาท)</label>
-                                    <input type="text" id="edit-salary" readonly class="w-full border border-slate-200 bg-slate-50 text-slate-500 rounded-lg px-4 py-2 cursor-not-allowed font-medium text-green-600">
+                                    <label class="block text-sm font-bold text-zinc-400 mb-1">ฐานเงินเดือน</label>
+                                    <input type="text" id="edit-salary" readonly class="w-full border border-zinc-200 bg-zinc-50 text-green-600 font-bold rounded-xl px-4 py-3 cursor-not-allowed">
                                 </div>
                             </div>
-
                             <div class="mt-8 flex justify-end">
-                                <button type="submit" id="save-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm flex items-center">
-                                    <i class="fa-solid fa-save mr-2"></i> บันทึกการแก้ไข
+                                <button type="submit" id="save-btn" class="px-8 py-3 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-md flex items-center">
+                                    <i class="fa-solid fa-save mr-2"></i> บันทึกข้อมูล
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
-
             </div>
         </div>
     </main>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // ตัด Firebase Storage ออกไปทั้งหมด
 
         const firebaseConfig = {
             apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY",
@@ -194,125 +147,63 @@
         const db = getFirestore(app);
         const appId = 'bizhris-phichit';
 
-        let currentUser = null;
-        let userData = null;
-
-        // ฟังก์ชันแปลงลิงก์ Google Drive ให้เป็น Direct Image Link ที่แสดงบนเว็บได้
         function convertDriveLink(url) {
             if (!url) return "";
-            // ถ้ารูปมาจาก Google Drive มักจะมีคำว่า file/d/ หรือ open?id=
             if (url.includes('drive.google.com')) {
                 const match = url.match(/\/d\/(.+?)\//) || url.match(/id=(.+?)(&|$)/);
-                if (match && match[1]) {
-                    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-                }
+                if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`;
             }
-            return url; // ถ้าเป็นลิงก์อื่น (เช่น Imgur, Facebook) ให้ใช้ลิงก์เดิมเลย
+            return url; 
         }
 
-        // ตรวจสอบการล็อกอิน และดึงข้อมูลมาใส่ฟอร์ม
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                currentUser = user;
                 const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-                try {
-                    const docSnap = await getDoc(userRef);
-                    if (docSnap.exists()) {
-                        userData = docSnap.data();
-                        
-                        document.getElementById('current-user-name').textContent = userData.name;
-                        document.getElementById('current-user-role').textContent = userData.role.toUpperCase();
-                        
-                        if(userData.role === 'admin') {
-                            document.getElementById('menu-admin').classList.remove('hidden');
-                        }
-
-                        // แสดงรูปโปรไฟล์
-                        const avatarUrl = userData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=0D8ABC&color=fff&size=128`;
-                        document.getElementById('profile-img-top').src = avatarUrl;
-                        document.getElementById('main-profile-img').src = avatarUrl;
-                        document.getElementById('edit-photo-url').value = userData.originalPhotoURL || userData.photoURL || '';
-
-                        // เติมข้อมูลลงในการ์ด
-                        document.getElementById('display-name').textContent = userData.name;
-                        document.getElementById('display-role').textContent = userData.role === 'admin' ? 'ผู้ดูแลระบบ (HR)' : (userData.role === 'manager' ? 'หัวหน้างาน' : 'พนักงาน');
-                        document.getElementById('display-branch').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> ${userData.branch || 'ไม่ระบุสาขา'}`;
-                        document.getElementById('display-emp-code').textContent = userData.employeeCode || '-';
-                        document.getElementById('display-start-date').textContent = userData.startDate ? new Date(userData.startDate).toLocaleDateString('th-TH') : '-';
-
-                        // เติมข้อมูลฟอร์ม
-                        document.getElementById('edit-name').value = userData.name || '';
-                        document.getElementById('edit-phone').value = userData.phone || '';
-                        document.getElementById('edit-address').value = userData.address || '';
-                        document.getElementById('edit-email').value = userData.email || '';
-                        document.getElementById('edit-idcard').value = userData.idCard || '';
-                        
-                        const salary = userData.baseSalary ? Number(userData.baseSalary).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00';
-                        document.getElementById('edit-salary').value = `฿ ${salary}`;
-                    }
-                } catch(e) { console.error(e); }
-            } else {
-                window.location.href = 'index.html'; 
-            }
+                const docSnap = await getDoc(userRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('current-user-name').textContent = data.name;
+                    document.getElementById('current-user-role').textContent = data.role.toUpperCase();
+                    const avatarUrl = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=27272a&color=eab308&size=128`;
+                    document.getElementById('profile-img-top').src = avatarUrl;
+                    document.getElementById('main-profile-img').src = avatarUrl;
+                    document.getElementById('display-name').textContent = data.name;
+                    document.getElementById('display-role').textContent = data.role.toUpperCase();
+                    document.getElementById('display-branch').textContent = data.branch;
+                    document.getElementById('display-emp-code').textContent = data.employeeCode;
+                    document.getElementById('display-start-date').textContent = new Date(data.startDate).toLocaleDateString('th-TH');
+                    document.getElementById('edit-name').value = data.name;
+                    document.getElementById('edit-phone').value = data.phone || '';
+                    document.getElementById('edit-address').value = data.address || '';
+                    document.getElementById('edit-email').value = data.email;
+                    document.getElementById('edit-photo-url').value = data.originalPhotoURL || data.photoURL || '';
+                    document.getElementById('edit-salary').value = `฿ ${Number(data.baseSalary).toLocaleString()}`;
+                    if(data.role === 'admin') document.getElementById('menu-admin').classList.remove('hidden');
+                }
+            } else { window.location.href = 'index.html'; }
         });
 
-        // จัดการเมื่อกดปุ่ม "บันทึกการแก้ไข"
-        document.getElementById('profile-form').addEventListener('submit', async function(e) {
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('save-btn');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
             btn.disabled = true;
-
-            const updatedName = document.getElementById('edit-name').value;
-            const updatedPhone = document.getElementById('edit-phone').value;
-            const updatedAddress = document.getElementById('edit-address').value;
             const inputPhotoUrl = document.getElementById('edit-photo-url').value.trim();
-            
-            // แปลงลิงก์ Drive ให้แสดงผลได้
             const displayPhotoUrl = convertDriveLink(inputPhotoUrl);
-
-            try {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-                await updateDoc(userRef, {
-                    name: updatedName,
-                    phone: updatedPhone,
-                    address: updatedAddress,
-                    originalPhotoURL: inputPhotoUrl, // เก็บลิงก์ต้นฉบับเผื่อไว้
-                    photoURL: displayPhotoUrl // ลิงก์ที่แปลงแล้วสำหรับแสดงผล
-                });
-
-                // อัปเดต UI ทันที
-                document.getElementById('display-name').textContent = updatedName;
-                document.getElementById('current-user-name').textContent = updatedName;
-                
-                if(displayPhotoUrl) {
-                    document.getElementById('main-profile-img').src = displayPhotoUrl;
-                    document.getElementById('profile-img-top').src = displayPhotoUrl;
-                }
-
-                alert('✅ บันทึกข้อมูลส่วนตัวและรูปภาพเรียบร้อยแล้ว!');
-            } catch (error) {
-                console.error("Update error: ", error);
-                alert("❌ เกิดข้อผิดพลาด: " + error.message);
-            } finally {
-                btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i> บันทึกการแก้ไข';
-                btn.disabled = false;
-            }
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', auth.currentUser.uid), {
+                name: document.getElementById('edit-name').value,
+                phone: document.getElementById('edit-phone').value,
+                address: document.getElementById('edit-address').value,
+                originalPhotoURL: inputPhotoUrl,
+                photoURL: displayPhotoUrl
+            });
+            alert('✅ บันทึกข้อมูลสำเร็จ!');
+            window.location.reload();
         });
 
-        // เมื่อกดที่รูปโปรไฟล์ตรงๆ ให้ใช้ Prompt ถามหา URL แทนการเปิด File Explorer
-        window.changeProfilePicture = function() {
-            const currentUrl = document.getElementById('edit-photo-url').value;
-            const newUrl = prompt("กรุณาวางลิงก์รูปภาพ (URL) ของคุณที่นี่:\n(เช่น ลิงก์จาก Google Drive หรือเว็บฝากรูป)", currentUrl);
-            
-            if (newUrl !== null) { // ถ้าไม่ได้กด Cancel
-                document.getElementById('edit-photo-url').value = newUrl;
-                // โชว์ตัวอย่างรูปทันที (ยังไม่ได้เซฟลงฐานข้อมูล ต้องกดปุ่มบันทึกก่อน)
-                const displayUrl = convertDriveLink(newUrl) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.name || 'User')}&background=0D8ABC&color=fff&size=128`;
-                document.getElementById('main-profile-img').src = displayUrl;
-            }
+        window.changeProfilePicture = () => {
+            const url = prompt("วางลิงก์รูปภาพ (Google Drive หรือ URL ทั่วไป):");
+            if(url) document.getElementById('edit-photo-url').value = url;
         }
-
     </script>
 </body>
 </html>
