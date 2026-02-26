@@ -292,6 +292,31 @@
 
         let userProfile = null;
 
+        // ฟังก์ชันช่วยเหลือสำหรับกลับไปหน้า Login และป้องกัน Error ในหน้าต่าง Preview ของ Canvas
+        function redirectToLogin() {
+            try {
+                // ถ้าโปรโตคอลเป็น about: แสดงว่ารันอยู่ใน iframe ของโหมดพรีวิว ซึ่งไม่อนุญาตให้เปลี่ยนหน้า
+                if (window.location.protocol === 'about:' || window.location.hostname === '') {
+                    throw new Error("Preview Sandbox Environment");
+                }
+                window.location.href = 'index.html';
+            } catch (e) {
+                // สร้างหน้าจอแจ้งเตือนสวยๆ แทนการเกิด Error ดำๆ
+                document.body.innerHTML = `
+                <div class="flex flex-col h-screen items-center justify-center bg-zinc-900 text-white p-6 text-center">
+                    <i class="fa-solid fa-lock text-6xl text-yellow-500 mb-6"></i>
+                    <h1 class="text-3xl font-bold mb-2">เซสชั่นหมดอายุ / ยังไม่ได้เข้าสู่ระบบ</h1>
+                    <p class="text-zinc-400 mb-6">ระบบรักษาความปลอดภัยปฏิเสธการเข้าถึงหน้าแดชบอร์ด</p>
+                    <div class="bg-zinc-800 p-5 rounded-xl border border-zinc-700 max-w-md text-left inline-block">
+                        <p class="text-sm text-yellow-400 leading-relaxed">
+                            💡 <b>สำหรับการทดสอบใน Canvas:</b><br>
+                            เนื่องจากไฟล์ถูกแยกออกจากกันแล้ว กรุณากลับไปเปิดพรีวิวที่ไฟล์ <b class="text-white">index.html</b> (หน้าล็อกอิน) เพื่อเข้าสู่ระบบก่อนครับ
+                        </p>
+                    </div>
+                </div>`;
+            }
+        }
+
         // ตรวจสอบสถานะ ล็อกอิน (ถ้าไม่ได้ล็อกอิน เตะกลับหน้า index.html)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -303,17 +328,17 @@
                         loadDashboardUI(); 
                     } else {
                         alert("ไม่พบข้อมูลโปรไฟล์ กรุณาติดต่อ HR");
-                        signOut(auth).then(() => window.location.href = 'index.html');
+                        signOut(auth).then(() => redirectToLogin());
                     }
                 } catch (e) { console.error(e); }
             } else {
-                window.location.href = 'index.html'; // เตะกลับหน้า Login
+                redirectToLogin(); // เตะกลับหน้า Login
             }
         });
 
         window.handleLogout = function() {
             if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                signOut(auth).then(() => { window.location.href = 'index.html'; });
+                signOut(auth).then(() => { redirectToLogin(); });
             }
         }
 
