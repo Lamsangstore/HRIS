@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เพิ่มพนักงานใหม่ - Lamsang Group</title>
+    <title>จัดการพนักงาน - Lamsang Group</title>
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,6 +11,8 @@
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-zinc-800">
@@ -20,15 +22,18 @@
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
         <div id="topbar-placeholder"></div>
 
-        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10">
+            
+            <!-- ส่วนที่ 1: ฟอร์มเพิ่ม/แก้ไขพนักงาน -->
             <div class="max-w-4xl mx-auto bg-white rounded-[2rem] shadow-xl border border-zinc-100 overflow-hidden">
                 <div class="bg-zinc-900 px-8 py-6 text-white font-black flex items-center justify-between">
-                    <span class="uppercase tracking-tighter text-xl">New Employee Registration</span>
-                    <i class="fa-solid fa-user-plus text-yellow-500 text-2xl"></i>
+                    <span class="uppercase tracking-tighter text-xl" id="form-title">New Employee Registration</span>
+                    <i class="fa-solid fa-user-plus text-yellow-500 text-2xl" id="form-icon"></i>
                 </div>
                 
-                <form id="add-employee-form" class="p-10">
-                    <div class="mb-10 bg-yellow-50 border-l-8 border-yellow-500 p-6 rounded-2xl shadow-sm">
+                <form id="employee-form" class="p-10">
+                    <!-- สถานะการแจ้งเตือน -->
+                    <div id="account-notice" class="mb-10 bg-yellow-50 border-l-8 border-yellow-500 p-6 rounded-2xl shadow-sm">
                         <div class="flex items-center mb-2">
                             <i class="fa-solid fa-key mr-3 text-xl text-yellow-600"></i>
                             <span class="font-black text-yellow-900 uppercase tracking-tight">Auto-Account Generation</span>
@@ -37,6 +42,9 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- ซ่อน UID ไว้สำหรับโหมดแก้ไข -->
+                        <input type="hidden" id="emp-uid">
+
                         <div class="md:col-span-2">
                             <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Work Email Address</label>
                             <input type="email" id="emp-email" required class="w-full border-2 border-zinc-100 bg-zinc-50 rounded-2xl px-6 py-4 focus:bg-white focus:border-yellow-500 transition-all outline-none font-bold shadow-inner" placeholder="email@lamsang.com">
@@ -57,16 +65,67 @@
                             <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Base Salary (THB)</label>
                             <input type="number" id="emp-salary" required class="w-full border-2 border-zinc-100 bg-zinc-50 rounded-2xl px-6 py-4 focus:bg-white focus:border-yellow-500 transition-all outline-none font-bold shadow-inner" placeholder="15000">
                         </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Branch / Location</label>
+                            <select id="emp-branch" class="w-full border-2 border-zinc-100 bg-zinc-50 rounded-2xl px-6 py-4 focus:bg-white focus:border-yellow-500 transition-all outline-none font-bold shadow-inner appearance-none">
+                                <option value="สาขาพิจิตร (เนินปอ)">สาขาพิจิตร (เนินปอ)</option>
+                                <option value="สำนักงานใหญ่">สำนักงานใหญ่</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">System Role</label>
+                            <select id="emp-role" class="w-full border-2 border-zinc-100 bg-zinc-50 rounded-2xl px-6 py-4 focus:bg-white focus:border-yellow-500 transition-all outline-none font-bold shadow-inner appearance-none">
+                                <option value="employee">Employee (พนักงานทั่วไป)</option>
+                                <option value="manager">Manager (หัวหน้างาน)</option>
+                                <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="mt-12 flex justify-end space-x-4 pt-8 border-t border-zinc-50">
-                        <button type="button" onclick="window.location.href='home.html'" class="px-8 py-4 text-zinc-400 font-bold hover:text-zinc-600 transition-all uppercase tracking-widest text-xs">Cancel</button>
+                        <button type="button" id="cancel-edit-btn" onclick="resetEmployeeForm()" class="hidden px-8 py-4 text-red-500 font-bold hover:bg-red-50 rounded-xl transition-all uppercase tracking-widest text-xs">
+                            Cancel Edit
+                        </button>
+                        <button type="button" onclick="window.location.href='home.html'" id="cancel-btn" class="px-8 py-4 text-zinc-400 font-bold hover:text-zinc-600 transition-all uppercase tracking-widest text-xs">
+                            Exit
+                        </button>
                         <button type="submit" id="submit-btn" class="px-12 py-5 bg-yellow-500 text-zinc-900 rounded-2xl hover:bg-yellow-400 transition-all font-black shadow-2xl uppercase tracking-widest flex items-center">
-                            Create Account <i class="fa-solid fa-chevron-right ml-3"></i>
+                            <span id="submit-btn-text">Create Account</span> <i class="fa-solid fa-chevron-right ml-3"></i>
                         </button>
                     </div>
                 </form>
             </div>
+
+            <!-- ส่วนที่ 2: รายชื่อพนักงานทั้งหมด -->
+            <div class="max-w-6xl mx-auto bg-white rounded-[2rem] shadow-sm border border-zinc-100 overflow-hidden">
+                <div class="p-8 border-b border-zinc-100 flex justify-between items-center">
+                    <h3 class="text-xl font-black text-zinc-800 uppercase tracking-tight">Employee Directory</h3>
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+                        <input type="text" id="search-emp" onkeyup="filterEmployees()" placeholder="ค้นหาชื่อหรืออีเมล..." class="pl-12 pr-6 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm font-medium">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="employee-table">
+                        <thead class="bg-zinc-50 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                            <tr>
+                                <th class="px-8 py-5">พนักงาน</th>
+                                <th class="px-6 py-5">รหัสพนักงาน</th>
+                                <th class="px-6 py-5">ตำแหน่ง/สิทธิ์</th>
+                                <th class="px-6 py-5">ฐานเงินเดือน</th>
+                                <th class="px-8 py-5 text-right">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100" id="employee-list">
+                            <!-- รายชื่อจะโหลดจาก Firebase -->
+                            <tr>
+                                <td colspan="5" class="px-8 py-10 text-center text-zinc-400 italic">กำลังโหลดรายชื่อพนักงาน...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -77,7 +136,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { renderUI } from "./shared_components.js";
 
         const firebaseConfig = { apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY", authDomain: "hris-21093.firebaseapp.com", projectId: "hris-21093", storageBucket: "hris-21093.firebasestorage.app", messagingSenderId: "549158917606", appId: "1:549158917606:web:cdade4e855554e57fab227", measurementId: "G-1FYRH1EL2W" };
@@ -85,6 +144,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = 'bizhris-phichit';
+
+        let isEditing = false;
+        let allEmployees = [];
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -94,33 +156,166 @@
                     if(data.role !== 'admin') window.location.href = 'home.html';
                     renderUI(data, 'add-employee');
                     if(document.getElementById('app-loader')) document.getElementById('app-loader').style.display = 'none';
+                    loadEmployeeList();
                 }
             } else { window.location.href = 'index.html'; }
         });
 
         window.handleLogout = () => signOut(auth).then(() => window.location.href = 'index.html');
 
-        document.getElementById('add-employee-form').addEventListener('submit', async (e) => {
+        // ฟังก์ชันโหลดรายชื่อพนักงานแบบ Real-time
+        function loadEmployeeList() {
+            const userCol = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+            onSnapshot(userCol, (snapshot) => {
+                allEmployees = [];
+                let html = '';
+                snapshot.forEach(doc => {
+                    const emp = doc.data();
+                    allEmployees.push(emp);
+                    const avatar = emp.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=f4f4f5&color=27272a&bold=true`;
+                    
+                    html += `
+                        <tr class="hover:bg-zinc-50 transition-colors group">
+                            <td class="px-8 py-5">
+                                <div class="flex items-center">
+                                    <img src="${avatar}" class="w-10 h-10 rounded-full border border-zinc-200 mr-4 object-cover">
+                                    <div>
+                                        <p class="font-bold text-zinc-800 text-sm">${emp.name}</p>
+                                        <p class="text-xs text-zinc-400 font-medium">${emp.email}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-sm font-black text-zinc-500">${emp.employeeCode || '-'}</td>
+                            <td class="px-6 py-5">
+                                <span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${emp.role === 'admin' ? 'bg-red-50 text-red-600' : 'bg-zinc-100 text-zinc-600'}">
+                                    ${emp.role}
+                                </span>
+                            </td>
+                            <td class="px-6 py-5 text-sm font-bold text-zinc-700">฿${Number(emp.baseSalary || 0).toLocaleString()}</td>
+                            <td class="px-8 py-5 text-right">
+                                <button onclick="prepareEdit('${emp.uid}')" class="text-zinc-400 hover:text-yellow-600 p-2 transition-all">
+                                    <i class="fa-solid fa-user-pen text-lg"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('employee-list').innerHTML = html || '<tr><td colspan="5" class="p-10 text-center text-zinc-400">ไม่พบรายชื่อพนักงาน</td></tr>';
+            });
+        }
+
+        // ฟังก์ชันกรองข้อมูลในตาราง
+        window.filterEmployees = () => {
+            const val = document.getElementById('search-emp').value.toLowerCase();
+            const rows = document.getElementById('employee-list').getElementsByTagName('tr');
+            for (let row of rows) {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(val) ? '' : 'none';
+            }
+        }
+
+        // เตรียมฟอร์มสำหรับการแก้ไข
+        window.prepareEdit = (uid) => {
+            const emp = allEmployees.find(e => e.uid === uid);
+            if(!emp) return;
+
+            isEditing = true;
+            document.getElementById('emp-uid').value = emp.uid;
+            document.getElementById('emp-email').value = emp.email;
+            document.getElementById('emp-email').readOnly = true; // ห้ามแก้เมล (Auth ผูกไว้)
+            document.getElementById('emp-email').classList.add('bg-zinc-200', 'cursor-not-allowed');
+            
+            document.getElementById('emp-name').value = emp.name;
+            document.getElementById('emp-code').value = emp.employeeCode || '';
+            document.getElementById('emp-startdate').value = emp.startDate || '';
+            document.getElementById('emp-salary').value = emp.baseSalary || '';
+            document.getElementById('emp-branch').value = emp.branch || 'สาขาพิจิตร (เนินปอ)';
+            document.getElementById('emp-role').value = emp.role || 'employee';
+
+            // ปรับ UI โหมดแก้ไข
+            document.getElementById('form-title').textContent = "Update Employee Details";
+            document.getElementById('form-icon').className = "fa-solid fa-user-pen text-yellow-500 text-2xl";
+            document.getElementById('submit-btn-text').textContent = "Update Information";
+            document.getElementById('account-notice').classList.add('hidden');
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+            document.getElementById('cancel-btn').classList.add('hidden');
+
+            // เลื่อนจอไปด้านบนสุดที่ฟอร์ม
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ล้างฟอร์มกลับสู่โหมดเพิ่มพนักงานใหม่
+        window.resetEmployeeForm = () => {
+            isEditing = false;
+            document.getElementById('employee-form').reset();
+            document.getElementById('emp-email').readOnly = false;
+            document.getElementById('emp-email').classList.remove('bg-zinc-200', 'cursor-not-allowed');
+            
+            document.getElementById('form-title').textContent = "New Employee Registration";
+            document.getElementById('form-icon').className = "fa-solid fa-user-plus text-yellow-500 text-2xl";
+            document.getElementById('submit-btn-text').textContent = "Create Account";
+            document.getElementById('account-notice').classList.remove('hidden');
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+            document.getElementById('cancel-btn').classList.remove('hidden');
+        }
+
+        // จัดการการส่งฟอร์ม (ทั้ง Create และ Update)
+        document.getElementById('employee-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
-            btn.disabled = true; btn.innerHTML = 'Creating...';
+            btn.disabled = true; 
+            const originalText = document.getElementById('submit-btn-text').textContent;
+            document.getElementById('submit-btn-text').textContent = isEditing ? 'Updating...' : 'Creating...';
+
             const email = document.getElementById('emp-email').value.trim();
             const name = document.getElementById('emp-name').value.trim();
+            const uid = document.getElementById('emp-uid').value;
+
             try {
-                const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
-                const authRes = await fetch(authUrl, { method: 'POST', body: JSON.stringify({ email, password: "123456", returnSecureToken: true }) });
-                const authData = await authRes.json();
-                if(!authRes.ok) throw new Error(authData.error.message);
-                
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', authData.localId), {
-                    uid: authData.localId, name, email,
-                    employeeCode: document.getElementById('emp-code').value,
-                    startDate: document.getElementById('emp-startdate').value,
-                    baseSalary: parseFloat(document.getElementById('emp-salary').value),
-                    role: 'employee', branch: 'สาขาพิจิตร (เนินปอ)', createdAt: new Date().toISOString()
-                });
-                alert('✅ Success!'); e.target.reset();
-            } catch(error) { alert("Error: " + error.message); } finally { btn.disabled = false; btn.innerHTML = 'Create Account <i class="fa-solid fa-chevron-right ml-3"></i>'; }
+                if (isEditing) {
+                    // โหมดแก้ไข: อัปเดต Firestore เท่านั้น
+                    const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', uid);
+                    await updateDoc(userRef, {
+                        name: name,
+                        employeeCode: document.getElementById('emp-code').value,
+                        startDate: document.getElementById('emp-startdate').value,
+                        baseSalary: parseFloat(document.getElementById('emp-salary').value),
+                        role: document.getElementById('emp-role').value,
+                        branch: document.getElementById('emp-branch').value,
+                        updatedAt: new Date().toISOString()
+                    });
+                    alert('✅ อัปเดตข้อมูลพนักงานสำเร็จ!');
+                    resetEmployeeForm();
+                } else {
+                    // โหมดเพิ่มใหม่: สร้างบัญชี Auth และ Firestore
+                    const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+                    const authRes = await fetch(authUrl, { method: 'POST', body: JSON.stringify({ email, password: "123456", returnSecureToken: true }) });
+                    const authData = await authRes.json();
+                    if(!authRes.ok) {
+                        if(authData.error.message === 'EMAIL_EXISTS') throw new Error('อีเมลนี้ถูกใช้งานแล้วในระบบ');
+                        throw new Error(authData.error.message);
+                    }
+                    
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', authData.localId), {
+                        uid: authData.localId, 
+                        name: name, 
+                        email: email,
+                        employeeCode: document.getElementById('emp-code').value,
+                        startDate: document.getElementById('emp-startdate').value,
+                        baseSalary: parseFloat(document.getElementById('emp-salary').value),
+                        role: document.getElementById('emp-role').value,
+                        branch: document.getElementById('emp-branch').value,
+                        createdAt: new Date().toISOString()
+                    });
+                    alert('✅ สร้างพนักงานใหม่สำเร็จ!');
+                    e.target.reset();
+                }
+            } catch(error) { 
+                alert("Error: " + error.message); 
+            } finally { 
+                btn.disabled = false; 
+                document.getElementById('submit-btn-text').textContent = originalText;
+            }
         });
     </script>
 </body>
