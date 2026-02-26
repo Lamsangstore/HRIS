@@ -605,7 +605,7 @@
             <div class="space-y-5">
                 <div id="login-loading" class="hidden text-center text-blue-600 mb-4 py-4">
                     <i class="fa-solid fa-circle-notch fa-spin text-4xl"></i>
-                    <p class="mt-4 text-sm font-medium">กำลังเชื่อมต่อฐานข้อมูล...</p>
+                    <p class="mt-4 text-sm font-medium" id="login-loading-text">กำลังเชื่อมต่อฐานข้อมูล...</p>
                 </div>
                 <div id="login-form">
                     <div class="mb-4">
@@ -667,7 +667,7 @@
                 await signInAnonymously(auth);
             } catch (error) {
                 console.error("Auth init failed:", error);
-                alert("ไม่สามารถเชื่อมต่อระบบรักษาความปลอดภัยได้");
+                alert("ไม่สามารถเชื่อมต่อระบบรักษาความปลอดภัยของ Firebase ได้");
             }
         };
         initAuth();
@@ -684,7 +684,13 @@
                         userProfile = docSnap.data();
                         loginSuccess(); // ถ้ามีข้อมูลแล้ว ให้ข้ามหน้า Login ไปเลย
                     }
-                } catch (e) { console.error("Error fetching profile:", e); }
+                } catch (e) { 
+                    console.error("Error fetching profile:", e);
+                    // ดักจับ Error แจ้งเตือนเรื่องการตั้งค่า Firestore
+                    if (e.message && e.message.includes('offline')) {
+                        console.warn("⚠️ Client is offline: เป็นไปได้ว่าคุณยังไม่ได้กด 'Create Database' ในเมนู Firestore Database บนเว็บ Firebase");
+                    }
+                }
             }
         });
 
@@ -706,10 +712,16 @@
                 userProfile = newProfile;
                 loginSuccess();
             } catch (error) {
-                console.error(error);
-                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+                console.error("Login/Save Error:", error);
                 document.getElementById('login-form').classList.remove('hidden');
                 document.getElementById('login-loading').classList.add('hidden');
+                
+                // แจ้งเตือนผู้ใช้ด้วยข้อความที่เข้าใจง่ายหากลืมสร้าง Database
+                if (error.message && error.message.includes('offline')) {
+                    alert("❌ ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (Offline)\n\nวิธีแก้ไข:\n1. กลับไปที่เว็บ Firebase Console (ของโปรเจกต์ hris-21093)\n2. มองหาเมนู 'Firestore Database' แถบด้านซ้ายมือ\n3. กดปุ่ม 'Create Database'\n4. เลือก Start in Test Mode แล้วกด Enable\n\nจากนั้นกลับมาที่หน้านี้แล้วลองกดเข้าสู่ระบบอีกครั้งครับ!");
+                } else {
+                    alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+                }
             }
         }
 
@@ -851,6 +863,8 @@
                 if(logContainer) logContainer.innerHTML = logsHtml || '<p class="text-slate-400 text-sm">ยังไม่มีประวัติการลงเวลาของคุณ</p>';
             }, (error) => {
                 console.error("Error fetching logs:", error);
+                const logContainer = document.getElementById('realtime-logs');
+                if(logContainer) logContainer.innerHTML = '<p class="text-red-500 text-sm">ดึงข้อมูลล้มเหลว (ตรวจสอบการสร้างฐานข้อมูล)</p>';
             });
         }
 
