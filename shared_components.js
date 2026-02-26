@@ -42,7 +42,7 @@ export function renderUI(userProfile, activePageId) {
                 <div class="space-y-2 mt-4 pt-4 border-t border-zinc-800">
                     <p class="px-4 text-xs text-zinc-500 uppercase tracking-wider mb-2 font-semibold">ส่วนการจัดการ</p>
                     <a href="add-employee.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'add-employee' ? 'text-zinc-900 bg-yellow-500 font-bold' : 'text-yellow-500'}">
-                        <i class="fa-solid fa-user-plus w-6 text-center"></i> <span class="ml-3">เพิ่มพนักงานใหม่</span>
+                        <i class="fa-solid fa-user-plus w-6 text-center"></i> <span class="ml-3">จัดการพนักงาน</span>
                     </a>
                     <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
                         <i class="fa-solid fa-file-invoice-dollar w-6 text-center"></i> <span class="ml-3">จัดการเงินเดือน</span>
