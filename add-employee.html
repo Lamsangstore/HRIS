@@ -81,28 +81,21 @@
                 </div>
 
                 <form id="add-employee-form" class="p-6">
-                    <!-- ส่วนเตือนความจำสำหรับ HR -->
-                    <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                    <!-- ข้อมูลแจ้งเตือนเรื่องการสร้างบัญชีอัตโนมัติ -->
+                    <div class="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>
+                                <i class="fa-solid fa-circle-info text-blue-500"></i>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-yellow-700">
-                                    <strong>ขั้นตอนสำคัญ:</strong> ในช่อง <b>Firebase Auth UID</b> ด้านล่าง คุณต้องนำ UID ที่ได้จากการสร้างบัญชีอีเมล/รหัสผ่าน ในหน้าต่าง <a href="https://console.firebase.google.com/" target="_blank" class="underline text-blue-600">Firebase Authentication</a> มาวาง เพื่อให้พนักงานสามารถล็อกอินได้
+                                <p class="text-sm text-blue-700">
+                                    <strong>ระบบสร้างบัญชีอัตโนมัติ:</strong> เมื่อกดบันทึก ระบบจะนำ <b>อีเมลติดต่อ</b> ไปสร้างบัญชีสำหรับล็อกอินให้ทันที โดยตั้งรหัสผ่านเริ่มต้นเป็น <b>123456</b> (พนักงานสามารถเปลี่ยนเองได้ภายหลัง)
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <!-- รหัสอ้างอิง Firebase -->
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Firebase Auth UID <span class="text-red-500">*</span></label>
-                            <input type="text" id="emp-uid" required class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="เช่น xX9zABC123...">
-                            <p class="text-xs text-slate-500 mt-1">คัดลอก UID มาจากเมนู Authentication ใน Firebase Console</p>
-                        </div>
-
                         <!-- ข้อมูลส่วนตัว -->
                         <h4 class="md:col-span-2 text-md font-semibold text-slate-800 border-b pb-2 mt-2">ข้อมูลส่วนตัว</h4>
                         
@@ -228,48 +221,71 @@
         document.getElementById('add-employee-form').addEventListener('submit', async function(e) {
             e.preventDefault(); // ป้องกันการรีเฟรชหน้าเว็บเมื่อกด submit
 
-            const uid = document.getElementById('emp-uid').value.trim();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังสร้างบัญชี...';
+            submitBtn.disabled = true;
+
+            const email = document.getElementById('emp-email').value.trim();
             const name = document.getElementById('emp-name').value;
             const role = document.getElementById('emp-role').value;
             
-            // สร้างก้อนข้อมูลที่ต้องการเก็บ
-            const employeeData = {
-                uid: uid,
-                name: name,
-                email: document.getElementById('emp-email').value,
-                phone: document.getElementById('emp-phone').value,
-                idCard: document.getElementById('emp-idcard').value,
-                address: document.getElementById('emp-address').value,
-                employeeCode: document.getElementById('emp-code').value,
-                role: role,
-                branch: document.getElementById('emp-branch').value,
-                baseSalary: parseFloat(document.getElementById('emp-salary').value),
-                startDate: document.getElementById('emp-startdate').value,
-                createdAt: new Date().toISOString(),
-                createdBy: currentUser.uid // เก็บว่า Admin คนไหนเป็นคนเพิ่มข้อมูล
-            };
-
             try {
-                // บันทึกข้อมูลลงในคอลเล็กชัน users โดยใช้ UID เป็นชื่อ Document
-                const newUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', uid);
+                // 1. สร้างบัญชี Firebase Auth ผ่าน REST API (เพื่อไม่ให้ Admin หลุดจากระบบ)
+                const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+                const authResponse = await fetch(authUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        password: "123456", // บังคับ 6 ตัวอักษรตามกฎของ Firebase
+                        returnSecureToken: true
+                    })
+                });
                 
-                // เช็คก่อนว่า UID นี้มีอยู่แล้วหรือยัง
-                const checkSnap = await getDoc(newUserRef);
-                if(checkSnap.exists()) {
-                    alert('❌ ไม่สามารถบันทึกได้ เนื่องจากมี Firebase Auth UID นี้ในระบบฐานข้อมูลแล้ว');
-                    return;
+                const authData = await authResponse.json();
+                
+                if (!authResponse.ok) {
+                    let errorMsg = "เกิดข้อผิดพลาดในการสร้างบัญชี";
+                    if(authData.error.message === 'EMAIL_EXISTS') errorMsg = "อีเมลนี้มีผู้ใช้งานในระบบแล้ว!";
+                    else if(authData.error.message === 'INVALID_EMAIL') errorMsg = "รูปแบบอีเมลไม่ถูกต้อง!";
+                    throw new Error(errorMsg);
                 }
 
+                const newUid = authData.localId; // ได้ UID ใหม่ของพนักงานมาแล้ว
+
+                // 2. สร้างก้อนข้อมูลที่ต้องการเก็บ
+                const employeeData = {
+                    uid: newUid,
+                    name: name,
+                    email: email,
+                    phone: document.getElementById('emp-phone').value,
+                    idCard: document.getElementById('emp-idcard').value,
+                    address: document.getElementById('emp-address').value,
+                    employeeCode: document.getElementById('emp-code').value,
+                    role: role,
+                    branch: document.getElementById('emp-branch').value,
+                    baseSalary: parseFloat(document.getElementById('emp-salary').value),
+                    startDate: document.getElementById('emp-startdate').value,
+                    createdAt: new Date().toISOString(),
+                    createdBy: currentUser.uid // เก็บว่า Admin คนไหนเป็นคนเพิ่มข้อมูล
+                };
+
+                // 3. บันทึกข้อมูลลงในคอลเล็กชัน users
+                const newUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', newUid);
                 await setDoc(newUserRef, employeeData);
                 
-                alert(`✅ บันทึกข้อมูลพนักงาน "${name}" ลงในระบบสำเร็จ!`);
+                alert(`✅ บันทึกข้อมูลพนักงาน "${name}" และสร้างบัญชีล็อกอินสำเร็จ!\n\nอีเมล: ${email}\nรหัสผ่านเริ่มต้น: 123456`);
                 
                 // เคลียร์ฟอร์ม
                 document.getElementById('add-employee-form').reset();
                 
             } catch (error) {
                 console.error("Error adding document: ", error);
-                alert("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+                alert("❌ " + error.message);
+            } finally {
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
             }
         });
 
