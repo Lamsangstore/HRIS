@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>โปรไฟล์ส่วนตัว - Lamsang Group</title>
-    <!-- เพิ่ม Favicon โลโก้บริษัท -->
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,53 +11,21 @@
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
+        .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-zinc-800">
 
-    <aside class="w-64 bg-zinc-900 text-zinc-300 flex flex-col transition-all duration-300 shadow-xl z-20">
-        <div class="p-5 flex items-center justify-center border-b border-zinc-800">
-            <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Lamsang Logo" class="h-10 w-10 object-contain rounded bg-white p-1 mr-3">
-            <h1 class="text-lg font-bold tracking-wider truncate text-white">Lamsang Group</h1>
-        </div>
-        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            <a href="home.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
-                <i class="fa-solid fa-house w-6"></i> หน้าหลัก
-            </a>
-            <a href="time.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
-                <i class="fa-solid fa-clock w-6"></i> เวลาทำงาน & กะ
-            </a>
-            <a href="profile.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-colors bg-yellow-500 text-zinc-900 font-semibold shadow-sm">
-                <i class="fa-solid fa-id-badge w-6"></i> โปรไฟล์ของฉัน
-            </a>
-            <a href="#" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
-                <i class="fa-solid fa-calendar-check w-6"></i> การอนุมัติ & วันลา
-            </a>
-            <div id="menu-admin" class="hidden space-y-2 mt-4 pt-4 border-t border-zinc-800">
-                <p class="px-4 text-xs text-zinc-500 uppercase tracking-wider mb-2 font-semibold">ส่วนการจัดการ</p>
-                <a href="add-employee.html" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors text-yellow-500">
-                    <i class="fa-solid fa-user-plus w-6"></i> เพิ่มพนักงานใหม่
-                </a>
-            </div>
-        </nav>
-    </aside>
+    <!-- ✅ จุดวาง Sidebar ส่วนกลาง -->
+    <div id="sidebar-placeholder"></div>
 
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200">
-            <h2 class="text-xl font-bold text-zinc-800">โปรไฟล์ส่วนตัว</h2>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center space-x-3">
-                    <img src="" id="profile-img-top" class="w-9 h-9 rounded-full object-cover border border-zinc-200">
-                    <div class="text-sm">
-                        <p class="font-semibold text-zinc-800" id="current-user-name">กำลังโหลด...</p>
-                        <p class="text-xs text-zinc-500" id="current-user-role">-</p>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <!-- ✅ จุดวาง Topbar ส่วนกลาง -->
+        <div id="topbar-placeholder"></div>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-8 bg-zinc-50">
             <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- เนื้อหาโปรไฟล์ (เหมือนเดิม) -->
                 <div class="md:col-span-1">
                     <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-8 text-center relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-full h-24 bg-zinc-900"></div>
@@ -86,39 +53,33 @@
 
                 <div class="md:col-span-2">
                     <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                        <div class="bg-zinc-900 px-6 py-4"><h3 class="text-lg font-bold text-white">จัดการข้อมูลส่วนตัว</h3></div>
+                        <div class="bg-zinc-900 px-6 py-4 text-white font-bold">จัดการข้อมูลส่วนตัว</div>
                         <form id="profile-form" class="p-6">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div class="sm:col-span-2">
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1">ลิงก์รูปโปรไฟล์ (URL)</label>
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs">ลิงก์รูปโปรไฟล์ (Direct Link/Google Drive)</label>
                                     <input type="url" id="edit-photo-url" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500" placeholder="https://...">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
-                                    <input type="text" id="edit-name" required class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500">
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs text-zinc-400 italic">ชื่อ-นามสกุล (พนักงานแก้ได้)</label>
+                                    <input type="text" id="edit-name" required class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 font-bold">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1">เบอร์โทรศัพท์</label>
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs text-zinc-400 italic">เบอร์โทรศัพท์</label>
                                     <input type="tel" id="edit-phone" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500">
                                 </div>
                                 <div class="sm:col-span-2">
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1">ที่อยู่ปัจจุบัน</label>
-                                    <textarea id="edit-address" rows="3" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
+                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs text-zinc-400 italic">ที่อยู่ปัจจุบัน</label>
+                                    <textarea id="edit-address" rows="2" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
                                 </div>
                                 <div class="sm:col-span-2 pt-4 border-t border-zinc-100">
-                                    <p class="text-xs font-bold text-zinc-400 mb-4 uppercase tracking-widest">ข้อมูลระบบ (แก้ไขไม่ได้)</p>
+                                    <p class="text-[10px] font-black text-zinc-300 mb-4 uppercase tracking-widest">ข้อมูลภายในล็อกไว้โดย HR</p>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-zinc-400 mb-1">อีเมลติดต่อ</label>
-                                    <input type="text" id="edit-email" readonly class="w-full border border-zinc-200 bg-zinc-50 text-zinc-400 rounded-xl px-4 py-3 cursor-not-allowed">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-zinc-400 mb-1">ฐานเงินเดือน</label>
-                                    <input type="text" id="edit-salary" readonly class="w-full border border-zinc-200 bg-zinc-50 text-green-600 font-bold rounded-xl px-4 py-3 cursor-not-allowed">
-                                </div>
+                                <div><label class="block text-[10px] font-bold text-zinc-400 mb-1 uppercase">อีเมลพนักงาน</label><input type="text" id="edit-email" readonly class="w-full border border-zinc-200 bg-zinc-50 text-zinc-400 rounded-xl px-4 py-2 cursor-not-allowed text-sm"></div>
+                                <div><label class="block text-[10px] font-bold text-zinc-400 mb-1 uppercase">ฐานเงินเดือน</label><input type="text" id="edit-salary" readonly class="w-full border border-zinc-200 bg-zinc-50 text-green-600 font-black rounded-xl px-4 py-2 cursor-not-allowed text-sm"></div>
                             </div>
                             <div class="mt-8 flex justify-end">
-                                <button type="submit" id="save-btn" class="px-8 py-3 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-md flex items-center">
+                                <button type="submit" id="save-btn" class="px-10 py-3 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-lg flex items-center">
                                     <i class="fa-solid fa-save mr-2"></i> บันทึกข้อมูล
                                 </button>
                             </div>
@@ -129,10 +90,18 @@
         </div>
     </main>
 
+    <div id="app-loader" class="loading-overlay">
+        <div class="text-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-yellow-500 mb-4"></i><p class="text-white text-xs font-bold tracking-widest uppercase">Lamsang Group</p></div>
+    </div>
+
+    <!-- ✅ นำเข้าไฟล์ Shared Component (ต้องเรียกเป็น type="module") -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // เรียกใช้ฟังก์ชันจากไฟล์ภายนอก
+        import { renderUI } from "./shared_components.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY",
@@ -149,6 +118,11 @@
         const db = getFirestore(app);
         const appId = 'bizhris-phichit';
 
+        function redirectToLogin() {
+            try { if (window.location.protocol === 'about:' || window.location.hostname === '') throw new Error(); window.location.href = 'index.html'; } 
+            catch (e) { document.body.innerHTML = `<div class="flex h-screen items-center justify-center bg-zinc-900 text-white p-6 text-center"><div><i class="fa-solid fa-lock text-6xl text-yellow-500 mb-6"></i><h1 class="text-3xl font-bold mb-2 text-yellow-500">SESSION EXPIRED</h1><p class="text-zinc-400">กรุณากลับไปเปิดไฟล์ index.html ใหม่ครับ</p></div></div>`; }
+        }
+
         function convertDriveLink(url) {
             if (!url) return "";
             if (url.includes('drive.google.com')) {
@@ -164,10 +138,14 @@
                 const docSnap = await getDoc(userRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    document.getElementById('current-user-name').textContent = data.name;
-                    document.getElementById('current-user-role').textContent = data.role.toUpperCase();
+                    
+                    // ✅ สั่ง Render Sidebar และ Topbar จากส่วนกลาง (หน้าโปรไฟล์ ID คือ 'profile')
+                    renderUI(data, 'profile');
+                    
+                    const loader = document.getElementById('app-loader');
+                    if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }
+
                     const avatarUrl = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=27272a&color=eab308&size=128`;
-                    document.getElementById('profile-img-top').src = avatarUrl;
                     document.getElementById('main-profile-img').src = avatarUrl;
                     document.getElementById('display-name').textContent = data.name;
                     document.getElementById('display-role').textContent = data.role.toUpperCase();
@@ -180,31 +158,40 @@
                     document.getElementById('edit-email').value = data.email;
                     document.getElementById('edit-photo-url').value = data.originalPhotoURL || data.photoURL || '';
                     document.getElementById('edit-salary').value = `฿ ${Number(data.baseSalary).toLocaleString()}`;
-                    if(data.role === 'admin') document.getElementById('menu-admin').classList.remove('hidden');
                 }
-            } else { window.location.href = 'index.html'; }
+            } else { redirectToLogin(); }
         });
+
+        // ฟังก์ชัน Logout ต้องผูกกับ window เพื่อให้ปุ่มใน Shared Component เรียกใช้ได้
+        window.handleLogout = () => {
+            if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) { signOut(auth).then(() => redirectToLogin()); }
+        }
 
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('save-btn');
-            btn.disabled = true;
+            btn.disabled = true; btn.innerHTML = 'กำลังบันทึก...';
             const inputPhotoUrl = document.getElementById('edit-photo-url').value.trim();
             const displayPhotoUrl = convertDriveLink(inputPhotoUrl);
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', auth.currentUser.uid), {
-                name: document.getElementById('edit-name').value,
-                phone: document.getElementById('edit-phone').value,
-                address: document.getElementById('edit-address').value,
-                originalPhotoURL: inputPhotoUrl,
-                photoURL: displayPhotoUrl
-            });
-            alert('✅ บันทึกข้อมูลสำเร็จ!');
-            window.location.reload();
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', auth.currentUser.uid), {
+                    name: document.getElementById('edit-name').value,
+                    phone: document.getElementById('edit-phone').value,
+                    address: document.getElementById('edit-address').value,
+                    originalPhotoURL: inputPhotoUrl,
+                    photoURL: displayPhotoUrl
+                });
+                alert('✅ บันทึกข้อมูลสำเร็จ!');
+                window.location.reload();
+            } catch(e) { alert(e.message); btn.disabled = false; btn.innerHTML = 'บันทึกข้อมูล'; }
         });
 
         window.changeProfilePicture = () => {
-            const url = prompt("วางลิงก์รูปภาพ (Google Drive หรือ URL ทั่วไป):");
-            if(url) document.getElementById('edit-photo-url').value = url;
+            const url = prompt("วางลิงก์รูปภาพ (Google Drive หรือ URL ทั่วไป):", document.getElementById('edit-photo-url').value);
+            if(url) {
+                document.getElementById('edit-photo-url').value = url;
+                document.getElementById('main-profile-img').src = convertDriveLink(url);
+            }
         }
     </script>
 </body>
