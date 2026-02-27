@@ -3,28 +3,14 @@
  * วิธีใช้: เรียกใช้ฟังก์ชัน renderUI(userProfile, activePageId) ในทุกหน้า
  */
 
-export function renderUI(userProfile, activePageId) {
+export function renderUI(userProfile, activePageId, isInitialLoad = false) {
     const logoUrl = "https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27";
     const avatarUrl = userProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=27272a&color=eab308&size=128`;
     const isAdmin = userProfile.role === 'admin';
     const isManager = userProfile.role === 'manager';
 
-    // 1. จัดการ Sidebar (เพิ่ม CSS สำหรับโหมด Collapsed ย่อขนาดให้แคบลงอีก)
+    // 1. จัดการ Sidebar (ใช้ CSS โหมด Collapsed ย่อขนาด)
     const sidebarHTML = `
-        <style>
-            #app-sidebar { transition: width 0.3s ease; }
-            /* เมื่อย่อเมนู จะเหลือความกว้างแค่ 4rem (64px) เพื่อให้แคบที่สุด */
-            #app-sidebar.collapsed { width: 4rem; }
-            #app-sidebar.collapsed .sidebar-text { display: none; }
-            #app-sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
-            #app-sidebar.collapsed .nav-item i { margin-left: 0 !important; margin-right: 0 !important; font-size: 1.25rem; }
-            #app-sidebar.collapsed .logo-container { padding: 1rem 0; } /* ลด padding รอบโลโก้ตอนย่อ */
-            #app-sidebar.collapsed .logo-container img { margin-right: 0; width: 2rem; height: 2rem; min-width: 2rem; } /* ย่อโลโก้ลงเล็กน้อย */
-            #app-sidebar.collapsed .admin-panel-text { display: none; }
-            #app-sidebar.collapsed .footer-text { display: none; }
-            #app-sidebar.collapsed .collapsed-footer-text { display: block; }
-        </style>
-        
         <aside id="app-sidebar" class="w-64 bg-zinc-900 text-zinc-300 flex flex-col transition-all duration-300 shadow-xl z-20 h-full overflow-hidden shrink-0">
             <div class="logo-container p-5 flex items-center justify-center border-b border-zinc-800 transition-all">
                 <img src="${logoUrl}" alt="Lamsang Logo" class="h-10 w-10 min-w-[2.5rem] object-contain rounded bg-white p-1 mr-3 shrink-0 transition-all">
@@ -110,13 +96,34 @@ export function renderUI(userProfile, activePageId) {
     if (sidebarTarget) sidebarTarget.innerHTML = sidebarHTML;
     if (topbarTarget) topbarTarget.innerHTML = topbarHTML;
 
-    // เพิ่ม CSS ให้หน้าเว็บค่อยๆ ปรากฏขึ้น (Fade In) แทนการใช้ตัวโหลดหมุนๆ
-    const styleEl = document.createElement('style');
-    styleEl.innerHTML = `
-        body main { animation: softFadeIn 0.3s ease-out forwards; }
-        @keyframes softFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    `;
-    document.head.appendChild(styleEl);
+    // ========================================================
+    // จัดการหน้าจอหมุนโหลด (Spinner Overlay) เฉพาะพื้นที่เนื้อหา
+    // ========================================================
+    if (isInitialLoad) {
+        const mainEl = document.querySelector('main');
+        if (mainEl && !document.getElementById('page-transition-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.id = 'page-transition-overlay';
+            overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Loading Workspace...</p>';
+            mainEl.appendChild(overlay);
+        }
+    } else {
+        // เมื่อข้อมูลจริงโหลดเสร็จแล้ว ให้ซ่อน Overlay หมุนๆ ทิ้งอย่างนุ่มนวล
+        const overlay = document.getElementById('page-transition-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 300);
+        }
+    }
+
+    // ดักจับเวลากดเปลี่ยนเมนู เพื่อโชว์หน้าโหลดก่อนเด้งไปไฟล์ใหม่
+    setTimeout(() => {
+        const links = document.querySelectorAll('#app-sidebar a.nav-item');
+        links.forEach(link => {
+            link.removeEventListener('click', handleMenuClick);
+            link.addEventListener('click', handleMenuClick);
+        });
+    }, 50);
 
     // 3. ฟังก์ชันสำหรับย่อ/ขยาย Sidebar
     if (!window.toggleSidebar) {
@@ -136,3 +143,93 @@ export function renderUI(userProfile, activePageId) {
         }, 50);
     }
 }
+
+// -------------------------------------------------------------
+// ฟังก์ชันทำงานตอนกดเปลี่ยนแท็บเมนู (โชว์หมุนๆ ค้างไว้)
+// -------------------------------------------------------------
+function handleMenuClick(e) {
+    const href = e.currentTarget.getAttribute('href');
+    // ถ้าลิงก์ไม่ได้ชี้ไปหน้าปัจจุบัน และไม่ใช่ #
+    if (href && href !== '#' && !e.currentTarget.classList.contains('bg-yellow-500')) {
+        e.preventDefault();
+        
+        // โชว์หน้าโหลด (หมุนๆ) ทับแค่ส่วนเนื้อหา (main) โดยเหลือ Topbar/Sidebar ไว้
+        const mainEl = document.querySelector('main');
+        if (mainEl) {
+            let overlay = document.getElementById('page-transition-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'page-transition-overlay';
+                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Switching Workspace...</p>';
+                mainEl.appendChild(overlay);
+            }
+            overlay.style.opacity = '1';
+        }
+        
+        // หน่วงเวลาเล็กน้อยให้ Animation ทำงานก่อนเปลี่ยนหน้าจริง
+        setTimeout(() => { window.location.href = href; }, 100);
+    }
+}
+
+// =========================================================
+// IIFE: โหลด Sidebar / Topbar ขึ้นมาโชว์ "ทันที" ตั้งแต่ยังไม่โหลดข้อมูล
+// เพื่อให้ดูเหมือนว่าเมนู "ค้างไว้" อย่างต่อเนื่องเมื่อสลับแท็บ
+// =========================================================
+(function renderInitialSkeleton() {
+    // ฝัง CSS ที่ใช้ควบคุมโครงสร้างการย่อ/ขยาย และการโหลดพื้นหลัง
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+        #page-transition-overlay {
+            position: absolute;
+            top: 64px; /* ความสูงของ Topbar (h-16 = 64px) */
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #fafafa; /* สีพื้นหลังกลืนไปกับข้อมูล */
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s ease;
+        }
+        main { position: relative; }
+        
+        /* Smooth fade in for content */
+        main > div:not(#topbar-placeholder):not(#page-transition-overlay) {
+            animation: softFadeIn 0.3s ease-out forwards;
+        }
+        @keyframes softFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Sidebar styles */
+        #app-sidebar { transition: width 0.3s ease; }
+        #app-sidebar.collapsed { width: 4rem; }
+        #app-sidebar.collapsed .sidebar-text { display: none; }
+        #app-sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        #app-sidebar.collapsed .nav-item i { margin-left: 0 !important; margin-right: 0 !important; font-size: 1.25rem; }
+        #app-sidebar.collapsed .logo-container { padding: 1rem 0; } 
+        #app-sidebar.collapsed .logo-container img { margin-right: 0; width: 2rem; height: 2rem; min-width: 2rem; } 
+        #app-sidebar.collapsed .admin-panel-text { display: none; }
+        #app-sidebar.collapsed .footer-text { display: none; }
+        #app-sidebar.collapsed .collapsed-footer-text { display: block; }
+    `;
+    document.head.appendChild(styleEl);
+
+    // เดาหน้าปัจจุบันจาก URL หรือ Title เพื่อไฮไลท์สีเมนูให้ถูกตั้งแต่แรก
+    const currentPath = window.location.pathname;
+    const pageTitle = document.title;
+    let guessedPageId = 'home';
+    if (currentPath.includes('time') || pageTitle.includes('เวลาทำงาน')) guessedPageId = 'time';
+    else if (currentPath.includes('profile') || pageTitle.includes('โปรไฟล์')) guessedPageId = 'profile';
+    else if (currentPath.includes('add-employee') || pageTitle.includes('จัดการพนักงาน')) guessedPageId = 'add-employee';
+
+    // สร้างข้อมูลชั่วคราวเพื่อวาด UI ก่อนที่ Firebase จะโหลดเสร็จ
+    const dummyUser = {
+        name: "Loading...",
+        role: "...",
+        photoURL: "https://ui-avatars.com/api/?name=L&background=f4f4f5&color=a1a1aa"
+    };
+    
+    // สั่งวาด UI ทันที (isInitialLoad = true) เพื่อล็อคเมนูให้ค้างไว้
+    renderUI(dummyUser, guessedPageId, true);
+})();
