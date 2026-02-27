@@ -20,6 +20,7 @@
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
+        .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
         
@@ -132,7 +133,21 @@
                                     <div><label class="input-label">เบอร์โทรศัพท์ฉุกเฉิน</label><input type="tel" id="f-emergency-phone" class="input-field" placeholder="08X-XXX-XXXX"></div>
                                 </div>
 
-                                <div class="flex justify-end pt-4">
+                                <!-- ความปลอดภัย (เปลี่ยนรหัสผ่าน) -->
+                                <h4 class="text-sm font-black text-zinc-700 mb-4 pb-2 border-b border-zinc-100"><i class="fa-solid fa-lock text-slate-500 mr-2"></i>ความปลอดภัย (Security)</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                    <div>
+                                        <label class="input-label">ตั้งรหัสผ่านใหม่ (New Password)</label>
+                                        <input type="password" id="f-new-password" class="input-field border-slate-200" placeholder="เว้นว่างไว้หากไม่ต้องการเปลี่ยน">
+                                        <p class="text-[10px] text-zinc-400 mt-1">*ความยาวอย่างน้อย 6 ตัวอักษร</p>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">ยืนยันรหัสผ่านใหม่ (Confirm Password)</label>
+                                        <input type="password" id="f-confirm-password" class="input-field border-slate-200" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง">
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end pt-4 border-t border-zinc-100">
                                     <button type="submit" id="save-btn" class="px-10 py-4 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-md flex items-center tracking-widest uppercase text-sm">
                                         <i class="fa-solid fa-save mr-2"></i> บันทึกข้อมูลส่วนตัว
                                     </button>
@@ -185,6 +200,16 @@
         </div>
     </main>
 
+    <!-- Overlay รอโหลด -->
+    <div id="app-loader" class="loading-overlay">
+        <div class="text-center">
+            <div class="relative inline-block mb-4">
+                <i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500"></i>
+            </div>
+            <p class="text-white text-xs font-black tracking-[0.2em] uppercase">Loading Profile</p>
+        </div>
+    </div>
+
     <!-- Script สำหรับทำงานระบบที่อยู่ Auto-complete -->
     <script>
         $(document).ready(function () {
@@ -201,7 +226,8 @@
     <!-- ✅ นำเข้าไฟล์ Shared Component -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // เพิ่ม updatePassword จาก firebase-auth
+        import { getAuth, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { renderUI } from "./shared_components.js";
 
@@ -234,6 +260,7 @@
                     
                     // Render Sidebar & Topbar
                     renderUI(data, 'profile');
+                    if(document.getElementById('app-loader')) { document.getElementById('app-loader').style.display = 'none'; }
 
                     // --- การ์ดโปรไฟล์ด้านซ้าย ---
                     const avatarUrl = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=27272a&color=eab308&size=128`;
@@ -299,13 +326,46 @@
 
         window.handleLogout = () => { if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) signOut(auth).then(() => redirectToLogin()); }
 
-        // เมื่อกดบันทึกข้อมูลส่วนตัว (เซฟเฉพาะฟิลด์ที่ได้รับอนุญาต)
+        // เมื่อกดบันทึกข้อมูลส่วนตัว (เซฟเฉพาะฟิลด์ที่ได้รับอนุญาต และ อัปเดตรหัสผ่านถ้ามีการกรอก)
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('save-btn');
             const originalBtnHTML = btn.innerHTML;
             btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
             
+            const newPassword = document.getElementById('f-new-password').value;
+            const confirmPassword = document.getElementById('f-confirm-password').value;
+
+            // ตรวจสอบและเปลี่ยนรหัสผ่าน
+            if (newPassword || confirmPassword) {
+                if (newPassword !== confirmPassword) {
+                    alert("❌ รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน");
+                    btn.disabled = false; btn.innerHTML = originalBtnHTML;
+                    return;
+                }
+                if (newPassword.length < 6) {
+                    alert("❌ รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
+                    btn.disabled = false; btn.innerHTML = originalBtnHTML;
+                    return;
+                }
+                
+                try {
+                    await updatePassword(auth.currentUser, newPassword);
+                    alert("✅ เปลี่ยนรหัสผ่านสำเร็จ!");
+                    document.getElementById('f-new-password').value = '';
+                    document.getElementById('f-confirm-password').value = '';
+                } catch (error) {
+                    // หากไม่ได้เข้าสู่ระบบนานเกินไป Firebase จะบังคับให้ล็อกอินใหม่เพื่อความปลอดภัย
+                    if (error.code === 'auth/requires-recent-login') {
+                        alert("⚠️ เซสชั่นหมดอายุหรือไม่ปลอดภัย กรุณาออกจากระบบและเข้าสู่ระบบใหม่อีกครั้งเพื่อเปลี่ยนรหัสผ่าน");
+                    } else {
+                        alert("❌ เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: " + error.message);
+                    }
+                    btn.disabled = false; btn.innerHTML = originalBtnHTML;
+                    return;
+                }
+            }
+
             const inputPhotoUrl = document.getElementById('edit-photo-url').value.trim();
             const displayPhotoUrl = convertDriveLink(inputPhotoUrl);
             
@@ -326,7 +386,7 @@
                     originalPhotoURL: inputPhotoUrl,
                     photoURL: displayPhotoUrl
                 });
-                alert('✅ อัปเดตข้อมูลส่วนตัวสำเร็จ!');
+                alert('✅ อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว!');
                 window.location.reload();
             } catch(e) { 
                 alert("เกิดข้อผิดพลาด: " + e.message); 
