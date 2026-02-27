@@ -12,80 +12,360 @@
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
         .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
+        .locked-field {
+            width: 100%;
+            border: 2px solid #f4f4f5;
+            background-color: #f4f4f5;
+            color: #71717a;
+            border-radius: 0.75rem;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: not-allowed;
+            user-select: none;
+        }
+        .editable-field {
+            width: 100%;
+            border: 2px solid #e4e4e7;
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.2s;
+            color: #27272a;
+        }
+        .editable-field:focus {
+            border-color: #eab308;
+            box-shadow: 0 0 0 4px rgba(234,179,8,0.1);
+        }
+        .section-header {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #a1a1aa;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f4f4f5;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .field-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #a1a1aa;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.3rem;
+        }
+        .badge-locked {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.6rem;
+            font-weight: 800;
+            background: #f4f4f5;
+            color: #a1a1aa;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-editable {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.6rem;
+            font-weight: 800;
+            background: #fef9c3;
+            color: #92400e;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-zinc-800">
 
-    <!-- ✅ จุดวาง Sidebar ส่วนกลาง -->
     <div id="sidebar-placeholder"></div>
 
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
-        <!-- ✅ จุดวาง Topbar ส่วนกลาง -->
         <div id="topbar-placeholder"></div>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-8 bg-zinc-50">
-            <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- เนื้อหาโปรไฟล์ (เหมือนเดิม) -->
-                <div class="md:col-span-1">
-                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-8 text-center relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-full h-24 bg-zinc-900"></div>
-                        <div class="relative w-32 h-32 mx-auto mt-8 mb-4 avatar-container cursor-pointer rounded-full border-4 border-white shadow-md group">
-                            <img src="" id="main-profile-img" class="w-full h-full rounded-full object-cover">
-                            <div class="avatar-overlay absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 transition-opacity duration-300" onclick="changeProfilePicture()">
-                                <i class="fa-solid fa-link text-white text-xl"></i>
+            <div class="max-w-5xl mx-auto space-y-6">
+
+                <!-- ============================================================ -->
+                <!-- CARD 1: Avatar + ข้อมูลสรุป (Profile Card) -->
+                <!-- ============================================================ -->
+                <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
+                    <div class="h-24 bg-zinc-900 relative">
+                        <div class="absolute bottom-0 left-8 translate-y-1/2 flex items-end gap-4">
+                            <div class="relative w-24 h-24 avatar-container cursor-pointer rounded-full border-4 border-white shadow-md" onclick="changeProfilePicture()">
+                                <img src="" id="main-profile-img" class="w-full h-full rounded-full object-cover bg-zinc-200">
+                                <div class="avatar-overlay absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 transition-opacity duration-300">
+                                    <i class="fa-solid fa-camera text-white text-lg"></i>
+                                </div>
                             </div>
                         </div>
-                        <h3 class="text-xl font-black text-zinc-800" id="display-name">-</h3>
-                        <p class="text-sm text-yellow-600 font-bold mb-1" id="display-role">-</p>
-                        <p class="text-xs text-zinc-400 mb-6" id="display-branch">-</p>
-                        <div class="border-t border-zinc-100 pt-6 text-left text-sm space-y-4">
-                            <div class="flex justify-between font-medium">
-                                <span class="text-zinc-400">รหัสพนักงาน:</span>
-                                <span id="display-emp-code">-</span>
+                    </div>
+                    <div class="pt-16 pb-6 px-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-black text-zinc-800" id="display-name">-</h2>
+                            <div class="flex items-center gap-3 mt-1 flex-wrap">
+                                <span class="text-yellow-600 font-bold text-sm" id="display-position">-</span>
+                                <span class="text-zinc-300">|</span>
+                                <span class="text-zinc-500 text-sm" id="display-branch">-</span>
+                                <span class="text-zinc-300">|</span>
+                                <span id="display-status-badge" class="status-badge">-</span>
                             </div>
-                            <div class="flex justify-between font-medium">
-                                <span class="text-zinc-400">เริ่มงานเมื่อ:</span>
-                                <span id="display-start-date">-</span>
+                            <div class="flex items-center gap-6 mt-3 text-xs text-zinc-400 flex-wrap">
+                                <span><i class="fa-solid fa-id-card mr-1 text-yellow-500"></i> รหัส: <span class="font-bold text-zinc-600" id="display-emp-code">-</span></span>
+                                <span><i class="fa-solid fa-calendar-plus mr-1 text-yellow-500"></i> เริ่มงาน: <span class="font-bold text-zinc-600" id="display-start-date">-</span></span>
+                                <span><i class="fa-solid fa-shield-halved mr-1 text-yellow-500"></i> สิทธิ์: <span class="font-bold text-zinc-600 uppercase" id="display-role">-</span></span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="text-center bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 min-w-[90px]">
+                                <p class="text-[10px] font-black text-zinc-400 uppercase tracking-wider">ประเภท</p>
+                                <p class="font-bold text-sm text-zinc-700 mt-0.5" id="display-emp-type">-</p>
+                            </div>
+                            <div class="text-center bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 min-w-[90px]">
+                                <p class="text-[10px] font-black text-zinc-400 uppercase tracking-wider">อายุงาน</p>
+                                <p class="font-bold text-sm text-zinc-700 mt-0.5" id="display-tenure">-</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="md:col-span-2">
-                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                        <div class="bg-zinc-900 px-6 py-4 text-white font-bold">จัดการข้อมูลส่วนตัว</div>
-                        <form id="profile-form" class="p-6">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div class="sm:col-span-2">
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs">ลิงก์รูปโปรไฟล์ (Direct Link/Google Drive)</label>
-                                    <input type="url" id="edit-photo-url" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500" placeholder="https://...">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs text-zinc-400 italic">ชื่อ-นามสกุล (พนักงานแก้ได้)</label>
-                                    <input type="text" id="edit-name" required class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 font-bold">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs text-zinc-400 italic">เบอร์โทรศัพท์</label>
-                                    <input type="tel" id="edit-phone" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500">
-                                </div>
-                                <div class="sm:col-span-2">
-                                    <label class="block text-sm font-bold text-zinc-700 mb-1 text-xs text-zinc-400 italic">ที่อยู่ปัจจุบัน</label>
-                                    <textarea id="edit-address" rows="2" class="w-full border border-zinc-300 rounded-xl px-4 py-3 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
-                                </div>
-                                <div class="sm:col-span-2 pt-4 border-t border-zinc-100">
-                                    <p class="text-[10px] font-black text-zinc-300 mb-4 uppercase tracking-widest">ข้อมูลภายในล็อกไว้โดย HR</p>
-                                </div>
-                                <div><label class="block text-[10px] font-bold text-zinc-400 mb-1 uppercase">อีเมลพนักงาน</label><input type="text" id="edit-email" readonly class="w-full border border-zinc-200 bg-zinc-50 text-zinc-400 rounded-xl px-4 py-2 cursor-not-allowed text-sm"></div>
-                                <div><label class="block text-[10px] font-bold text-zinc-400 mb-1 uppercase">ฐานเงินเดือน</label><input type="text" id="edit-salary" readonly class="w-full border border-zinc-200 bg-zinc-50 text-green-600 font-black rounded-xl px-4 py-2 cursor-not-allowed text-sm"></div>
-                            </div>
-                            <div class="mt-8 flex justify-end">
-                                <button type="submit" id="save-btn" class="px-10 py-3 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-lg flex items-center">
-                                    <i class="fa-solid fa-save mr-2"></i> บันทึกข้อมูล
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                <!-- ============================================================ -->
+                <!-- LEGEND -->
+                <!-- ============================================================ -->
+                <div class="flex items-center gap-4 text-xs text-zinc-500 px-1">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> แก้ไขได้โดยพนักงาน</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-zinc-300 inline-block"></span> ล็อกโดย HR (ไม่สามารถแก้ไขได้)</span>
                 </div>
+
+                <!-- ============================================================ -->
+                <!-- FORM: ข้อมูลทั้งหมด -->
+                <!-- ============================================================ -->
+                <form id="profile-form">
+                    
+                    <!-- ── หมวด 1: ข้อมูลส่วนบุคคล ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-6">
+                        <p class="section-header"><i class="fa-solid fa-address-card text-yellow-500"></i> ข้อมูลส่วนบุคคล</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-4">
+
+                            <div>
+                                <label class="field-label">คำนำหน้า <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-title">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ชื่อจริง (TH) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-fname-th">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">นามสกุล (TH) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-lname-th">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ชื่อเล่น <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-nickname" class="editable-field" placeholder="ชื่อเล่น">
+                            </div>
+
+                            <div>
+                                <label class="field-label">First Name (EN) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-fname-en">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">Last Name (EN) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-lname-en">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">เพศ <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-gender">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">วันเกิด <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-dob">-</div>
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="field-label">เลขบัตรประชาชน <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-idcard">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">รหัสพนักงาน <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-emp-code">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">วันเริ่มทำงาน <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-start-date">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── หมวด 2: ข้อมูลการติดต่อ ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-6">
+                        <p class="section-header"><i class="fa-solid fa-address-book text-yellow-500"></i> ข้อมูลการติดต่อ</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-5 gap-y-4">
+
+                            <div>
+                                <label class="field-label">เบอร์โทรศัพท์ <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="tel" id="edit-phone" class="editable-field" placeholder="0XX-XXX-XXXX">
+                            </div>
+                            <div>
+                                <label class="field-label">อีเมล (Login) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-email">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">Line User ID <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-line-id" class="editable-field" placeholder="@line_id">
+                            </div>
+
+                            <div class="md:col-span-3">
+                                <label class="field-label">ที่อยู่ (บ้านเลขที่, ซอย, ถนน) <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-address" class="editable-field" placeholder="บ้านเลขที่, ซอย, ถนน">
+                            </div>
+
+                            <div>
+                                <label class="field-label">จังหวัด <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-province" class="editable-field" placeholder="จังหวัด">
+                            </div>
+                            <div>
+                                <label class="field-label">เขต/อำเภอ <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-district" class="editable-field" placeholder="เขต/อำเภอ">
+                            </div>
+                            <div>
+                                <label class="field-label">แขวง/ตำบล <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-subdistrict" class="editable-field" placeholder="แขวง/ตำบล">
+                            </div>
+                            <div>
+                                <label class="field-label">รหัสไปรษณีย์ <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-zipcode" class="editable-field" placeholder="XXXXX">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── หมวด 3: ข้อมูลการทำงาน ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-6">
+                        <p class="section-header"><i class="fa-solid fa-briefcase text-yellow-500"></i> ข้อมูลการทำงาน</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-4">
+                            <div>
+                                <label class="field-label">สาขา/แผนก <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-branch">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ตำแหน่ง <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-position">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ประเภทพนักงาน <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-emp-type">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">สถานะ <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-status">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">สิทธิ์ในระบบ <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-role">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── หมวด 4: ข้อมูลเงินเดือนและบัญชี ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-6">
+                        <p class="section-header"><i class="fa-solid fa-coins text-yellow-500"></i> ข้อมูลเงินเดือนและบัญชี</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-4">
+                            <div>
+                                <label class="field-label">ฐานเงินเดือน (รายเดือน) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field text-green-600 font-black" id="v-salary-month">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ฐานเงินวัน (รายวัน) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-salary-day">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ฐานเงินชั่วโมง <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-salary-hour">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">คอมมิชชั่น (%) <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-commission">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ช่องทางรับเงิน <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-payment-method">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ธนาคาร <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-bank-name">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">เลขที่บัญชี <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-bank-acc">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">ประกันสังคม <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-sso">-</div>
+                            </div>
+                            <div>
+                                <label class="field-label">หักภาษี ณ ที่จ่าย <span class="badge-locked"><i class="fa-solid fa-lock"></i> HR Lock</span></label>
+                                <div class="locked-field" id="v-tax">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── หมวด 5: ผู้ติดต่อฉุกเฉิน ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-6">
+                        <p class="section-header"><i class="fa-solid fa-truck-medical text-yellow-500"></i> ผู้ติดต่อฉุกเฉิน</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                            <div>
+                                <label class="field-label">ชื่อผู้ติดต่อฉุกเฉิน <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="text" id="edit-emergency-name" class="editable-field" placeholder="ชื่อ-นามสกุล">
+                            </div>
+                            <div>
+                                <label class="field-label">เบอร์ติดต่อฉุกเฉิน <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                                <input type="tel" id="edit-emergency-phone" class="editable-field" placeholder="0XX-XXX-XXXX">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── หมวด 6: รูปโปรไฟล์ ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 mb-6">
+                        <p class="section-header"><i class="fa-solid fa-image text-yellow-500"></i> รูปโปรไฟล์</p>
+                        <div>
+                            <label class="field-label">ลิงก์รูปโปรไฟล์ (Direct Link / Google Drive) <span class="badge-editable"><i class="fa-solid fa-pen"></i> แก้ไขได้</span></label>
+                            <input type="url" id="edit-photo-url" class="editable-field" placeholder="https://drive.google.com/... หรือ URL รูปภาพโดยตรง">
+                        </div>
+                    </div>
+
+                    <!-- ── ปุ่มบันทึก ── -->
+                    <div class="flex justify-end gap-3 pb-4">
+                        <button type="reset" class="px-6 py-3 bg-zinc-100 text-zinc-500 rounded-xl hover:bg-zinc-200 transition-all font-bold text-sm">
+                            ล้างการแก้ไข
+                        </button>
+                        <button type="submit" id="save-btn" class="px-10 py-3 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-lg flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-save"></i> บันทึกข้อมูล
+                        </button>
+                    </div>
+                </form>
+
             </div>
         </div>
     </main>
@@ -94,13 +374,10 @@
         <div class="text-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-yellow-500 mb-4"></i><p class="text-white text-xs font-bold tracking-widest uppercase">Lamsang Group</p></div>
     </div>
 
-    <!-- ✅ นำเข้าไฟล์ Shared Component (ต้องเรียกเป็น type="module") -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // เรียกใช้ฟังก์ชันจากไฟล์ภายนอก
         import { renderUI } from "./shared_components.js";
 
         const firebaseConfig = {
@@ -112,87 +389,195 @@
             appId: "1:549158917606:web:cdade4e855554e57fab227",
             measurementId: "G-1FYRH1EL2W"
         };
-        
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = 'bizhris-phichit';
 
-        function redirectToLogin() {
-            try { if (window.location.protocol === 'about:' || window.location.hostname === '') throw new Error(); window.location.href = 'index.html'; } 
-            catch (e) { document.body.innerHTML = `<div class="flex h-screen items-center justify-center bg-zinc-900 text-white p-6 text-center"><div><i class="fa-solid fa-lock text-6xl text-yellow-500 mb-6"></i><h1 class="text-3xl font-bold mb-2 text-yellow-500">SESSION EXPIRED</h1><p class="text-zinc-400">กรุณากลับไปเปิดไฟล์ index.html ใหม่ครับ</p></div></div>`; }
+        // ── ฟังก์ชัน Helper ──
+        function set(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value || '-';
         }
-
+        function val(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+        }
         function convertDriveLink(url) {
-            if (!url) return "";
+            if (!url) return '';
             if (url.includes('drive.google.com')) {
                 const match = url.match(/\/d\/(.+?)\//) || url.match(/id=(.+?)(&|$)/);
                 if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`;
             }
-            return url; 
+            return url;
         }
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-                const docSnap = await getDoc(userRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    // ✅ สั่ง Render Sidebar และ Topbar จากส่วนกลาง (หน้าโปรไฟล์ ID คือ 'profile')
-                    renderUI(data, 'profile');
-                    
-                    const loader = document.getElementById('app-loader');
-                    if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }
-
-                    const avatarUrl = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=27272a&color=eab308&size=128`;
-                    document.getElementById('main-profile-img').src = avatarUrl;
-                    document.getElementById('display-name').textContent = data.name;
-                    document.getElementById('display-role').textContent = data.role.toUpperCase();
-                    document.getElementById('display-branch').textContent = data.branch;
-                    document.getElementById('display-emp-code').textContent = data.employeeCode;
-                    document.getElementById('display-start-date').textContent = new Date(data.startDate).toLocaleDateString('th-TH');
-                    document.getElementById('edit-name').value = data.name;
-                    document.getElementById('edit-phone').value = data.phone || '';
-                    document.getElementById('edit-address').value = data.address || '';
-                    document.getElementById('edit-email').value = data.email;
-                    document.getElementById('edit-photo-url').value = data.originalPhotoURL || data.photoURL || '';
-                    document.getElementById('edit-salary').value = `฿ ${Number(data.baseSalary).toLocaleString()}`;
-                }
-            } else { redirectToLogin(); }
-        });
-
-        // ฟังก์ชัน Logout ต้องผูกกับ window เพื่อให้ปุ่มใน Shared Component เรียกใช้ได้
-        window.handleLogout = () => {
-            if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) { signOut(auth).then(() => redirectToLogin()); }
+        function calcTenure(startDate) {
+            if (!startDate) return '-';
+            const start = new Date(startDate);
+            const now = new Date();
+            const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+            if (months < 12) return `${months} เดือน`;
+            const years = Math.floor(months / 12);
+            const rem = months % 12;
+            return `${years} ปี ${rem > 0 ? rem + ' เดือน' : ''}`.trim();
         }
-
-        document.getElementById('profile-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('save-btn');
-            btn.disabled = true; btn.innerHTML = 'กำลังบันทึก...';
-            const inputPhotoUrl = document.getElementById('edit-photo-url').value.trim();
-            const displayPhotoUrl = convertDriveLink(inputPhotoUrl);
+        function statusBadge(status) {
+            const map = {
+                active:     { text: 'Active',     cls: 'bg-green-100 text-green-700' },
+                probation:  { text: 'Probation',  cls: 'bg-yellow-100 text-yellow-700' },
+                resigned:   { text: 'Resigned',   cls: 'bg-red-100 text-red-600' }
+            };
+            return map[status] || { text: status, cls: 'bg-zinc-100 text-zinc-500' };
+        }
+        function redirectToLogin() {
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', auth.currentUser.uid), {
-                    name: document.getElementById('edit-name').value,
-                    phone: document.getElementById('edit-phone').value,
-                    address: document.getElementById('edit-address').value,
-                    originalPhotoURL: inputPhotoUrl,
-                    photoURL: displayPhotoUrl
-                });
-                alert('✅ บันทึกข้อมูลสำเร็จ!');
-                window.location.reload();
-            } catch(e) { alert(e.message); btn.disabled = false; btn.innerHTML = 'บันทึกข้อมูล'; }
+                if (window.location.protocol === 'about:' || window.location.hostname === '') throw new Error();
+                window.location.href = 'index.html';
+            } catch (e) {
+                document.body.innerHTML = `<div class="flex h-screen items-center justify-center bg-zinc-900 text-white p-6 text-center"><div><i class="fa-solid fa-lock text-6xl text-yellow-500 mb-6"></i><h1 class="text-3xl font-bold mb-2 text-yellow-500">SESSION EXPIRED</h1><p class="text-zinc-400">กรุณากลับไปเปิดไฟล์ index.html ใหม่</p></div></div>`;
+            }
+        }
+
+        // ── Auth State ──
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) return redirectToLogin();
+
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+            const docSnap = await getDoc(userRef);
+            if (!docSnap.exists()) return redirectToLogin();
+
+            const d = docSnap.data();
+
+            // Render shared UI
+            renderUI(d, 'profile');
+
+            // Hide loader
+            const loader = document.getElementById('app-loader');
+            if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }
+
+            // ── รูปโปรไฟล์ ──
+            const avatarUrl = d.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=27272a&color=eab308&size=128`;
+            document.getElementById('main-profile-img').src = avatarUrl;
+
+            // ── Card header ──
+            set('display-name', d.name);
+            set('display-position', d.position || d.role);
+            set('display-branch', d.branch);
+            set('display-emp-code', d.employeeCode);
+            set('display-start-date', d.startDate ? new Date(d.startDate).toLocaleDateString('th-TH') : '-');
+            set('display-role', d.role?.toUpperCase());
+            set('display-emp-type', d.empType || '-');
+            set('display-tenure', calcTenure(d.startDate));
+
+            const sb = statusBadge(d.status);
+            const sbEl = document.getElementById('display-status-badge');
+            sbEl.textContent = sb.text;
+            sbEl.className = `status-badge ${sb.cls}`;
+
+            // ── หมวด 1: ข้อมูลส่วนบุคคล (ล็อก) ──
+            set('v-title', d.titleTH);
+            set('v-fname-th', d.fnameTH);
+            set('v-lname-th', d.lnameTH);
+            set('v-fname-en', d.fnameEN);
+            set('v-lname-en', d.lnameEN);
+            set('v-gender', d.gender);
+            set('v-dob', d.dob ? new Date(d.dob).toLocaleDateString('th-TH') : '-');
+            // ซ่อนเลขบัตรบางส่วน (แสดงเฉพาะ 4 ตัวท้าย)
+            set('v-idcard', d.idCard ? d.idCard.replace(/^(\d+)(\d{4})$/, (_, h, t) => '*'.repeat(h.length) + t) : '-');
+            set('v-emp-code', d.employeeCode);
+            set('v-start-date', d.startDate ? new Date(d.startDate).toLocaleDateString('th-TH') : '-');
+
+            // ── หมวด 1: ข้อมูลส่วนบุคคล (แก้ไขได้) ──
+            val('edit-nickname', d.nickname);
+
+            // ── หมวด 2: การติดต่อ ──
+            set('v-email', d.email);
+            val('edit-phone', d.phone);
+            val('edit-line-id', d.lineId);
+            val('edit-address', d.address);
+            val('edit-province', d.province);
+            val('edit-district', d.district);
+            val('edit-subdistrict', d.subdistrict);
+            val('edit-zipcode', d.zipcode);
+
+            // ── หมวด 3: การทำงาน (ล็อก) ──
+            set('v-branch', d.branch);
+            set('v-position', d.position);
+            set('v-emp-type', d.empType);
+            set('v-status', d.status);
+            set('v-role', d.role?.toUpperCase());
+
+            // ── หมวด 4: เงินเดือน (ล็อก) ──
+            set('v-salary-month', d.baseSalary ? `฿ ${Number(d.baseSalary).toLocaleString()}` : '-');
+            set('v-salary-day',   d.dailyWage  ? `฿ ${Number(d.dailyWage).toLocaleString()}`  : '-');
+            set('v-salary-hour',  d.hourlyWage ? `฿ ${Number(d.hourlyWage).toLocaleString()}`  : '-');
+            set('v-commission',   d.commission ? `${d.commission}%` : '-');
+            set('v-payment-method', d.paymentMethod);
+            set('v-bank-name', d.bankName);
+            set('v-bank-acc',  d.bankAccount ? '****' + d.bankAccount.slice(-4) : '-');
+            set('v-sso', d.sso === 'Yes' ? 'เข้าร่วม (5%)' : 'ไม่เข้าร่วม');
+            set('v-tax', d.taxDeduction === 'No' ? 'ไม่หัก' : d.taxDeduction === 'Yes' ? 'หักตามขั้นบันได' : d.taxDeduction === '3' ? 'หัก 3%' : d.taxDeduction || '-');
+
+            // ── หมวด 5: ฉุกเฉิน (แก้ไขได้) ──
+            val('edit-emergency-name', d.emergencyName);
+            val('edit-emergency-phone', d.emergencyPhone);
+
+            // ── หมวด 6: รูปโปรไฟล์ ──
+            val('edit-photo-url', d.originalPhotoURL || d.photoURL || '');
         });
 
+        // ── Logout ──
+        window.handleLogout = () => {
+            if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+                signOut(auth).then(() => redirectToLogin());
+            }
+        };
+
+        // ── เปลี่ยนรูปโปรไฟล์ด้วยคลิกที่รูป ──
         window.changeProfilePicture = () => {
-            const url = prompt("วางลิงก์รูปภาพ (Google Drive หรือ URL ทั่วไป):", document.getElementById('edit-photo-url').value);
-            if(url) {
+            const cur = document.getElementById('edit-photo-url').value;
+            const url = prompt('วางลิงก์รูปภาพ (Google Drive หรือ URL ทั่วไป):', cur);
+            if (url) {
                 document.getElementById('edit-photo-url').value = url;
                 document.getElementById('main-profile-img').src = convertDriveLink(url);
             }
-        }
+        };
+
+        // ── บันทึกฟอร์ม ──
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังบันทึก...';
+
+            const inputPhotoUrl = document.getElementById('edit-photo-url').value.trim();
+            const displayPhotoUrl = convertDriveLink(inputPhotoUrl);
+
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', auth.currentUser.uid), {
+                    nickname:       document.getElementById('edit-nickname').value.trim(),
+                    phone:          document.getElementById('edit-phone').value.trim(),
+                    lineId:         document.getElementById('edit-line-id').value.trim(),
+                    address:        document.getElementById('edit-address').value.trim(),
+                    province:       document.getElementById('edit-province').value.trim(),
+                    district:       document.getElementById('edit-district').value.trim(),
+                    subdistrict:    document.getElementById('edit-subdistrict').value.trim(),
+                    zipcode:        document.getElementById('edit-zipcode').value.trim(),
+                    emergencyName:  document.getElementById('edit-emergency-name').value.trim(),
+                    emergencyPhone: document.getElementById('edit-emergency-phone').value.trim(),
+                    originalPhotoURL: inputPhotoUrl,
+                    photoURL:       displayPhotoUrl,
+                    updatedAt:      new Date().toISOString()
+                });
+                alert('✅ บันทึกข้อมูลสำเร็จ!');
+                window.location.reload();
+            } catch (err) {
+                alert('❌ เกิดข้อผิดพลาด: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-save"></i> บันทึกข้อมูล';
+            }
+        });
     </script>
 </body>
 </html>
