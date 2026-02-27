@@ -9,16 +9,17 @@ export function renderUI(userProfile, activePageId) {
     const isAdmin = userProfile.role === 'admin';
     const isManager = userProfile.role === 'manager';
 
-    // 1. จัดการ Sidebar (เพิ่ม CSS สำหรับโหมด Collapsed ย่อขนาด)
+    // 1. จัดการ Sidebar (เพิ่ม CSS สำหรับโหมด Collapsed ย่อขนาดให้แคบลงอีก)
     const sidebarHTML = `
         <style>
             #app-sidebar { transition: width 0.3s ease; }
-            /* เมื่อย่อเมนู จะเหลือความกว้างแค่ 5rem (80px) */
-            #app-sidebar.collapsed { width: 5rem; }
+            /* เมื่อย่อเมนู จะเหลือความกว้างแค่ 4rem (64px) เพื่อให้แคบที่สุด */
+            #app-sidebar.collapsed { width: 4rem; }
             #app-sidebar.collapsed .sidebar-text { display: none; }
             #app-sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
             #app-sidebar.collapsed .nav-item i { margin-left: 0 !important; margin-right: 0 !important; font-size: 1.25rem; }
-            #app-sidebar.collapsed .logo-container img { margin-right: 0; }
+            #app-sidebar.collapsed .logo-container { padding: 1rem 0; } /* ลด padding รอบโลโก้ตอนย่อ */
+            #app-sidebar.collapsed .logo-container img { margin-right: 0; width: 2rem; height: 2rem; min-width: 2rem; } /* ย่อโลโก้ลงเล็กน้อย */
             #app-sidebar.collapsed .admin-panel-text { display: none; }
             #app-sidebar.collapsed .footer-text { display: none; }
             #app-sidebar.collapsed .collapsed-footer-text { display: block; }
