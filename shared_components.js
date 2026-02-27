@@ -9,7 +9,7 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
     const isAdmin = userProfile.role === 'admin';
     const isManager = userProfile.role === 'manager';
 
-    // 1. จัดการ Sidebar (ใช้ CSS โหมด Collapsed ย่อขนาด)
+    // 1. จัดการ Sidebar
     const sidebarHTML = `
         <aside id="app-sidebar" class="w-64 bg-zinc-900 text-zinc-300 flex flex-col transition-all duration-300 shadow-xl z-20 h-full overflow-hidden shrink-0">
             <div class="logo-container p-5 flex items-center justify-center border-b border-zinc-800 transition-all">
@@ -42,7 +42,7 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
                 <div class="space-y-2 mt-6 pt-6 border-t border-zinc-800">
                     <p class="px-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">Admin Panel</p>
                     <a href="add-employee.html" title="เพิ่มพนักงานใหม่" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'add-employee' ? 'text-zinc-900 bg-yellow-500 font-bold' : 'text-yellow-500'}">
-                        <i class="fa-solid fa-user-plus w-6 text-center shrink-0"></i> <span class="ml-3 sidebar-text whitespace-nowrap">เพิ่มพนักงานใหม่</span>
+                        <i class="fa-solid fa-user-plus w-6 text-center shrink-0"></i> <span class="ml-3 sidebar-text whitespace-nowrap">เพิ่ม/แก้ไขพนักงาน</span>
                     </a>
                     <a href="#" title="จัดการเงินเดือน" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
                         <i class="fa-solid fa-file-invoice-dollar w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">จัดการเงินเดือน</span>
@@ -59,7 +59,7 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
         </aside>
     `;
 
-    // 2. จัดการ Topbar (เพิ่มปุ่ม Hamburger Menu ฝั่งซ้าย)
+    // 2. จัดการ Topbar 
     const topbarHTML = `
         <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200 shrink-0">
             <div class="flex items-center">
@@ -75,7 +75,7 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
                     <span class="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">3</span>
                 </button>
                 <div class="h-8 w-px bg-zinc-200 mx-2"></div>
-                <a href="profile.html" class="flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
+                <a href="profile.html" class="nav-item flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
                     <img src="${avatarUrl}" class="w-8 h-8 rounded-full object-cover border-2 border-zinc-200 group-hover:border-yellow-500 transition-all">
                     <div class="text-sm leading-tight hidden md:block">
                         <p class="font-bold text-zinc-800 group-hover:text-yellow-600 transition-colors">${userProfile.name}</p>
@@ -97,44 +97,51 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
     if (topbarTarget) topbarTarget.innerHTML = topbarHTML;
 
     // ========================================================
-    // จัดการหน้าจอหมุนโหลด (Spinner Overlay) เฉพาะพื้นที่เนื้อหา
+    // 3. ระบบหน้าจอหมุนโหลด เฉพาะพื้นที่ข้อมูล (Content Area)
     // ========================================================
-    if (isInitialLoad) {
-        const mainEl = document.querySelector('main');
-        if (mainEl && !document.getElementById('page-transition-overlay')) {
-            const overlay = document.createElement('div');
-            overlay.id = 'page-transition-overlay';
-            overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Loading Workspace...</p>';
-            mainEl.appendChild(overlay);
-        }
-    } else {
-        // เมื่อข้อมูลจริงโหลดเสร็จแล้ว ให้ซ่อน Overlay หมุนๆ ทิ้งอย่างนุ่มนวล
-        const overlay = document.getElementById('page-transition-overlay');
-        if (overlay) {
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 300);
+    // หาพื้นที่เนื้อหา (div ตัวสุดท้ายใน main ที่เราใช้แสดงข้อมูล)
+    const contentArea = document.querySelector('main > div.overflow-y-auto');
+    
+    if (contentArea) {
+        contentArea.style.position = 'relative'; // ทำให้วาง Overlay ทับได้พอดีเป๊ะ
+        
+        if (isInitialLoad) {
+            if (!document.getElementById('content-transition-overlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'content-transition-overlay';
+                // ใช้สีพื้นหลัง #fafafa หรือ #f4f4f5 ให้กลืนกับหน้าเว็บ
+                overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center transition-opacity duration-300';
+                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Loading Workspace...</p>';
+                contentArea.appendChild(overlay);
+            }
+        } else {
+            // ซ่อนหน้าจอโหลดเมื่อ Firebase โหลดข้อมูลเสร็จ
+            const overlay = document.getElementById('content-transition-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+            }
         }
     }
 
-    // ดักจับเวลากดเปลี่ยนเมนู เพื่อโชว์หน้าโหลดก่อนเด้งไปไฟล์ใหม่
+    // ========================================================
+    // 4. ดักจับการคลิกเมนู เพื่อโชว์หมุนโหลดก่อนเปลี่ยนหน้า
+    // ========================================================
     setTimeout(() => {
-        const links = document.querySelectorAll('#app-sidebar a.nav-item');
+        // ค้นหาลิงก์ทั้งใน Sidebar และ Topbar (ปุ่มโปรไฟล์)
+        const links = document.querySelectorAll('#app-sidebar a.nav-item, header a.nav-item');
         links.forEach(link => {
             link.removeEventListener('click', handleMenuClick);
             link.addEventListener('click', handleMenuClick);
         });
     }, 50);
 
-    // 3. ฟังก์ชันสำหรับย่อ/ขยาย Sidebar
+    // ฟังก์ชันสำหรับย่อ/ขยาย Sidebar
     if (!window.toggleSidebar) {
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('app-sidebar');
-            if (sidebar) {
-                sidebar.classList.toggle('collapsed');
-            }
+            if (sidebar) sidebar.classList.toggle('collapsed');
         };
-
-        // ตรวจสอบขนาดหน้าจอตอนโหลดเว็บ: ถ้าจอเล็กกว่า iPad (1024px) ให้ซ่อน Sidebar อัตโนมัติ
         setTimeout(() => {
             if (window.innerWidth < 1024) { 
                 const sidebar = document.getElementById('app-sidebar');
@@ -145,63 +152,52 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
 }
 
 // -------------------------------------------------------------
-// ฟังก์ชันทำงานตอนกดเปลี่ยนแท็บเมนู (โชว์หมุนๆ ค้างไว้)
+// ฟังก์ชันดักจับการสลับแท็บ (เปลี่ยนหน้า)
 // -------------------------------------------------------------
 function handleMenuClick(e) {
     const href = e.currentTarget.getAttribute('href');
-    // ถ้าลิงก์ไม่ได้ชี้ไปหน้าปัจจุบัน และไม่ใช่ #
+    // ถ้าลิงก์ไม่ได้ชี้ไปหน้าปัจจุบัน และไม่ใช่ลิงก์หลอก (#)
     if (href && href !== '#' && !e.currentTarget.classList.contains('bg-yellow-500')) {
         e.preventDefault();
         
-        // โชว์หน้าโหลด (หมุนๆ) ทับแค่ส่วนเนื้อหา (main) โดยเหลือ Topbar/Sidebar ไว้
-        const mainEl = document.querySelector('main');
-        if (mainEl) {
-            let overlay = document.getElementById('page-transition-overlay');
+        // 1. เรียกตัวโหลด (Spinner) มาบัง "เฉพาะเนื้อหาตรงกลาง"
+        const contentArea = document.querySelector('main > div.overflow-y-auto');
+        if (contentArea) {
+            let overlay = document.getElementById('content-transition-overlay');
             if (!overlay) {
                 overlay = document.createElement('div');
-                overlay.id = 'page-transition-overlay';
-                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Switching Workspace...</p>';
-                mainEl.appendChild(overlay);
+                overlay.id = 'content-transition-overlay';
+                overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center transition-opacity duration-200';
+                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Switching Tab...</p>';
+                contentArea.appendChild(overlay);
             }
+            
+            // อัปเดตไฮไลท์เมนูหลอกๆ ให้ผู้ใช้รู้สึกว่ากดติดแล้วทันที
+            document.querySelectorAll('#app-sidebar a.nav-item').forEach(el => el.classList.remove('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm'));
+            if(e.currentTarget.closest('#app-sidebar')) {
+                e.currentTarget.classList.add('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm');
+            }
+            
             overlay.style.opacity = '1';
         }
         
-        // หน่วงเวลาเล็กน้อยให้ Animation ทำงานก่อนเปลี่ยนหน้าจริง
-        setTimeout(() => { window.location.href = href; }, 100);
+        // 2. ดีเลย์ 150ms ให้แอนิเมชันหมุนเริ่มทำงาน แล้วค่อยสั่งเบราว์เซอร์เปลี่ยนไฟล์
+        // (ฟีเจอร์ View Transition ของเบราว์เซอร์ยุคใหม่จะช่วยให้การเปลี่ยนไฟล์นี้เนียนตา ไม่เกิดจอกระพริบขาว)
+        setTimeout(() => { window.location.href = href; }, 150);
     }
 }
 
 // =========================================================
-// IIFE: โหลด Sidebar / Topbar ขึ้นมาโชว์ "ทันที" ตั้งแต่ยังไม่โหลดข้อมูล
-// เพื่อให้ดูเหมือนว่าเมนู "ค้างไว้" อย่างต่อเนื่องเมื่อสลับแท็บ
+// IIFE: วาดโครงสร้าง (Skeleton) ทันทีที่เปิดเว็บ
+// เพื่อให้ดูเหมือนว่าเมนู "ค้างไว้" อย่างต่อเนื่องเมื่อโหลดหน้าใหม่
 // =========================================================
 (function renderInitialSkeleton() {
-    // ฝัง CSS ที่ใช้ควบคุมโครงสร้างการย่อ/ขยาย และการโหลดพื้นหลัง
+    // ฝัง CSS ลดการกระพริบ และเปิดใช้ View Transitions API (ฟีเจอร์ใหม่สำหรับเนียนตาข้ามไฟล์)
     const styleEl = document.createElement('style');
     styleEl.innerHTML = `
-        #page-transition-overlay {
-            position: absolute;
-            top: 64px; /* ความสูงของ Topbar (h-16 = 64px) */
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #fafafa; /* สีพื้นหลังกลืนไปกับข้อมูล */
-            z-index: 40;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: opacity 0.3s ease;
-        }
-        main { position: relative; }
+        @view-transition { navigation: auto; }
         
-        /* Smooth fade in for content */
-        main > div:not(#topbar-placeholder):not(#page-transition-overlay) {
-            animation: softFadeIn 0.3s ease-out forwards;
-        }
-        @keyframes softFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Sidebar styles */
+        /* สไตล์ของ Sidebar ย่อ/ขยาย */
         #app-sidebar { transition: width 0.3s ease; }
         #app-sidebar.collapsed { width: 4rem; }
         #app-sidebar.collapsed .sidebar-text { display: none; }
@@ -215,7 +211,7 @@ function handleMenuClick(e) {
     `;
     document.head.appendChild(styleEl);
 
-    // เดาหน้าปัจจุบันจาก URL หรือ Title เพื่อไฮไลท์สีเมนูให้ถูกตั้งแต่แรก
+    // เดาหน้าปัจจุบันจาก URL เพื่อไฮไลท์สีให้ถูกทันที
     const currentPath = window.location.pathname;
     const pageTitle = document.title;
     let guessedPageId = 'home';
@@ -223,13 +219,13 @@ function handleMenuClick(e) {
     else if (currentPath.includes('profile') || pageTitle.includes('โปรไฟล์')) guessedPageId = 'profile';
     else if (currentPath.includes('add-employee') || pageTitle.includes('จัดการพนักงาน')) guessedPageId = 'add-employee';
 
-    // สร้างข้อมูลชั่วคราวเพื่อวาด UI ก่อนที่ Firebase จะโหลดเสร็จ
+    // วาด UI ด้วยข้อมูลจำลองทันที (ล็อก Sidebar ให้ค้างไว้ก่อนโหลด Firebase เสร็จ)
     const dummyUser = {
-        name: "Loading...",
-        role: "...",
-        photoURL: "https://ui-avatars.com/api/?name=L&background=f4f4f5&color=a1a1aa"
+        name: "Loading Profile...",
+        role: "SYSTEM",
+        photoURL: "https://ui-avatars.com/api/?name=LSG&background=f4f4f5&color=a1a1aa"
     };
     
-    // สั่งวาด UI ทันที (isInitialLoad = true) เพื่อล็อคเมนูให้ค้างไว้
+    // ส่ง isInitialLoad = true เพื่อสั่งให้สร้าง Spinner ทับพื้นที่ตรงกลาง
     renderUI(dummyUser, guessedPageId, true);
 })();
