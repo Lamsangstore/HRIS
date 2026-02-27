@@ -20,7 +20,6 @@
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
-        .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
         
@@ -186,16 +185,6 @@
         </div>
     </main>
 
-    <!-- Overlay รอโหลด -->
-    <div id="app-loader" class="loading-overlay">
-        <div class="text-center">
-            <div class="relative inline-block mb-4">
-                <i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500"></i>
-            </div>
-            <p class="text-white text-xs font-black tracking-[0.2em] uppercase">Loading Profile</p>
-        </div>
-    </div>
-
     <!-- Script สำหรับทำงานระบบที่อยู่ Auto-complete -->
     <script>
         $(document).ready(function () {
@@ -245,7 +234,6 @@
                     
                     // Render Sidebar & Topbar
                     renderUI(data, 'profile');
-                    if(document.getElementById('app-loader')) { document.getElementById('app-loader').style.display = 'none'; }
 
                     // --- การ์ดโปรไฟล์ด้านซ้าย ---
                     const avatarUrl = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=27272a&color=eab308&size=128`;
