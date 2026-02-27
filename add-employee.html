@@ -20,9 +20,9 @@
     
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
-        .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
+        /* สไตล์สำหรับซ่อน/แสดงเนื้อหาตามแท็บ */
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -262,15 +262,6 @@
         </div>
     </main>
 
-    <div id="app-loader" class="loading-overlay">
-        <div class="text-center">
-            <div class="relative inline-block mb-4">
-                <i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500"></i>
-            </div>
-            <p class="text-white text-xs font-black tracking-[0.2em] uppercase">Loading System</p>
-        </div>
-    </div>
-
     <!-- Script สำหรับทำงานระบบที่อยู่ Auto-complete -->
     <script>
         $(document).ready(function () {
@@ -326,7 +317,6 @@
                     const data = docSnap.data();
                     if(data.role !== 'admin') { window.location.href = 'home.html'; return; }
                     renderUI(data, 'add-employee');
-                    document.getElementById('app-loader').style.display = 'none';
                     loadEmployeeList(); 
                 }
             } else { if (window.location.protocol !== 'about:') window.location.href = 'index.html'; }
