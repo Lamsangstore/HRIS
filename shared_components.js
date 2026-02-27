@@ -110,6 +110,14 @@ export function renderUI(userProfile, activePageId) {
     if (sidebarTarget) sidebarTarget.innerHTML = sidebarHTML;
     if (topbarTarget) topbarTarget.innerHTML = topbarHTML;
 
+    // เพิ่ม CSS ให้หน้าเว็บค่อยๆ ปรากฏขึ้น (Fade In) แทนการใช้ตัวโหลดหมุนๆ
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+        body main { animation: softFadeIn 0.3s ease-out forwards; }
+        @keyframes softFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    `;
+    document.head.appendChild(styleEl);
+
     // 3. ฟังก์ชันสำหรับย่อ/ขยาย Sidebar
     if (!window.toggleSidebar) {
         window.toggleSidebar = function() {
