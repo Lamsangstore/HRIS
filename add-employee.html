@@ -5,25 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>จัดการพนักงาน - Lamsang Group</title>
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
+    
+    <!-- Dependencies สำหรับระบบ Auto-complete ที่อยู่ไทย -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/dependencies/JQL.min.js"></script>
+    <script type="text/javascript" src="https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/dependencies/typeahead.bundle.js"></script>
+    <link rel="stylesheet" href="https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/dist/jquery.Thailand.min.css">
+    <script type="text/javascript" src="https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/dist/jquery.Thailand.min.js"></script>
+
+    <!-- Tailwind CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
         .loading-overlay { position: fixed; inset: 0; background: #18181b; z-index: 100; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
-        /* สไตล์สำหรับซ่อน/แสดงเนื้อหาตามแท็บ */
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* สไตล์ Input มาตรฐาน */
+        
         .input-field { width: 100%; border: 2px solid #f4f4f5; background-color: #fafafa; border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.875rem; outline: none; transition: all 0.2s; font-weight: 500; color: #27272a; }
         .input-field:focus { background-color: #ffffff; border-color: #eab308; box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.1); }
-        /* แก้ไข Label ให้อ่านง่ายขึ้น: ขนาดใหญ่ขึ้น, สีเข้มขึ้น, ลดความหนาลง */
         .input-label { display: block; font-size: 0.9rem; font-weight: 600; color: #3f3f46; margin-bottom: 0.4rem; }
         .section-title { font-size: 1.1rem; font-weight: 800; color: #27272a; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 2px solid #f4f4f5; display: flex; align-items: center; }
         .section-title i { color: #eab308; margin-right: 0.75rem; }
+
+        /* ปรับแต่งดีไซน์ Dropdown ของที่อยู่ให้เข้ากับธีม Lamsang Group */
+        .twitter-typeahead { width: 100%; }
+        .tt-hint { color: #a1a1aa !important; }
+        .tt-menu { width: 100%; background-color: #ffffff; border: 2px solid #f4f4f5; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); margin-top: 4px; padding: 0.5rem 0; z-index: 50 !important; }
+        .tt-suggestion { padding: 0.5rem 1rem; font-size: 0.875rem; color: #3f3f46; cursor: pointer; transition: background-color 0.1s; }
+        .tt-suggestion:hover, .tt-suggestion.tt-cursor { background-color: #fefce8 !important; color: #a16207 !important; font-weight: 600; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-zinc-800">
@@ -42,7 +57,6 @@
                     <p class="text-sm text-zinc-500 font-medium">จัดการข้อมูลและประวัติพนักงาน Lamsang Group</p>
                 </div>
                 
-                <!-- ตัวสลับแท็บ -->
                 <div class="flex p-1 bg-zinc-200 rounded-xl w-full md:w-auto shadow-inner">
                     <button id="btn-tab-add" onclick="switchTab('add')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-zinc-800 shadow-sm">
                         <i class="fa-solid fa-user-plus mr-2"></i>เพิ่มพนักงานใหม่
@@ -55,12 +69,9 @@
 
             <div class="max-w-6xl mx-auto relative">
 
-                <!-- ======================================================= -->
-                <!-- TAB 1 & EDIT MODE: แบบฟอร์มข้อมูลพนักงาน (Master Form) -->
-                <!-- ======================================================= -->
+                <!-- TAB 1 & EDIT MODE -->
                 <div id="tab-form" class="tab-content active bg-white rounded-[2rem] shadow-lg border border-zinc-100 overflow-hidden">
                     
-                    <!-- Header ของฟอร์ม (เปลี่ยนสี/ข้อความตามโหมด) -->
                     <div id="form-header" class="bg-zinc-900 px-8 py-6 text-white flex items-center justify-between">
                         <div>
                             <span class="font-black text-xl tracking-tight" id="form-title">ลงทะเบียนพนักงานใหม่</span>
@@ -70,7 +81,6 @@
                     </div>
                     
                     <form id="employee-form" class="p-8 lg:p-10">
-                        <!-- แจ้งเตือนการสร้างบัญชี (โชว์เฉพาะตอนเพิ่มใหม่) -->
                         <div id="account-notice" class="mb-10 bg-yellow-50 border-l-4 border-yellow-500 p-5 rounded-xl">
                             <div class="flex items-center mb-1 text-yellow-900">
                                 <i class="fa-solid fa-key mr-2"></i><span class="font-bold text-sm">ระบบสร้างบัญชีล็อกอินอัตโนมัติ</span>
@@ -78,14 +88,14 @@
                             <p class="text-xs text-yellow-800">ใช้อีเมลเป็น Username และรหัสผ่านเริ่มต้นคือ <span class="bg-yellow-200 px-1.5 py-0.5 rounded font-black text-zinc-900">123456</span></p>
                         </div>
 
-                        <input type="hidden" id="emp-uid"> <!-- สำหรับโหมดแก้ไข -->
+                        <input type="hidden" id="emp-uid">
 
-                        <!-- หมวดที่ 1: ข้อมูลระบบและสถานะพนักงาน -->
+                        <!-- หมวดที่ 1: ข้อมูลระบบ -->
                         <h4 class="section-title"><i class="fa-solid fa-server"></i>1. ข้อมูลระบบและสถานะ (System & Status)</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-                            <div><label class="input-label">รหัสพนักงาน (Employee ID) <span class="text-red-500">*</span></label><input type="text" id="f-emp-code" required class="input-field" placeholder="LSG-001"></div>
+                            <div><label class="input-label">รหัสพนักงาน <span class="text-red-500">*</span></label><input type="text" id="f-emp-code" required class="input-field" placeholder="LSG-001"></div>
                             <div>
-                                <label class="input-label">สิทธิ์ในระบบ (System Role) <span class="text-red-500">*</span></label>
+                                <label class="input-label">สิทธิ์ในระบบ <span class="text-red-500">*</span></label>
                                 <select id="f-sys-role" class="input-field cursor-pointer">
                                     <option value="employee">พนักงาน (Employee)</option>
                                     <option value="manager">หัวหน้างาน (Manager)</option>
@@ -100,7 +110,7 @@
                                     <option value="resigned">ลาออก (Resigned)</option>
                                 </select>
                             </div>
-                            <div class="md:col-span-3"><label class="input-label">ลิงก์รูปโปรไฟล์ (Profile Picture URL)</label><input type="url" id="f-photo-url" class="input-field" placeholder="https://..."></div>
+                            <div class="md:col-span-3"><label class="input-label">ลิงก์รูปโปรไฟล์ (URL)</label><input type="url" id="f-photo-url" class="input-field" placeholder="https://..."></div>
                         </div>
 
                         <!-- หมวดที่ 2: ข้อมูลส่วนบุคคล -->
@@ -121,24 +131,25 @@
                             
                             <div>
                                 <label class="input-label">เพศ</label>
-                                <select id="f-gender" class="input-field cursor-pointer"><option value="ชาย">ชาย (Male)</option><option value="หญิง">หญิง (Female)</option><option value="อื่นๆ">อื่นๆ (Other)</option></select>
+                                <select id="f-gender" class="input-field cursor-pointer"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option><option value="อื่นๆ">อื่นๆ</option></select>
                             </div>
                             <div><label class="input-label">วันเกิด (Date of Birth)</label><input type="date" id="f-dob" class="input-field"></div>
                             <div><label class="input-label">เลขบัตรประชาชน</label><input type="text" id="f-idcard" class="input-field" placeholder="X-XXXX-XXXXX-XX-X"></div>
                         </div>
 
-                        <!-- หมวดที่ 3: ข้อมูลการติดต่อ -->
+                        <!-- หมวดที่ 3: ข้อมูลการติดต่อ (เพิ่ม Auto-complete) -->
                         <h4 class="section-title"><i class="fa-solid fa-address-book"></i>3. ข้อมูลการติดต่อ (Contact Info)</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                             <div><label class="input-label">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label><input type="tel" id="f-phone" required class="input-field"></div>
-                            <div><label class="input-label">อีเมลบริษัท (ใช้ล็อกอิน) <span class="text-red-500">*</span></label><input type="email" id="f-email" required class="input-field" placeholder="name@lamsang.com"></div>
+                            <div><label class="input-label">อีเมลบริษัท (Login) <span class="text-red-500">*</span></label><input type="email" id="f-email" required class="input-field" placeholder="name@lamsang.com"></div>
                             <div><label class="input-label">Line User ID</label><input type="text" id="f-line-id" class="input-field"></div>
                             
                             <div class="md:col-span-3"><label class="input-label">ที่อยู่ (บ้านเลขที่, ซอย, ถนน)</label><input type="text" id="f-address" class="input-field"></div>
                             
-                            <div><label class="input-label">แขวง/ตำบล</label><input type="text" id="f-subdistrict" class="input-field"></div>
-                            <div><label class="input-label">เขต/อำเภอ</label><input type="text" id="f-district" class="input-field"></div>
+                            <!-- จัดเรียงจาก ใหญ่สุด ไป เล็กสุด -->
                             <div><label class="input-label">จังหวัด</label><input type="text" id="f-province" class="input-field"></div>
+                            <div><label class="input-label">เขต/อำเภอ</label><input type="text" id="f-district" class="input-field"></div>
+                            <div><label class="input-label">แขวง/ตำบล</label><input type="text" id="f-subdistrict" class="input-field"></div>
                             <div><label class="input-label">รหัสไปรษณีย์</label><input type="text" id="f-zipcode" class="input-field"></div>
                         </div>
 
@@ -164,7 +175,7 @@
                             </div>
                         </div>
 
-                        <!-- หมวดที่ 5: ข้อมูลเงินเดือนและบัญชี -->
+                        <!-- หมวดที่ 5: ข้อมูลเงินเดือน -->
                         <h4 class="section-title"><i class="fa-solid fa-coins"></i>5. ข้อมูลเงินเดือนและบัญชี (Payroll & Finance)</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                             <div><label class="input-label">ฐานเงินเดือน (รายเดือน) <span class="text-red-500">*</span></label><input type="number" id="f-salary-month" required class="input-field" value="0"></div>
@@ -182,7 +193,7 @@
                             <div>
                                 <label class="input-label">ธนาคาร (Bank)</label>
                                 <select id="f-bank-name" class="input-field cursor-pointer">
-                                    <option value="">- เลือกธนาคาร -</option><option value="KBANK">กสิกรไทย (KBANK)</option><option value="SCB">กสิกรไทย (SCB)</option><option value="BBL">ไทยพาณิชย์ (BBL)</option><option value="KTB">กรุงไทย (KTB)</option><option value="BAY">กรุงเทพ (BBL)</option>
+                                    <option value="">- เลือกธนาคาร -</option><option value="KBANK">กสิกรไทย (KBANK)</option><option value="SCB">ไทยพาณิชย์ (SCB)</option><option value="BBL">กรุงเทพ (BBL)</option><option value="KTB">กรุงไทย (KTB)</option><option value="BAY">กรุงศรี (BAY)</option>
                                 </select>
                             </div>
                             <div><label class="input-label">เลขที่บัญชี</label><input type="text" id="f-bank-acc" class="input-field"></div>
@@ -216,9 +227,7 @@
                     </form>
                 </div>
 
-                <!-- ======================================================= -->
                 <!-- TAB 2: รายชื่อพนักงาน (Directory) -->
-                <!-- ======================================================= -->
                 <div id="tab-list" class="tab-content bg-white rounded-[2rem] shadow-sm border border-zinc-100 overflow-hidden min-h-[500px]">
                     <div class="p-8 border-b border-zinc-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50">
                         <div>
@@ -253,7 +262,6 @@
         </div>
     </main>
 
-    <!-- Overlay รอโหลด -->
     <div id="app-loader" class="loading-overlay">
         <div class="text-center">
             <div class="relative inline-block mb-4">
@@ -263,21 +271,27 @@
         </div>
     </div>
 
+    <!-- Script สำหรับทำงานระบบที่อยู่ Auto-complete -->
+    <script>
+        $(document).ready(function () {
+            // เรียกใช้งาน jquery.Thailand.js ผูกกับช่องกรอกข้อมูล
+            $.Thailand({
+                database: 'https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/database/db.json', 
+                $province: $('#f-province'),    // จังหวัด
+                $amphoe: $('#f-district'),      // อำเภอ/เขต
+                $district: $('#f-subdistrict'), // ตำบล/แขวง
+                $zipcode: $('#f-zipcode')       // รหัสไปรษณีย์
+            });
+        });
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { renderUI } from "./shared_components.js";
 
-        const firebaseConfig = { 
-            apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY", 
-            authDomain: "hris-21093.firebaseapp.com", 
-            projectId: "hris-21093", 
-            storageBucket: "hris-21093.firebasestorage.app", 
-            messagingSenderId: "549158917606", 
-            appId: "1:549158917606:web:cdade4e855554e57fab227", 
-            measurementId: "G-1FYRH1EL2W" 
-        };
+        const firebaseConfig = { apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY", authDomain: "hris-21093.firebaseapp.com", projectId: "hris-21093", storageBucket: "hris-21093.firebasestorage.app", messagingSenderId: "549158917606", appId: "1:549158917606:web:cdade4e855554e57fab227", measurementId: "G-1FYRH1EL2W" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -286,62 +300,40 @@
         let isEditing = false;
         let allEmployees = [];
 
-        // ----------------------------------------
-        // TAB MANAGEMENT LOGIC
-        // ----------------------------------------
         window.switchTab = (tabName) => {
-            // อัปเดตปุ่มแท็บ
             const btnAdd = document.getElementById('btn-tab-add');
             const btnManage = document.getElementById('btn-tab-manage');
             
             if(tabName === 'add') {
                 btnAdd.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-zinc-800 shadow-sm";
                 btnManage.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-zinc-500 hover:text-zinc-800";
-                
                 document.getElementById('tab-form').classList.add('active');
                 document.getElementById('tab-list').classList.remove('active');
-                
-                // ถ้าย้ายมาแท็บเพิ่มพนักงาน ต้องล้างโหมดแก้ไข
                 resetEmployeeForm();
             } else if (tabName === 'manage') {
                 btnManage.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-zinc-800 shadow-sm";
                 btnAdd.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-zinc-500 hover:text-zinc-800";
-                
                 document.getElementById('tab-list').classList.add('active');
                 document.getElementById('tab-form').classList.remove('active');
-                
-                // โหลดข้อมูลถ้าเพิ่งกดมา
                 if(allEmployees.length === 0) loadEmployeeList();
             }
         }
 
-        // ----------------------------------------
-        // AUTH & INIT
-        // ----------------------------------------
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if(data.role !== 'admin') {
-                        alert("⚠️ จำกัดสิทธิ์เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น");
-                        window.location.href = 'home.html';
-                        return;
-                    }
+                    if(data.role !== 'admin') { window.location.href = 'home.html'; return; }
                     renderUI(data, 'add-employee');
                     document.getElementById('app-loader').style.display = 'none';
-                    loadEmployeeList(); // โหลดรายชื่อเตรียมไว้
+                    loadEmployeeList(); 
                 }
-            } else { 
-                if (window.location.protocol !== 'about:') window.location.href = 'index.html'; 
-            }
+            } else { if (window.location.protocol !== 'about:') window.location.href = 'index.html'; }
         });
 
         window.handleLogout = () => { if(confirm('ต้องการออกจากระบบ?')) signOut(auth).then(() => window.location.reload()); }
 
-        // ----------------------------------------
-        // EMPLOYEE DIRECTORY
-        // ----------------------------------------
         function loadEmployeeList() {
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
                 allEmployees = [];
@@ -351,7 +343,6 @@
                     allEmployees.push(emp);
                     const avatar = emp.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=f4f4f5&color=27272a&bold=true`;
                     
-                    // ป้ายสถานะ
                     let statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-[10px] font-bold">Active</span>';
                     if(emp.status === 'resigned') statusBadge = '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold">Resigned</span>';
                     else if(emp.status === 'probation') statusBadge = '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold">Probation</span>';
@@ -391,10 +382,6 @@
             for (let row of rows) { row.style.display = row.innerText.toLowerCase().includes(val) ? '' : 'none'; }
         }
 
-        // ----------------------------------------
-        // FORM MANAGEMENT (MAP DATA)
-        // ----------------------------------------
-        // ดึงค่าจาก Input อย่างปลอดภัย
         const val = (id) => document.getElementById(id).value.trim();
 
         window.prepareEdit = (uid) => {
@@ -402,17 +389,13 @@
             if(!emp) return;
 
             isEditing = true;
-            
-            // Map ข้อมูลเข้า Form ทุกตัว
             document.getElementById('emp-uid').value = emp.uid;
             
-            // หมวด 1
             document.getElementById('f-emp-code').value = emp.employeeCode || '';
             document.getElementById('f-sys-role').value = emp.role || 'employee';
             document.getElementById('f-status').value = emp.status || 'active';
             document.getElementById('f-photo-url').value = emp.photoURL || '';
 
-            // หมวด 2
             document.getElementById('f-title').value = emp.titleTH || 'นาย';
             document.getElementById('f-fname-th').value = emp.fnameTH || (emp.name ? emp.name.split(' ')[0] : '');
             document.getElementById('f-lname-th').value = emp.lnameTH || (emp.name ? emp.name.split(' ').slice(1).join(' ') : '');
@@ -423,23 +406,23 @@
             document.getElementById('f-dob').value = emp.dob || '';
             document.getElementById('f-idcard').value = emp.idCard || '';
 
-            // หมวด 3
             document.getElementById('f-phone').value = emp.phone || '';
             document.getElementById('f-email').value = emp.email || '';
             document.getElementById('f-line-id').value = emp.lineId || '';
             document.getElementById('f-address').value = emp.address || '';
-            document.getElementById('f-subdistrict').value = emp.subdistrict || '';
-            document.getElementById('f-district').value = emp.district || '';
-            document.getElementById('f-province').value = emp.province || '';
-            document.getElementById('f-zipcode').value = emp.zipcode || '';
+            
+            // ข้อมูลที่อยู่ใหม่ (Auto-complete)
+            // เช็คและใส่ค่า ถ้าในอดีตเคยมีค่าจะใช้ typeahead ('val', ค่า) เพื่ออัปเดตฟิลด์ให้ตรงกัน
+            $('#f-subdistrict').typeahead('val', emp.subdistrict || '');
+            $('#f-district').typeahead('val', emp.district || '');
+            $('#f-province').typeahead('val', emp.province || '');
+            $('#f-zipcode').typeahead('val', emp.zipcode || '');
 
-            // หมวด 4
             document.getElementById('f-start-date').value = emp.startDate || '';
             document.getElementById('f-branch').value = emp.branch || 'สำนักงานใหญ่';
             document.getElementById('f-position').value = emp.position || '';
             document.getElementById('f-emp-type').value = emp.empType || 'Full-time';
 
-            // หมวด 5
             document.getElementById('f-salary-month').value = emp.baseSalary || 0;
             document.getElementById('f-salary-day').value = emp.dailyWage || 0;
             document.getElementById('f-salary-hour').value = emp.hourlyWage || 0;
@@ -450,16 +433,13 @@
             document.getElementById('f-sso').value = emp.sso || 'Yes';
             document.getElementById('f-tax').value = emp.taxDeduction || 'No';
 
-            // หมวด 6
             document.getElementById('f-emergency-name').value = emp.emergencyName || '';
             document.getElementById('f-emergency-phone').value = emp.emergencyPhone || '';
 
-            // ล็อกฟิลด์อีเมล (Auth)
             const emailInput = document.getElementById('f-email');
             emailInput.readOnly = true;
             emailInput.classList.add('opacity-50', 'cursor-not-allowed');
 
-            // เปลี่ยนหน้าตาฟอร์มให้รู้ว่ากำลัง "แก้ไข"
             document.getElementById('form-header').classList.replace('bg-zinc-900', 'bg-zinc-800');
             document.getElementById('form-title').textContent = "แก้ไขข้อมูลพนักงาน";
             document.getElementById('form-subtitle').textContent = `Editing profile of: ${emp.name}`;
@@ -468,7 +448,6 @@
             document.getElementById('account-notice').classList.add('hidden');
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
 
-            // บังคับเปลี่ยนหน้าจอไปแสดงแท็บฟอร์ม
             document.getElementById('tab-list').classList.remove('active');
             document.getElementById('tab-form').classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -477,6 +456,9 @@
         window.resetEmployeeForm = () => {
             isEditing = false;
             document.getElementById('employee-form').reset();
+            
+            // ล้างค่า typeahead
+            $('#f-subdistrict, #f-district, #f-province, #f-zipcode').typeahead('val', '');
             
             const emailInput = document.getElementById('f-email');
             emailInput.readOnly = false;
@@ -490,13 +472,9 @@
             document.getElementById('account-notice').classList.remove('hidden');
             document.getElementById('btn-cancel-edit').classList.add('hidden');
             
-            // กลับไปหน้าตาราง
             switchTab('manage');
         }
 
-        // ----------------------------------------
-        // SUBMIT (CREATE OR UPDATE)
-        // ----------------------------------------
         document.getElementById('employee-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
@@ -504,27 +482,23 @@
             const originalText = document.getElementById('submit-btn-text').textContent;
             document.getElementById('submit-btn-text').textContent = 'กำลังประมวลผล...';
 
-            // รวบรวมข้อมูลทั้งหมด 30+ ฟิลด์
             const fullName = `${val('f-fname-th')} ${val('f-lname-th')}`.trim();
             const email = val('f-email');
 
             const payload = {
-                // 1. ระบบ
                 employeeCode: val('f-emp-code'), role: val('f-sys-role'), status: val('f-status'), photoURL: val('f-photo-url'),
-                // 2. ส่วนตัว
                 name: fullName, titleTH: val('f-title'), fnameTH: val('f-fname-th'), lnameTH: val('f-lname-th'),
                 nickname: val('f-nickname'), fnameEN: val('f-fname-en'), lnameEN: val('f-lname-en'),
                 gender: val('f-gender'), dob: val('f-dob'), idCard: val('f-idcard'),
-                // 3. ติดต่อ
                 phone: val('f-phone'), email: email, lineId: val('f-line-id'), address: val('f-address'),
+                
+                // เก็บข้อมูลจากช่อง Auto-complete
                 subdistrict: val('f-subdistrict'), district: val('f-district'), province: val('f-province'), zipcode: val('f-zipcode'),
-                // 4. งาน
+                
                 startDate: val('f-start-date'), branch: val('f-branch'), position: val('f-position'), empType: val('f-emp-type'),
-                // 5. เงิน
                 baseSalary: Number(val('f-salary-month')||0), dailyWage: Number(val('f-salary-day')||0), hourlyWage: Number(val('f-salary-hour')||0),
                 commission: Number(val('f-commission')||0), paymentMethod: val('f-payment-method'), bankName: val('f-bank-name'), bankAccount: val('f-bank-acc'),
                 sso: val('f-sso'), taxDeduction: val('f-tax'),
-                // 6. ฉุกเฉิน
                 emergencyName: val('f-emergency-name'), emergencyPhone: val('f-emergency-phone'),
                 updatedAt: new Date().toISOString()
             };
@@ -534,9 +508,8 @@
                     const uid = document.getElementById('emp-uid').value;
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), payload);
                     alert('✅ บันทึกการแก้ไขข้อมูลเรียบร้อยแล้ว!');
-                    resetEmployeeForm(); // สลับกลับหน้า List ให้
+                    resetEmployeeForm(); 
                 } else {
-                    // Create Auth Account first
                     const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
                     const authRes = await fetch(authUrl, { method: 'POST', body: JSON.stringify({ email, password: "123456", returnSecureToken: true }) });
                     const authData = await authRes.json();
@@ -548,7 +521,8 @@
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', authData.localId), payload);
                     alert('✅ สร้างพนักงานใหม่สำเร็จ!\nระบบสร้างรหัสผ่านเริ่มต้นคือ: 123456');
                     document.getElementById('employee-form').reset();
-                    switchTab('manage'); // พาไปดูผลงานที่หน้า List
+                    $('#f-subdistrict, #f-district, #f-province, #f-zipcode').typeahead('val', ''); // ล้างค่า typeahead ด้วย
+                    switchTab('manage'); 
                 }
             } catch(error) { 
                 alert("❌ เกิดข้อผิดพลาด: " + error.message); 
