@@ -188,28 +188,38 @@
             const nav = document.getElementById('sidebar-nav');
             const items = buildNav(profile);
             let html = '';
+            let inAdminDiv = false;
+        
             items.forEach(item => {
                 if (!item.show) return;
+        
+                // Divider = เปิด admin section
                 if (item.divider) {
                     html += `<div class="mt-6 pt-6 border-t border-zinc-800">
                         <p class="px-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">${item.label}</p>`;
+                    inAdminDiv = true;
                     return;
                 }
+        
                 const isActive = item.id === activeId;
                 const baseClass = 'nav-item flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer';
-                const activeClass = isActive ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm' : 
-                                    (item.adminStyle ? 'text-yellow-500 hover:bg-zinc-800 hover:text-yellow-400' : 'hover:bg-zinc-800 hover:text-yellow-400');
+                const activeClass = isActive
+                    ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm'
+                    : (item.adminStyle
+                        ? 'text-yellow-500 hover:bg-zinc-800 hover:text-yellow-400'
+                        : 'hover:bg-zinc-800 hover:text-yellow-400');
+        
                 html += `<button data-page="${item.id}" class="${baseClass} ${activeClass} w-full text-left" title="${item.label}">
                     <i class="fa-solid ${item.icon} w-6 text-center shrink-0"></i>
                     <span class="ml-3 font-medium sidebar-text whitespace-nowrap">${item.label}</span>
                 </button>`;
-                if (item.divider) html += '</div>';
             });
-            // ปิด admin div ถ้ามี
-            if (items.some(i => i.show && i.divider)) html += '</div>';
+        
+            // ปิด admin div ถ้าเปิดค้างอยู่
+            if (inAdminDiv) html += '</div>';
+        
             nav.innerHTML = html;
-
-            // Bind click
+        
             nav.querySelectorAll('button[data-page]').forEach(btn => {
                 btn.addEventListener('click', () => navigateTo(btn.dataset.page));
             });
