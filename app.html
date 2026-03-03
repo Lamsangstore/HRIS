@@ -409,34 +409,46 @@
         }
         function calcLeaveHours(startDate, startTime, endDate, endTime, schedule) {
             const workDaySet = new Set(schedule.workDays || [1,2,3,4,5]);
-            const holidays   = new Set(schedule.holidays || []);
+            const personalHols = new Set(schedule.holidays || []);
             let total = 0;
-            const [ssh, ssm] = (startTime || schedule.workStart || '08:00').split(':').map(Number);
-            const [esh, esm] = (endTime   || schedule.workEnd   || '17:00').split(':').map(Number);
-            const startMs = new Date(`${startDate}T${String(ssh).padStart(2,'0')}:${String(ssm).padStart(2,'0')}`);
-            const endMs   = new Date(`${endDate}T${String(esh).padStart(2,'0')}:${String(esm).padStart(2,'0')}`);
+            const ws0 = schedule.workStart || '08:00';
+            const we0 = schedule.workEnd   || '17:00';
             let cur = new Date(startDate + 'T00:00:00');
             const endDay = new Date(endDate + 'T00:00:00');
             while (cur <= endDay) {
                 const ds = cur.toISOString().slice(0,10);
-                if (workDaySet.has(cur.getDay()) && !holidays.has(ds)) {
-                    const ws = schedule.workStart || '08:00';
-                    const we = schedule.workEnd   || '17:00';
-                    const dayStart = new Date(`${ds}T${ws}`);
-                    const dayEnd   = new Date(`${ds}T${we}`);
-                    const s = cur.getTime() === new Date(startDate+'T00:00:00').getTime() && startMs > dayStart ? startMs : dayStart;
-                    const e = cur.getTime() === endDay.getTime() && endMs < dayEnd ? endMs : dayEnd;
+                const isPubHol = isPublicHoliday(ds);
+                if (workDaySet.has(cur.getDay()) && !personalHols.has(ds) && !isPubHol) {
+                    const dayStart = new Date(ds + 'T' + ws0);
+                    const dayEnd   = new Date(ds + 'T' + we0);
+                    const fullDayMins = (dayEnd - dayStart) / 60000;
+                    const breakMins   = schedule.breakMinutes || 60;
+                    const workMins    = fullDayMins - breakMins; // ชั่วโมงทำงานจริง/วัน
+                    const isFirstDay  = ds === startDate;
+                    const isLastDay   = ds === endDate;
+                    const useStart    = isFirstDay && startTime ? new Date(ds + 'T' + startTime) : dayStart;
+                    const useEnd      = isLastDay  && endTime   ? new Date(ds + 'T' + endTime)   : dayEnd;
+                    const s = useStart < dayStart ? dayStart : useStart;
+                    const e = useEnd   > dayEnd   ? dayEnd   : useEnd;
                     if (e > s) {
-                        let mins = (e - s) / 60000;
-                        const fullDayMins = (dayEnd - dayStart) / 60000;
-                        const breakMins  = schedule.breakMinutes || 60;
-                        mins = mins * (1 - breakMins / fullDayMins);
-                        total += Math.max(0, mins);
+                        const slotMins = (e - s) / 60000;
+                        // สัดส่วนของวัน × ชั่วโมงทำงานจริง
+                        const ratio = slotMins / fullDayMins;
+                        total += workMins * ratio;
                     }
                 }
                 cur.setDate(cur.getDate() + 1);
             }
             return Math.round(total / 60 * 100) / 100;
+        }
+        // คืนชั่วโมงทำงานต่อวันตาม schedule
+        function getDayWorkHours(schedule) {
+            const ws = schedule.workStart || '08:00';
+            const we = schedule.workEnd   || '17:00';
+            const start = new Date('2000-01-01T' + ws);
+            const end   = new Date('2000-01-01T' + we);
+            const mins  = (end - start) / 60000 - (schedule.breakMinutes || 60);
+            return Math.max(1, mins / 60);
         }
         function hoursToDisplay(h) {
             if (h == null || h === '') return '-';
@@ -1425,16 +1437,18 @@
         </div>
       </div>
       <!-- ช่วงเวลา (hidden ถ้าไม่เปิด hourly) -->
+      <!-- ช่วงเวลา (hidden ถ้าไม่เปิด hourly) -->
       <div id="hourly-fields" class="hidden grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-bold text-zinc-700 mb-1">เวลาเริ่ม</label>
-          <input type="time" id="req-start-time" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <select id="req-start-time" onchange="recalcHours()" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none bg-white cursor-pointer"></select>
         </div>
         <div>
           <label class="block text-sm font-bold text-zinc-700 mb-1">เวลาสิ้นสุด</label>
-          <input type="time" id="req-end-time" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <select id="req-end-time" onchange="recalcHours()" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none bg-white cursor-pointer"></select>
         </div>
       </div>
+      <div id="leave-date-warn" class="hidden p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-1"></div>
       <!-- Preview ชั่วโมง -->
       <div id="hours-preview" class="hidden items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
         <i class="fa-solid fa-calculator text-yellow-600 text-lg"></i>
@@ -1579,17 +1593,28 @@
             recalcHours();
         };
 
+        function buildHourSelect(sel, defaultHour) {
+            if (!sel) return;
+            const dh = (defaultHour || '08:00').substring(0, 2) + ':00';
+            sel.innerHTML = '';
+            for (let h = 0; h <= 23; h++) {
+                const v = String(h).padStart(2,'0') + ':00';
+                const o = document.createElement('option');
+                o.value = v; o.textContent = v;
+                if (v === dh) o.selected = true;
+                sel.appendChild(o);
+            }
+        }
         function setDefaultDates() {
             const today = new Date().toISOString().slice(0, 10);
             const sd = document.getElementById('req-start-date');
             const ed = document.getElementById('req-end-date');
             if (sd) sd.value = today;
             if (ed) ed.value = today;
-            // Set default times from schedule
-            const st = document.getElementById('req-start-time');
-            const et = document.getElementById('req-end-time');
-            if (st) st.value = mySchedule.workStart;
-            if (et) et.value = mySchedule.workEnd;
+            const ws = (mySchedule.workStart || '08:00').substring(0,2) + ':00';
+            const we = (mySchedule.workEnd   || '17:00').substring(0,2) + ':00';
+            buildHourSelect(document.getElementById('req-start-time'), ws);
+            buildHourSelect(document.getElementById('req-end-time'),   we);
         }
 
         window.toggleHourly = () => {
@@ -1610,12 +1635,39 @@
             recalcHours();
         };
 
+        function checkLeaveDates(sd, ed) {
+            const warn = document.getElementById('leave-date-warn');
+            if (!warn) return;
+            const msgs = [];
+            let d = new Date(sd + 'T00:00:00');
+            const eDay = new Date(ed + 'T00:00:00');
+            while (d <= eDay) {
+                const ds = d.toISOString().slice(0, 10);
+                const hn = getHolidayName(ds);
+                if (hn) msgs.push(ds + ' เป็นวันหยุดนักขัตฤกษ์ (' + hn + ')');
+                d.setDate(d.getDate() + 1);
+            }
+            myRequests.filter(r => r.status !== 'cancelled' && r.status !== 'rejected').forEach(r => {
+                if (r.startDate <= ed && r.endDate >= sd)
+                    msgs.push('มีคำขอลา ' + r.typeName + ' ซ้อนในช่วงนี้แล้ว (' + r.startDate + ')');
+            });
+            if (msgs.length) {
+                warn.innerHTML = msgs.map(m => '<p class="text-xs text-amber-800 font-bold">⚠️ ' + m + '</p>').join('');
+                warn.classList.remove('hidden');
+            } else {
+                warn.classList.add('hidden');
+                warn.innerHTML = '';
+            }
+        }
         function recalcHours() {
             const sd = document.getElementById('req-start-date')?.value;
             const ed = document.getElementById('req-end-date')?.value;
             if (!sd || !ed) return;
-            const st = isHourly ? (document.getElementById('req-start-time')?.value || mySchedule.workStart) : mySchedule.workStart;
-            const et = isHourly ? (document.getElementById('req-end-time')?.value  || mySchedule.workEnd)   : mySchedule.workEnd;
+            checkLeaveDates(sd, ed);
+            const ws = (mySchedule.workStart || '08:00').substring(0,2) + ':00';
+            const we = (mySchedule.workEnd   || '17:00').substring(0,2) + ':00';
+            const st = isHourly ? (document.getElementById('req-start-time')?.value || ws) : ws;
+            const et = isHourly ? (document.getElementById('req-end-time')?.value   || we) : we;
             const hrs = calcLeaveHours(sd, st, ed, et, mySchedule);
             const prev = document.getElementById('hours-preview');
             const val  = document.getElementById('hours-preview-val');
@@ -1628,9 +1680,7 @@
                 prev?.classList.remove('flex');
             }
         }
-
-        // Bind date/time change
-        ['req-start-date','req-end-date','req-start-time','req-end-time'].forEach(id => {
+        ['req-start-date', 'req-end-date'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', recalcHours);
         });
 
@@ -1644,9 +1694,21 @@
             const reason = document.getElementById('req-reason')?.value.trim();
             if (!sd || !ed || !reason) { showToast('กรุณากรอกข้อมูลให้ครบ', 'error'); return; }
             if (sd > ed) { showToast('วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น', 'error'); return; }
-            const st = isHourly ? document.getElementById('req-start-time')?.value : mySchedule.workStart;
-            const et = isHourly ? document.getElementById('req-end-time')?.value   : mySchedule.workEnd;
+            const ws0 = (mySchedule.workStart || '08:00').substring(0,2) + ':00';
+            const we0 = (mySchedule.workEnd   || '17:00').substring(0,2) + ':00';
+            const st = isHourly ? (document.getElementById('req-start-time')?.value || ws0) : ws0;
+            const et = isHourly ? (document.getElementById('req-end-time')?.value   || we0) : we0;
             const hrs = calcLeaveHours(sd, st, ed, et, mySchedule);
+            if (hrs <= 0) {
+                showToast('วันที่เลือกไม่มีชั่วโมงทำงาน (เป็นวันหยุดหรือนอกตารางงาน)', 'error'); return;
+            }
+            const hasOverlap = myRequests.some(r =>
+                r.status !== 'cancelled' && r.status !== 'rejected' &&
+                r.startDate <= ed && r.endDate >= sd
+            );
+            if (hasOverlap) {
+                showToast('มีคำขอลาซ้อนในช่วงวันที่นี้แล้ว กรุณาตรวจสอบ', 'error'); return;
+            }
 
             const btn = document.getElementById('submit-leave-btn');
             btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังส่ง...';
@@ -1699,7 +1761,8 @@
                     ? fmtDate(r.startDate)
                     : `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}`;
                 const timeRange = r.isHourly ? ` (${r.startTime}–${r.endTime})` : '';
-                const canCancel = r.status === 'pending';
+                const todayStr = new Date().toISOString().slice(0,10);
+                const canCancel = r.status === 'pending' && r.startDate > todayStr;
                 return `
                 <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                   <div class="w-12 h-12 rounded-2xl ${cv.bg} flex items-center justify-center shrink-0">
@@ -1726,11 +1789,31 @@
         }
 
         window.cancelLeaveRequest = async (id) => {
+            const req = myRequests.find(r => r.id === id);
+            if (!req) return;
+            const todayNow = new Date().toISOString().slice(0,10);
+            if (req.startDate <= todayNow) {
+                showToast('วันลาถึงแล้ว ไม่สามารถยกเลิกเองได้ กรุณาติดต่อหัวหน้า', 'error');
+                return;
+            }
             if (!confirm('ต้องการยกเลิกคำขอลานี้?')) return;
             try {
                 await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: 'cancelled', cancelledAt: new Date().toISOString()
                 });
+                // คืนชั่วโมงกลับถ้าสถานะ approved
+                if (req.status === 'approved' && req.totalHours > 0) {
+                    const leaveTypeKey = ['sick','personal','vacation'].includes(req.type) ? req.type : null;
+                    if (leaveTypeKey) {
+                        const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid);
+                        const bs = await getDoc(balRef);
+                        if (bs.exists()) {
+                            const bal = bs.data();
+                            const newUsed = Math.max(0, (bal[leaveTypeKey]?.usedHours || 0) - req.totalHours);
+                            await updateDoc(balRef, { [leaveTypeKey + '.usedHours']: newUsed });
+                        }
+                    }
+                }
                 showToast('ยกเลิกคำขอลาแล้ว', 'info');
             } catch (e) { showToast('❌ ' + e.message, 'error'); }
         };
@@ -2527,7 +2610,7 @@ PAGES['payroll'] = {
             if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>`;
             unsubRec=onSnapshot(
                 query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
-                      where('periodId','==',pid),orderBy('employeeCode')),
+                      where('periodId','==',pid)),
                 snap=>{records=snap.docs.map(d=>({id:d.id,...d.data()}));renderPanel(period);}
             );
         };
