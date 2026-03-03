@@ -413,10 +413,11 @@
             let total = 0;
             const ws0 = schedule.workStart || '08:00';
             const we0 = schedule.workEnd   || '17:00';
-            let cur = new Date(startDate + 'T00:00:00');
-            const endDay = new Date(endDate + 'T00:00:00');
+            let cur = new Date(startDate + 'T12:00:00');
+            const endDay = new Date(endDate + 'T12:00:00');
             while (cur <= endDay) {
-                const ds = cur.toISOString().slice(0,10);
+                const yr=cur.getFullYear(),mo=String(cur.getMonth()+1).padStart(2,'0'),dy=String(cur.getDate()).padStart(2,'0');
+                const ds=yr+'-'+mo+'-'+dy;
                 const isPubHol = isPublicHoliday(ds);
                 if (workDaySet.has(cur.getDay()) && !personalHols.has(ds) && !isPubHol) {
                     const dayStart = new Date(ds + 'T' + ws0);
@@ -1639,10 +1640,14 @@
             const warn = document.getElementById('leave-date-warn');
             if (!warn) return;
             const msgs = [];
-            let d = new Date(sd + 'T00:00:00');
-            const eDay = new Date(ed + 'T00:00:00');
+            let d = new Date(sd + 'T12:00:00');
+            const eDay = new Date(ed + 'T12:00:00');
             while (d <= eDay) {
-                const ds = d.toISOString().slice(0, 10);
+                // ใช้ local date แทน toISOString() เพื่อป้องกัน timezone shift (UTC+7 → วันหดไป 1)
+                const yr  = d.getFullYear();
+                const mo  = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const ds  = yr + '-' + mo + '-' + day;
                 const hn = getHolidayName(ds);
                 if (hn) msgs.push(ds + ' เป็นวันหยุดนักขัตฤกษ์ (' + hn + ')');
                 d.setDate(d.getDate() + 1);
