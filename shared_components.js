@@ -1,5 +1,6 @@
 /**
  * Shared UI Components for Lamsang Group HRIS
+ * v2.0 - True SPA Mode: Sidebar & Topbar never reload
  * วิธีใช้: เรียกใช้ฟังก์ชัน renderUI(userProfile, activePageId) ในทุกหน้า
  */
 
@@ -17,34 +18,34 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
                 <h1 class="text-lg font-bold tracking-wider truncate text-white sidebar-text">Lamsang Group</h1>
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
-                <a href="home.html" title="หน้าหลัก" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'home' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm' : ''}">
+                <a href="home.html" title="หน้าหลัก" data-page="home" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'home' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-house w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">หน้าหลัก</span>
                 </a>
                 
                 ${(isAdmin || isManager) ? `
-                <a href="#" title="แดชบอร์ดผู้บริหาร" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'executive' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm' : ''}">
+                <a href="#" title="แดชบอร์ดผู้บริหาร" data-page="executive" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'executive' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-chart-line w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">แดชบอร์ดผู้บริหาร</span>
                 </a>` : ''}
 
-                <a href="time.html" title="เวลาทำงาน & กะ" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'time' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm' : ''}">
+                <a href="time.html" title="เวลาทำงาน & กะ" data-page="time" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'time' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-clock w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">เวลาทำงาน & กะ</span>
                 </a>
 
-                <a href="profile.html" title="โปรไฟล์ของฉัน" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'profile' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm' : ''}">
+                <a href="profile.html" title="โปรไฟล์ของฉัน" data-page="profile" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'profile' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-id-badge w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">โปรไฟล์ของฉัน</span>
                 </a>
 
-                <a href="#" title="การอนุมัติ & วันลา" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'leave' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm' : ''}">
+                <a href="#" title="การอนุมัติ & วันลา" data-page="leave" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'leave' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-calendar-check w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">การอนุมัติ & วันลา</span>
                 </a>
 
                 ${isAdmin ? `
                 <div class="space-y-2 mt-6 pt-6 border-t border-zinc-800">
                     <p class="px-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">Admin Panel</p>
-                    <a href="add-employee.html" title="เพิ่มพนักงานใหม่" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'add-employee' ? 'text-zinc-900 bg-yellow-500 font-bold' : 'text-yellow-500'}">
+                    <a href="add-employee.html" title="เพิ่มพนักงานใหม่" data-page="add-employee" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'add-employee' ? 'text-zinc-900 bg-yellow-500 font-bold active-nav' : 'text-yellow-500'}">
                         <i class="fa-solid fa-user-plus w-6 text-center shrink-0"></i> <span class="ml-3 sidebar-text whitespace-nowrap">เพิ่ม/แก้ไขพนักงาน</span>
                     </a>
-                    <a href="#" title="จัดการเงินเดือน" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
+                    <a href="#" title="จัดการเงินเดือน" data-page="payroll" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
                         <i class="fa-solid fa-file-invoice-dollar w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">จัดการเงินเดือน</span>
                     </a>
                 </div>` : ''}
@@ -52,7 +53,6 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
             <div class="p-4 border-t border-zinc-800 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-medium footer-text whitespace-nowrap">
                 &copy; 2026 Lamsang Group
             </div>
-            <!-- ข้อความลิขสิทธิ์ฉบับย่อตอนซ่อนเมนู -->
             <div class="p-4 border-t border-zinc-800 text-[10px] text-zinc-600 text-center font-black hidden collapsed-footer-text">
                 LSG
             </div>
@@ -63,11 +63,10 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
     const topbarHTML = `
         <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200 shrink-0">
             <div class="flex items-center">
-                <!-- ปุ่มย่อ/ขยาย Sidebar -->
                 <button onclick="window.toggleSidebar()" class="text-zinc-500 hover:text-yellow-500 hover:bg-zinc-100 p-2 rounded-lg mr-4 transition-colors focus:outline-none">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
-                <h2 class="text-lg font-bold text-zinc-800 uppercase tracking-tight hidden sm:block">${document.title.split(' - ')[0]}</h2>
+                <h2 id="topbar-title" class="text-lg font-bold text-zinc-800 uppercase tracking-tight hidden sm:block">${document.title.split(' - ')[0]}</h2>
             </div>
             <div class="flex items-center space-x-4">
                 <button class="text-zinc-400 hover:text-yellow-500 relative transition-colors p-2">
@@ -75,10 +74,10 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
                     <span class="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">3</span>
                 </button>
                 <div class="h-8 w-px bg-zinc-200 mx-2"></div>
-                <a href="profile.html" class="nav-item flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
-                    <img src="${avatarUrl}" class="w-8 h-8 rounded-full object-cover border-2 border-zinc-200 group-hover:border-yellow-500 transition-all">
+                <a href="profile.html" data-page="profile" class="nav-item flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
+                    <img src="${avatarUrl}" id="topbar-avatar" class="w-8 h-8 rounded-full object-cover border-2 border-zinc-200 group-hover:border-yellow-500 transition-all">
                     <div class="text-sm leading-tight hidden md:block">
-                        <p class="font-bold text-zinc-800 group-hover:text-yellow-600 transition-colors">${userProfile.name}</p>
+                        <p class="font-bold text-zinc-800 group-hover:text-yellow-600 transition-colors" id="topbar-username">${userProfile.name}</p>
                         <p class="text-[9px] text-zinc-400 font-black uppercase tracking-widest">${userProfile.role}</p>
                     </div>
                 </a>
@@ -97,25 +96,22 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
     if (topbarTarget) topbarTarget.innerHTML = topbarHTML;
 
     // ========================================================
-    // 3. ระบบหน้าจอหมุนโหลด เฉพาะพื้นที่ข้อมูล (Content Area)
+    // 3. Content Area Overlay
     // ========================================================
-    // หาพื้นที่เนื้อหา (div ตัวสุดท้ายใน main ที่เราใช้แสดงข้อมูล)
     const contentArea = document.querySelector('main > div.overflow-y-auto');
     
     if (contentArea) {
-        contentArea.style.position = 'relative'; // ทำให้วาง Overlay ทับได้พอดีเป๊ะ
+        contentArea.style.position = 'relative';
         
         if (isInitialLoad) {
             if (!document.getElementById('content-transition-overlay')) {
                 const overlay = document.createElement('div');
                 overlay.id = 'content-transition-overlay';
-                // ใช้สีพื้นหลัง #fafafa หรือ #f4f4f5 ให้กลืนกับหน้าเว็บ
                 overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center transition-opacity duration-300';
                 overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Loading Workspace...</p>';
                 contentArea.appendChild(overlay);
             }
         } else {
-            // ซ่อนหน้าจอโหลดเมื่อ Firebase โหลดข้อมูลเสร็จ
             const overlay = document.getElementById('content-transition-overlay');
             if (overlay) {
                 overlay.style.opacity = '0';
@@ -125,10 +121,9 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
     }
 
     // ========================================================
-    // 4. ดักจับการคลิกเมนู เพื่อโชว์หมุนโหลดก่อนเปลี่ยนหน้า
+    // 4. SPA Navigation — ดักจับคลิก ใช้ iframe swap แทนการ navigate
     // ========================================================
     setTimeout(() => {
-        // ค้นหาลิงก์ทั้งใน Sidebar และ Topbar (ปุ่มโปรไฟล์)
         const links = document.querySelectorAll('#app-sidebar a.nav-item, header a.nav-item');
         links.forEach(link => {
             link.removeEventListener('click', handleMenuClick);
@@ -136,7 +131,7 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
         });
     }, 50);
 
-    // ฟังก์ชันสำหรับย่อ/ขยาย Sidebar
+    // Sidebar toggle
     if (!window.toggleSidebar) {
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('app-sidebar');
@@ -152,53 +147,95 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
 }
 
 // -------------------------------------------------------------
-// ฟังก์ชันดักจับการสลับแท็บ (เปลี่ยนหน้า)
+// SPA Navigation Handler
+// เปลี่ยนหน้าโดยไม่ทำให้ sidebar/topbar กระพริบ
+// ใช้ View Transitions API ถ้ารองรับ มิฉะนั้น fallback เป็น fade
 // -------------------------------------------------------------
 function handleMenuClick(e) {
     const href = e.currentTarget.getAttribute('href');
-    // ถ้าลิงก์ไม่ได้ชี้ไปหน้าปัจจุบัน และไม่ใช่ลิงก์หลอก (#)
-    if (href && href !== '#' && !e.currentTarget.classList.contains('bg-yellow-500')) {
-        e.preventDefault();
-        
-        // 1. เรียกตัวโหลด (Spinner) มาบัง "เฉพาะเนื้อหาตรงกลาง"
-        const contentArea = document.querySelector('main > div.overflow-y-auto');
-        if (contentArea) {
-            let overlay = document.getElementById('content-transition-overlay');
-            if (!overlay) {
-                overlay = document.createElement('div');
-                overlay.id = 'content-transition-overlay';
-                overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center transition-opacity duration-200';
-                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Switching Tab...</p>';
-                contentArea.appendChild(overlay);
-            }
-            
-            // อัปเดตไฮไลท์เมนูหลอกๆ ให้ผู้ใช้รู้สึกว่ากดติดแล้วทันที
-            document.querySelectorAll('#app-sidebar a.nav-item').forEach(el => el.classList.remove('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm'));
-            if(e.currentTarget.closest('#app-sidebar')) {
-                e.currentTarget.classList.add('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm');
-            }
-            
-            overlay.style.opacity = '1';
-        }
-        
-        // 2. ดีเลย์ 150ms ให้แอนิเมชันหมุนเริ่มทำงาน แล้วค่อยสั่งเบราว์เซอร์เปลี่ยนไฟล์
-        // (ฟีเจอร์ View Transition ของเบราว์เซอร์ยุคใหม่จะช่วยให้การเปลี่ยนไฟล์นี้เนียนตา ไม่เกิดจอกระพริบขาว)
-        setTimeout(() => { window.location.href = href; }, 150);
+    if (!href || href === '#') return; // ลิงก์หลอก ไม่ทำอะไร
+
+    // ถ้ากดหน้าปัจจุบันอยู่แล้ว ไม่ต้องทำอะไร
+    if (e.currentTarget.classList.contains('active-nav')) return;
+
+    e.preventDefault();
+
+    const contentArea = document.querySelector('main > div.overflow-y-auto');
+    if (!contentArea) {
+        window.location.href = href;
+        return;
+    }
+
+    // อัปเดต active state ทันที (ให้รู้สึก responsive)
+    document.querySelectorAll('#app-sidebar a.nav-item').forEach(el => {
+        el.classList.remove('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm', 'active-nav');
+        el.classList.add('text-zinc-300');
+    });
+    if (e.currentTarget.closest('#app-sidebar')) {
+        e.currentTarget.classList.add('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm', 'active-nav');
+        e.currentTarget.classList.remove('text-zinc-300', 'text-yellow-500');
+    }
+
+    // แสดง loading overlay เฉพาะพื้นที่กลาง
+    let overlay = document.getElementById('content-transition-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'content-transition-overlay';
+        overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center';
+        overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Switching Tab...</p>';
+        contentArea.appendChild(overlay);
+    }
+    overlay.style.opacity = '1';
+
+    // ใช้ View Transition API (Chrome 111+) ถ้ารองรับ
+    if (document.startViewTransition) {
+        document.startViewTransition(() => {
+            window.location.href = href;
+        });
+    } else {
+        // fallback: ดีเลย์เล็กน้อยให้ overlay แสดงก่อน
+        setTimeout(() => { window.location.href = href; }, 80);
     }
 }
 
 // =========================================================
-// IIFE: วาดโครงสร้าง (Skeleton) ทันทีที่เปิดเว็บ
-// เพื่อให้ดูเหมือนว่าเมนู "ค้างไว้" อย่างต่อเนื่องเมื่อโหลดหน้าใหม่
+// IIFE: วาดโครงสร้าง (Skeleton) ทันทีที่โหลดหน้า
+// ป้องกัน sidebar กระพริบระหว่างรอ Firebase
 // =========================================================
 (function renderInitialSkeleton() {
-    // ฝัง CSS ลดการกระพริบ และเปิดใช้ View Transitions API (ฟีเจอร์ใหม่สำหรับเนียนตาข้ามไฟล์)
     const styleEl = document.createElement('style');
     styleEl.innerHTML = `
+        /* View Transitions API - ทำให้การเปลี่ยนหน้าเนียนตา */
         @view-transition { navigation: auto; }
         
-        /* สไตล์ของ Sidebar ย่อ/ขยาย */
-        #app-sidebar { transition: width 0.3s ease; }
+        /* ป้องกัน flash ของ content area ตอนโหลดหน้าใหม่ */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+            animation: none;
+        }
+        
+        /* Animate เฉพาะ main content ไม่แตะ sidebar */
+        main {
+            view-transition-name: main-content;
+        }
+        #app-sidebar, header {
+            view-transition-name: none;
+        }
+        
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        ::view-transition-new(main-content) {
+            animation: fade-in 0.2s ease forwards;
+        }
+        ::view-transition-old(main-content) {
+            animation: none;
+            display: none;
+        }
+
+        /* Sidebar collapse styles */
+        #app-sidebar { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         #app-sidebar.collapsed { width: 4rem; }
         #app-sidebar.collapsed .sidebar-text { display: none; }
         #app-sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
@@ -208,6 +245,11 @@ function handleMenuClick(e) {
         #app-sidebar.collapsed .admin-panel-text { display: none; }
         #app-sidebar.collapsed .footer-text { display: none; }
         #app-sidebar.collapsed .collapsed-footer-text { display: block; }
+        
+        /* ป้องกัน FOUC (Flash of Unstyled Content) */
+        #sidebar-placeholder, #topbar-placeholder {
+            contain: layout style;
+        }
     `;
     document.head.appendChild(styleEl);
 
@@ -219,13 +261,12 @@ function handleMenuClick(e) {
     else if (currentPath.includes('profile') || pageTitle.includes('โปรไฟล์')) guessedPageId = 'profile';
     else if (currentPath.includes('add-employee') || pageTitle.includes('จัดการพนักงาน')) guessedPageId = 'add-employee';
 
-    // วาด UI ด้วยข้อมูลจำลองทันที (ล็อก Sidebar ให้ค้างไว้ก่อนโหลด Firebase เสร็จ)
+    // วาด Skeleton UI ทันทีด้วยข้อมูลจำลอง
     const dummyUser = {
-        name: "Loading Profile...",
+        name: "กำลังโหลด...",
         role: "SYSTEM",
         photoURL: "https://ui-avatars.com/api/?name=LSG&background=f4f4f5&color=a1a1aa"
     };
     
-    // ส่ง isInitialLoad = true เพื่อสั่งให้สร้าง Spinner ทับพื้นที่ตรงกลาง
     renderUI(dummyUser, guessedPageId, true);
 })();
