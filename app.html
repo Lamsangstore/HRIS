@@ -4032,7 +4032,7 @@ PAGES['holidays'] = {
 PAGES['payslip'] = {
     title: 'E-Pay Slip',
     html: `
-<div class="p-6 lg:p-8 max-w-4xl mx-auto">
+<div class="p-6 lg:p-8 max-w-2xl mx-auto">
   <div class="mb-8">
     <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight flex items-center gap-3">
       <span class="w-10 h-10 bg-yellow-500 rounded-2xl flex items-center justify-center shrink-0">
@@ -4040,9 +4040,9 @@ PAGES['payslip'] = {
       </span>
       E-Pay Slip
     </h2>
-    <p class="text-sm text-zinc-400 font-medium mt-1 ml-[52px]">สลิปเงินเดือนของคุณ — ยืนยันรหัสผ่านก่อนเปิด Google Drive</p>
+    <p class="text-sm text-zinc-400 font-medium mt-1 ml-[52px]">สลิปเงินเดือนของคุณ</p>
   </div>
-  <div id="ps-list" class="space-y-6">
+  <div id="ps-content">
     <div class="text-center py-20 text-zinc-300">
       <i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i>
       <p class="font-bold text-sm">กำลังโหลด...</p>
@@ -4062,10 +4062,10 @@ PAGES['payslip'] = {
     </div>
     <div class="p-7 space-y-4">
       <div class="flex items-center gap-3 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
-        <i class="fa-solid fa-file-invoice text-yellow-500 text-xl shrink-0"></i>
+        <i class="fa-brands fa-google-drive text-green-500 text-xl shrink-0"></i>
         <div>
-          <p id="ps-pw-label" class="font-black text-zinc-800 text-sm">-</p>
-          <p id="ps-pw-sub" class="text-[10px] text-zinc-400 mt-0.5">-</p>
+          <p class="font-black text-zinc-800 text-sm">โฟลเดอร์สลิปของคุณ</p>
+          <p class="text-[10px] text-zinc-400 mt-0.5">ระบบจะเปิด Google Drive หลังยืนยัน</p>
         </div>
       </div>
       <div>
@@ -4088,94 +4088,92 @@ PAGES['payslip'] = {
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
-        const { collection, query, where, orderBy, onSnapshot }
+        const { collection, query, where, getDocs }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const { getAuth, signInWithEmailAndPassword }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
 
-        const TM = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
         let pendingUrl = null;
 
-        // Listen to keydown on password input
-        document.addEventListener('keydown', function psKeyHandler(e) {
+        // Enter key handler
+        function pwKeyHandler(e) {
             if (e.key === 'Enter' && !document.getElementById('ps-pw-modal')?.classList.contains('hidden')) {
                 psConfirmPw();
             }
-        });
+        }
+        document.addEventListener('keydown', pwKeyHandler);
 
-        const unsub = onSnapshot(
-            query(collection(db,'artifacts',APP_ID,'public','data','payslips'),
-                  where('uid','==',user.uid),
-                  orderBy('year','desc'), orderBy('periodNo','desc')),
-            snap => renderSlips(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        );
+        // ดึง slip record ของ user นี้ (1 record = 1 folder)
+        const el = document.getElementById('ps-content');
+        try {
+            const snap = await getDocs(
+                query(collection(db,'artifacts',APP_ID,'public','data','payslips'),
+                      where('uid','==',user.uid))
+            );
 
-        function renderSlips(slips) {
-            const el = document.getElementById('ps-list');
-            if (!el) return;
-            if (!slips.length) {
-                el.innerHTML = `<div class="text-center py-24 text-zinc-300">
+            if (snap.empty) {
+                el.innerHTML = `
+                <div class="text-center py-24 text-zinc-300">
                   <div class="w-20 h-20 bg-zinc-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
                     <i class="fa-solid fa-file-circle-xmark text-4xl"></i>
                   </div>
                   <p class="font-black text-zinc-400 text-base">ยังไม่มีสลิปเงินเดือน</p>
-                  <p class="text-sm text-zinc-300 mt-1">ทีม HR จะอัปโหลดสลิปให้คุณหลังสิ้นงวด</p>
-                </div>`; return;
+                  <p class="text-sm text-zinc-300 mt-1">ทีม HR จะเพิ่มลิงก์โฟลเดอร์ให้คุณในภายหลัง</p>
+                </div>`;
+                return;
             }
-            const byYear = {};
-            slips.forEach(s => { const y = String(s.year || '?'); (byYear[y] = byYear[y] || []).push(s); });
-            let html = '';
-            Object.keys(byYear).sort((a,b) => b - a).forEach(yr => {
-                html += `<div>
-                  <div class="flex items-center gap-3 mb-4">
-                    <span class="text-xs font-black tracking-widest uppercase text-white bg-zinc-800 px-4 py-1.5 rounded-full">ปี ${yr}</span>
-                    <span class="text-xs text-zinc-400 font-medium">${byYear[yr].length} สลิป</span>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">`;
-                byYear[yr].forEach(s => {
-                    const mo = TM[parseInt(s.month || 0)] || '';
-                    const label = s.label || (mo ? (mo + ' ' + yr) : ('งวด ' + s.periodNo));
-                    const sub = 'งวด ' + (s.periodNo || '-') + ' / ' + yr;
-                    html += `<div class="bg-white rounded-2xl border-2 border-zinc-100 hover:border-yellow-300 hover:shadow-lg transition-all p-5 flex flex-col group">
-                      <div class="flex items-center gap-3 mb-4">
-                        <div class="w-11 h-11 bg-yellow-50 group-hover:bg-yellow-100 rounded-xl flex items-center justify-center shrink-0 transition-all">
-                          <i class="fa-solid fa-file-invoice text-yellow-500 text-lg"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="font-black text-zinc-800 text-sm leading-tight">${label}</p>
-                          <p class="text-[10px] text-zinc-400 font-bold uppercase mt-0.5">${sub}</p>
-                        </div>
-                      </div>
-                      ${s.note ? '<p class="text-xs text-zinc-400 mb-3 truncate">' + s.note + '</p>' : ''}
-                      <div class="mt-auto">
-                        <button class="ps-open-btn w-full bg-zinc-900 hover:bg-yellow-500 text-white hover:text-zinc-900 font-black py-2.5 rounded-xl text-xs transition-all uppercase tracking-widest flex items-center justify-center gap-2"
-                          data-label="${label.replace(/"/g,'&quot;')}" data-sub="${sub}" data-url="${encodeURIComponent(s.driveUrl || '')}">
-                          <i class="fa-solid fa-lock text-xs"></i> ดูสลิป
-                        </button>
-                      </div>
-                    </div>`;
-                });
-                html += `</div></div>`;
-            });
-            el.innerHTML = html;
-            // Attach click handlers via event delegation
-            el.querySelectorAll('.ps-open-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    psOpenPw(btn.dataset.label, btn.dataset.sub, btn.dataset.url);
-                });
-            });
+
+            const s = snap.docs[0].data();
+            const av = profile.photoURL ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=27272a&color=eab308&size=128`;
+
+            el.innerHTML = `
+            <div class="bg-white rounded-3xl border-2 border-zinc-100 p-8 flex flex-col items-center text-center gap-5">
+              <img src="${av}" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg">
+              <div>
+                <p class="font-black text-zinc-800 text-xl">${profile.name}</p>
+                <p class="text-sm text-zinc-400 font-medium mt-0.5">${profile.position || profile.role} · ${profile.branch || ''}</p>
+              </div>
+
+              <div class="w-full bg-zinc-50 rounded-2xl border border-zinc-200 p-5 flex items-center gap-4">
+                <div class="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center shrink-0">
+                  <i class="fa-brands fa-google-drive text-green-500 text-2xl"></i>
+                </div>
+                <div class="text-left flex-1 min-w-0">
+                  <p class="font-black text-zinc-800">โฟลเดอร์สลิปของฉัน</p>
+                  <p class="text-xs text-zinc-400 truncate mt-0.5">${s.driveUrl}</p>
+                </div>
+              </div>
+
+              <div class="w-full bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 text-left">
+                <p class="text-xs text-amber-800 font-black flex items-center gap-2">
+                  <i class="fa-solid fa-shield-halved text-amber-500"></i>
+                  ต้องยืนยันรหัสผ่านก่อนเปิด
+                </p>
+                <p class="text-[10px] text-amber-600 mt-1">เพื่อความปลอดภัย ระบบจะตรวจสอบตัวตนทุกครั้งที่เปิดสลิป</p>
+              </div>
+
+              <button onclick="psOpenPw('${encodeURIComponent(s.driveUrl)}')"
+                class="w-full bg-zinc-900 hover:bg-yellow-500 hover:text-zinc-900 text-white font-black py-4 rounded-2xl text-sm transition-all shadow-lg uppercase tracking-widest flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lock"></i> ยืนยันรหัสผ่านเพื่อเปิดสลิป
+              </button>
+            </div>`;
+
+        } catch(e) {
+            el.innerHTML = `<div class="text-center py-16 text-zinc-400">
+                <i class="fa-solid fa-triangle-exclamation text-3xl mb-3 text-yellow-500"></i>
+                <p class="font-bold text-sm">เกิดข้อผิดพลาด: ${e.message}</p>
+            </div>`;
         }
 
-        function psOpenPw(label, sub, encodedUrl) {
+        window.psOpenPw = (encodedUrl) => {
             pendingUrl = decodeURIComponent(encodedUrl);
-            document.getElementById('ps-pw-label').textContent = label;
-            document.getElementById('ps-pw-sub').textContent = sub;
             const inp = document.getElementById('ps-pw-input');
             if (inp) inp.value = '';
             document.getElementById('ps-pw-error')?.classList.add('hidden');
             document.getElementById('ps-pw-modal')?.classList.remove('hidden');
             setTimeout(() => inp?.focus(), 120);
-        }
+        };
 
         window.psClosePw = () => {
             document.getElementById('ps-pw-modal')?.classList.add('hidden');
@@ -4183,7 +4181,7 @@ PAGES['payslip'] = {
         };
 
         window.psConfirmPw = async () => {
-            const pw = document.getElementById('ps-pw-input')?.value || '';
+            const pw  = document.getElementById('ps-pw-input')?.value || '';
             if (!pw) return;
             const btn = document.getElementById('ps-pw-btn');
             const err = document.getElementById('ps-pw-error');
@@ -4205,8 +4203,8 @@ PAGES['payslip'] = {
         };
 
         return () => {
-            unsub();
-            ['psClosePw','psConfirmPw'].forEach(k => delete window[k]);
+            document.removeEventListener('keydown', pwKeyHandler);
+            ['psOpenPw','psClosePw','psConfirmPw'].forEach(k => delete window[k]);
         };
     }
 };
