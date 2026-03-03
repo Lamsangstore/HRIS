@@ -2339,44 +2339,6 @@ PAGES['leave-admin'] = {
         // ================================================================
         // PAYROLL PAGE
         // ================================================================
-        // ============================================================
-// PAYROLL MODULE - Lamsang Group HRIS
-// payroll_module.js
-// ============================================================
-//
-// ══ วิธีติดตั้งใน app.html ══════════════════════════════════
-//
-// STEP 1 — คัดลอกโค้ดทั้งหมดในไฟล์นี้
-//   เปิด app.html แล้วหา:
-//       }; ← บรรทัดปิดสุดท้ายของ PAGES['leave-admin']
-//   วางโค้ดทั้งหมดต่อจากนั้น ก่อน </script>
-//
-// STEP 2 — ลบ payroll ออกจาก blacklist ใน navigateTo()
-//   หาบรรทัด:
-//       if (pageId === '#' || pageId === 'executive' || pageId === 'payroll' || ...)
-//   ลบ  || pageId === 'payroll'  ออก
-//
-// STEP 3 — buildNav() ไม่ต้องเปลี่ยน (ใช้ id: 'payroll' อยู่แล้ว)
-//
-// ══ Firestore Collections ใหม่ ═══════════════════════════════
-//
-//   payroll_periods/{id}:
-//     periodNo, year, startDate, endDate, note
-//     status: 'draft' | 'final' | 'paid'
-//     createdAt, createdBy, finalizedAt, paidAt
-//
-//   payroll_records/{id}:
-//     periodId, periodNo, year, uid, employeeCode, name, nickname
-//     branch, position, lineId, photoURL
-//     baseSalary, dailyWage, hourlyWage, commissionRate
-//     workDays, workHours, commissionUnits
-//     earningDaily, earningHourly, earningCommission, otherEarning
-//     sickLeaveHours, personalLeaveHours, vacationLeaveHours, otherLeaveHours, lateHours
-//     deductLeave, deductSSO, deductTax, otherDeduct, taxMode
-//     totalEarning, totalDeduct, netPay
-//     createdAt, updatedAt
-// ============================================================
-
 PAGES['payroll'] = {
     title: '\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19',
     html: `
