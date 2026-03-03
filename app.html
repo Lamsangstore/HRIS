@@ -232,7 +232,7 @@
         // ── Navigate ────────────────────────────────────────────────────
         window.navigateTo = async function(pageId) {
             if (pageId === currentPageId) return;
-            if (pageId === '#' || pageId === 'executive' || pageId === 'payroll' || pageId === '---') {
+            if (pageId === '#' || pageId === '---') {
                 showToast('หน้านี้ยังอยู่ระหว่างพัฒนา', 'info');
                 return;
             }
@@ -2296,6 +2296,564 @@ PAGES['leave-admin'] = {
         };
     }
 };
+        
+    PAGES['payroll'] = {
+    title: '\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19',
+    html: `
+<style>
+:root { --pr-gold:#eab308; --pr-dark:#18181b; }
+.pr-input {
+  width:100%; border:2px solid #f4f4f5; background:#fafafa; border-radius:.6rem;
+  padding:.55rem .85rem; font-size:.8rem; font-weight:600; color:#27272a;
+  outline:none; transition:all .18s; font-family:inherit;
+}
+.pr-input:focus { background:#fff; border-color:#eab308; box-shadow:0 0 0 3px rgba(234,179,8,.12); }
+.pr-input[readonly],.pr-input:read-only { background:#f4f4f5; color:#71717a; cursor:default; border-color:#e4e4e7; }
+.pr-lbl { display:block; font-size:.7rem; font-weight:700; color:#71717a; margin-bottom:.22rem; text-transform:uppercase; letter-spacing:.05em; }
+.pr-section { border-left:3px solid #eab308; padding-left:1rem; margin-bottom:1.5rem; }
+.pr-section-title { font-size:.68rem; font-weight:900; color:#a1a1aa; text-transform:uppercase; letter-spacing:.12em; margin-bottom:.7rem; }
+.pr-row-earn   { background:#f0fdf4; }
+.pr-row-deduct { background:#fef2f2; }
+.pr-row-net    { background:#fefce8; }
+.pr-badge-draft  { background:#fef9c3; color:#713f12; border:1px solid #fde047; }
+.pr-badge-final  { background:#dcfce7; color:#14532d; border:1px solid #86efac; }
+.pr-badge-paid   { background:#e0f2fe; color:#0c4a6e; border:1px solid #7dd3fc; }
+.pr-slide { animation:prSlide .2s ease forwards; }
+@keyframes prSlide { from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:translateX(0)} }
+.num { font-variant-numeric:tabular-nums; }
+</style>
+
+<div class="p-6 lg:p-8 max-w-[1400px] mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-10 h-10 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-md">
+          <i class="fa-solid fa-file-invoice-dollar text-yellow-400"></i>
+        </div>
+        <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">Payroll Management</h2>
+      </div>
+      <p class="text-sm text-zinc-400 font-medium">\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e25\u0e30\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19 Lamsang Group</p>
+    </div>
+    <button onclick="prOpenCreate()"
+      class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-6 py-3 rounded-xl shadow-lg transition-all text-sm uppercase tracking-widest">
+      <i class="fa-solid fa-plus"></i> \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14\u0e43\u0e2b\u0e21\u0e48
+    </button>
+  </div>
+  <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+    <div class="xl:col-span-2">
+      <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-yellow-500"></i> \u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19
+          </h3>
+          <span id="pr-cnt" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full">-</span>
+        </div>
+        <div id="pr-list" class="divide-y divide-zinc-100 max-h-[72vh] overflow-y-auto">
+          <div class="p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="text-sm font-bold">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="xl:col-span-3" id="pr-panel">
+      <div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-72 text-zinc-300">
+        <i class="fa-solid fa-arrow-left text-5xl mb-4 opacity-25"></i>
+        <p class="font-bold text-sm">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e07\u0e27\u0e14\u0e08\u0e32\u0e01\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create Period -->
+<div id="pr-modal-create" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseCreate()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+      <div>
+        <h3 class="font-black text-white text-lg">\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e43\u0e2b\u0e21\u0e48</h3>
+        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">New Payroll Period</p>
+      </div>
+      <button onclick="prCloseCreate()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div class="p-7 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="pr-lbl">\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48</label><input type="number" id="pr-no" class="pr-input" placeholder="1" min="1"></div>
+        <div><label class="pr-lbl">\u0e1b\u0e35 (\u0e1e.\u0e28.)</label><input type="number" id="pr-yr" class="pr-input" placeholder="2568"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="pr-lbl">\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</label><input type="date" id="pr-s" class="pr-input"></div>
+        <div><label class="pr-lbl">\u0e16\u0e36\u0e07\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</label><input type="date" id="pr-e" class="pr-input"></div>
+      </div>
+      <div><label class="pr-lbl">\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38</label><input type="text" id="pr-note" class="pr-input" placeholder="\u0e40\u0e0a\u0e48\u0e19 \u0e40\u0e14\u0e37\u0e2d\u0e19\u0e21\u0e35\u0e19\u0e32\u0e04\u0e21 2568"></div>
+      <button onclick="prDoCreate()" id="pr-create-btn"
+        class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-4 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md flex items-center justify-center gap-2">
+        <i class="fa-solid fa-plus-circle"></i> \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit Record -->
+<div id="pr-modal-rec" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseRec()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[93vh] flex flex-col overflow-hidden">
+    <div class="bg-zinc-900 px-7 py-4 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700">
+        <div>
+          <p id="pr-rec-name" class="font-black text-white text-sm">-</p>
+          <p id="pr-rec-code" class="text-yellow-400 text-[10px] font-bold uppercase tracking-widest">-</p>
+        </div>
+      </div>
+      <button onclick="prCloseRec()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div class="overflow-y-auto flex-1 p-7 space-y-5" id="pr-rec-body"></div>
+    <div class="shrink-0 px-7 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
+      <div>
+        <p class="text-[10px] text-zinc-400 font-bold uppercase">\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a (\u0e2a\u0e38\u0e17\u0e18\u0e34)</p>
+        <p class="text-2xl font-black text-green-600 num" id="pr-net-prev">\u0e3f -</p>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="prCloseRec()" class="px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl transition-all text-sm">\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01</button>
+        <button onclick="prSaveRec()" id="pr-save-btn"
+          class="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl transition-all text-sm uppercase tracking-widest shadow-md flex items-center gap-2">
+          <i class="fa-solid fa-save"></i> \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01
+        </button>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin') { navigateTo('home'); return; }
+        const { collection, doc, addDoc, updateDoc, onSnapshot, query,
+                orderBy, where, getDocs, writeBatch }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        let periods = [], activeId = null, records = [], employees = [], editId = null, unsubRec = null;
+        const fmt  = n => Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+        const fmtD = s => s ? new Date(s).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '-';
+        const gN   = id => parseFloat(document.getElementById(id)?.value||0)||0;
+        const gV   = id => document.getElementById(id)?.value?.trim()||'';
+        const sEl  = id => document.getElementById(id);
+
+        const empSnap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','users'));
+        employees = empSnap.docs.map(d=>d.data()).filter(e=>e.uid);
+
+        const unsubP = onSnapshot(
+            query(collection(db,'artifacts',APP_ID,'public','data','payroll_periods'),orderBy('createdAt','desc')),
+            snap => {
+                periods = snap.docs.map(d=>({id:d.id,...d.data()}));
+                renderList();
+                const c = sEl('pr-cnt'); if(c) c.textContent = periods.length+' \u0e07\u0e27\u0e14';
+            }
+        );
+
+        function badge(s) {
+            return s==='paid' ? ['pr-badge-paid','\u0e08\u0e48\u0e32\u0e22\u0e41\u0e25\u0e49\u0e27']
+                 : s==='final' ? ['pr-badge-final','\u0e2a\u0e23\u0e38\u0e1b\u0e41\u0e25\u0e49\u0e27']
+                 : ['pr-badge-draft','\u0e23\u0e48\u0e32\u0e07'];
+        }
+
+        function renderList() {
+            const el = sEl('pr-list'); if(!el) return;
+            if(!periods.length){el.innerHTML=`<div class="p-10 text-center text-zinc-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><p class="font-bold text-sm">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19</p></div>`;return;}
+            el.innerHTML = periods.map(p=>{
+                const ia=p.id===activeId;
+                const [bc,bt]=badge(p.status);
+                return `<button onclick="prSel('${p.id}')" class="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-zinc-50 transition-all ${ia?'bg-yellow-50 border-l-4 border-yellow-500':''}">
+                  <div class="w-11 h-11 rounded-2xl ${ia?'bg-zinc-900':'bg-zinc-100'} flex flex-col items-center justify-center shrink-0">
+                    <span class="text-[9px] font-black ${ia?'text-yellow-400':'text-zinc-400'} uppercase leading-none">\u0e07\u0e27\u0e14</span>
+                    <span class="text-lg font-black ${ia?'text-white':'text-zinc-700'} leading-none">${p.periodNo}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="font-black text-zinc-800 text-sm">\u0e07\u0e27\u0e14 ${p.periodNo} / ${p.year}</span>
+                      <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${bc}">${bt}</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-400 mt-0.5">${fmtD(p.startDate)} \u2013 ${fmtD(p.endDate)}</p>
+                    ${p.note?`<p class="text-[10px] text-zinc-400 truncate">${p.note}</p>`:''}
+                  </div>
+                  <i class="fa-solid fa-chevron-right text-zinc-300 text-xs shrink-0"></i>
+                </button>`;
+            }).join('');
+        }
+
+        window.prSel = async pid => {
+            activeId=pid; renderList();
+            if(unsubRec){unsubRec();unsubRec=null;}
+            const period=periods.find(p=>p.id===pid); if(!period) return;
+            const panel=sEl('pr-panel');
+            if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>`;
+            unsubRec=onSnapshot(
+                query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
+                      where('periodId','==',pid),orderBy('employeeCode')),
+                snap=>{records=snap.docs.map(d=>({id:d.id,...d.data()}));renderPanel(period);}
+            );
+        };
+
+        function renderPanel(p) {
+            const panel=sEl('pr-panel'); if(!panel) return;
+            const isDraft=!p.status||p.status==='draft';
+            const tNet=records.reduce((s,r)=>s+(r.netPay||0),0);
+            const tEar=records.reduce((s,r)=>s+(r.totalEarning||0),0);
+            const tDed=records.reduce((s,r)=>s+(r.totalDeduct||0),0);
+            const [bc,bt]=badge(p.status);
+            panel.innerHTML=`<div class="pr-slide space-y-5">
+              <div class="bg-zinc-900 rounded-2xl p-6 text-white">
+                <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+                  <div class="flex items-center gap-3">
+                    <span class="text-5xl font-black text-yellow-400 leading-none">${p.periodNo}</span>
+                    <div>
+                      <p class="font-black text-xl leading-tight">\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48 ${p.periodNo} / ${p.year}</p>
+                      <p class="text-zinc-400 text-xs mt-0.5">${fmtD(p.startDate)} \u2013 ${fmtD(p.endDate)}</p>
+                      ${p.note?`<p class="text-zinc-500 text-xs">${p.note}</p>`:''}
+                      <span class="mt-1 inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full ${bc}">${bt}</span>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase">\u0e22\u0e2d\u0e14\u0e2a\u0e38\u0e17\u0e18\u0e34\u0e23\u0e27\u0e21</p>
+                    <p class="text-3xl font-black text-yellow-400 num">\u0e3f${fmt(tNet)}</p>
+                    <p class="text-[10px] text-zinc-500 mt-1">${records.length} \u0e04\u0e19</p>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-zinc-800">
+                  <div class="text-center"><p class="text-[10px] text-zinc-500 font-bold uppercase">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e23\u0e27\u0e21</p><p class="font-black text-green-400 num">\u0e3f${fmt(tEar)}</p></div>
+                  <div class="text-center border-x border-zinc-800"><p class="text-[10px] text-zinc-500 font-bold uppercase">\u0e2b\u0e31\u0e01\u0e23\u0e27\u0e21</p><p class="font-black text-red-400 num">\u0e3f${fmt(tDed)}</p></div>
+                  <div class="text-center"><p class="text-[10px] text-zinc-500 font-bold uppercase">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</p><p class="font-black text-white">${records.length} \u0e04\u0e19</p></div>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 items-center">
+                ${isDraft?`
+                <button onclick="prGenAll('${p.id}')" class="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
+                  <i class="fa-solid fa-bolt"></i> \u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34
+                </button>
+                <button onclick="prFinal('${p.id}')" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
+                  <i class="fa-solid fa-lock"></i> \u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14
+                </button>`:''}
+                ${p.status==='final'?`<button onclick="prPaid('${p.id}')" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm"><i class="fa-solid fa-check-double"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22</button>`:''}
+                <button onclick="prCSV('${p.id}')" class="inline-flex items-center gap-2 border-2 border-zinc-200 hover:border-zinc-400 text-zinc-600 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
+                  <i class="fa-solid fa-file-csv"></i> Export CSV
+                </button>
+                ${isDraft?`<button onclick="prDel('${p.id}')" class="ml-auto inline-flex items-center gap-1.5 text-red-400 hover:text-red-600 font-black text-xs px-3 py-2 rounded-lg hover:bg-red-50 transition-all"><i class="fa-solid fa-trash-can"></i> \u0e25\u0e1a\u0e07\u0e27\u0e14</button>`:''}
+              </div>
+              <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead><tr class="bg-zinc-50 border-b border-zinc-200">
+                      <th class="px-4 py-3 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</th>
+                      <th class="px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</th>
+                      <th class="px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e2b\u0e31\u0e01</th>
+                      <th class="px-3 py-3 text-right text-[10px] font-black text-green-600 uppercase tracking-widest">\u0e2a\u0e38\u0e17\u0e18\u0e34</th>
+                      <th class="px-3 py-3 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e41\u0e01\u0e49\u0e44\u0e02</th>
+                    </tr></thead>
+                    <tbody>${records.length ? records.map(r=>{
+                        const av=r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
+                        return `<tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-all">
+                          <td class="px-4 py-3"><div class="flex items-center gap-3"><img src="${av}" class="w-9 h-9 rounded-xl object-cover border border-zinc-200 shrink-0"><div class="min-w-0"><p class="font-black text-zinc-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
+                          <td class="px-3 py-3 text-right num text-sm font-bold text-zinc-700">\u0e3f${fmt(r.totalEarning)}</td>
+                          <td class="px-3 py-3 text-right num text-sm font-bold text-red-500">\u0e3f${fmt(r.totalDeduct)}</td>
+                          <td class="px-3 py-3 text-right num font-black text-green-600">\u0e3f${fmt(r.netPay)}</td>
+                          <td class="px-3 py-3 text-center"><button onclick="prOpenRec('${r.id}')" class="text-xs font-black bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 text-zinc-600 px-3 py-1.5 rounded-lg transition-all"><i class="fa-solid fa-pen-to-square mr-1"></i>${isDraft?'\u0e41\u0e01\u0e49\u0e44\u0e02':'\u0e14\u0e39'}</button></td>
+                        </tr>`;
+                    }).join('') : `<tr><td colspan="5" class="text-center py-12 text-zinc-300"><i class="fa-solid fa-circle-exclamation text-3xl mb-3 block"></i><p class="font-bold text-sm">\u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</p></td></tr>`}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        window.prOpenCreate = () => {
+            const now=new Date(), y=now.getFullYear()+543;
+            const nx=periods.length ? Math.max(...periods.filter(p=>p.year==y).map(p=>p.periodNo||0))+1 : 1;
+            const sv=(id,v)=>{const e=sEl(id);if(e)e.value=v;};
+            sv('pr-no',nx); sv('pr-yr',y);
+            const gy=now.getFullYear(), gm=now.getMonth();
+            sv('pr-s',new Date(gy,gm,1).toISOString().slice(0,10));
+            sv('pr-e',new Date(gy,gm+1,0).toISOString().slice(0,10));
+            sEl('pr-modal-create')?.classList.remove('hidden');
+        };
+        window.prCloseCreate = () => sEl('pr-modal-create')?.classList.add('hidden');
+
+        window.prDoCreate = async () => {
+            const no=parseInt(gV('pr-no')), yr=parseInt(gV('pr-yr')), s=gV('pr-s'), e=gV('pr-e'), n=gV('pr-note');
+            if(!no||!yr||!s||!e){showToast('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e01\u0e23\u0e2d\u0e01\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e43\u0e2b\u0e49\u0e04\u0e23\u0e1a','error');return;}
+            const btn=sEl('pr-create-btn'); btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i>';
+            try {
+                const ref=await addDoc(collection(db,'artifacts',APP_ID,'public','data','payroll_periods'),
+                    {periodNo:no,year:yr,startDate:s,endDate:e,note:n,status:'draft',createdAt:new Date().toISOString(),createdBy:profile.name});
+                showToast('\u2705 \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22','success');
+                prCloseCreate();
+                setTimeout(()=>prSel(ref.id),300);
+            } catch(err){showToast('\u274c '+err.message,'error');}
+            finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-plus-circle mr-2"></i> \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14';}
+        };
+
+        function cntDays(sd,ed,sc){
+            const ws=new Set(sc.workDays||[1,2,3,4,5]), hd=new Set(sc.holidays||[]);
+            let n=0, d=new Date(sd+'T00:00:00'), end=new Date(ed+'T00:00:00');
+            while(d<=end){const ds=d.toISOString().slice(0,10);if(ws.has(d.getDay())&&!hd.has(ds))n++;d.setDate(d.getDate()+1);}
+            return n;
+        }
+        function calcTax(sal,mode){
+            if(!mode||mode==='No')return 0;
+            if(mode==='3')return Math.round(sal*0.03);
+            const an=sal*12; let t=0,rem=an;
+            for(const [c,r] of [[150000,0],[150000,.05],[200000,.1],[250000,.15],[250000,.2],[500000,.25],[500000,.3],[Infinity,.35]]){
+                const tx=Math.min(rem,c); t+=tx*r; rem-=tx; if(rem<=0)break;
+            }
+            return Math.round(t/12);
+        }
+
+        window.prGenAll = async pid => {
+            const active=employees.filter(e=>e.status!=='resigned');
+            if(!confirm(`\u0e04\u0e33\u0e19\u0e27\u0e13\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e43\u0e2b\u0e49 ${active.length} \u0e04\u0e19?\n\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e40\u0e14\u0e34\u0e21\u0e08\u0e30\u0e16\u0e39\u0e01\u0e41\u0e17\u0e19\u0e17\u0e35\u0e48`))return;
+            const period=periods.find(p=>p.id===pid); if(!period)return;
+            const btn=document.querySelector(`[onclick="prGenAll('${pid}')"]`);
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> \u0e01\u0e33\u0e25\u0e31\u0e07\u0e04\u0e33\u0e19\u0e27\u0e13...';}
+            try {
+                const [ls,ss]=await Promise.all([
+                    getDocs(query(collection(db,'artifacts',APP_ID,'public','data','leave_requests'),where('status','==','approved'))),
+                    getDocs(collection(db,'artifacts',APP_ID,'public','data','work_schedules')),
+                ]);
+                const lbu={},sbu={};
+                ls.docs.forEach(d=>{const l=d.data();if(l.startDate<=period.endDate&&l.endDate>=period.startDate){if(!lbu[l.uid])lbu[l.uid]=[];lbu[l.uid].push(l);}});
+                ss.docs.forEach(d=>{sbu[d.id]=d.data();});
+                const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
+                if(ex.docs.length){const b1=writeBatch(db);ex.docs.forEach(d=>b1.delete(d.ref));await b1.commit();}
+                const b2=writeBatch(db);
+                active.forEach(emp=>{
+                    const lv=lbu[emp.uid]||[], sc=sbu[emp.uid]||{workDays:[1,2,3,4,5],workStart:'08:00',workEnd:'17:00',breakMinutes:60};
+                    const lh={sick:0,personal:0,vacation:0,other:0};
+                    lv.forEach(l=>{const t=['sick','personal','vacation'].includes(l.type)?l.type:'other';lh[t]+=(l.totalHours||0);});
+                    const wd=cntDays(period.startDate,period.endDate,sc);
+                    const base=emp.baseSalary||0, daily=emp.dailyWage||0, hourly=emp.hourlyWage||0, commR=emp.commission||0;
+                    const taxMode=emp.taxDeduction||'No';
+                    const dSSO=emp.sso==='Yes'?Math.min(Math.round(base*0.05),750):0;
+                    const dTax=calcTax(base,taxMode), eD=daily*wd;
+                    const tEar=base+eD, tDed=dSSO+dTax, net=tEar-tDed;
+                    const ref=doc(collection(db,'artifacts',APP_ID,'public','data','payroll_records'));
+                    b2.set(ref,{
+                        periodId:pid,periodNo:period.periodNo,year:period.year,
+                        uid:emp.uid,employeeCode:emp.employeeCode||'',name:emp.name,
+                        nickname:emp.nickname||'',lineId:emp.lineId||'',photoURL:emp.photoURL||'',
+                        branch:emp.branch||'',position:emp.position||'',
+                        baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,
+                        workDays:wd,workHours:0,commissionUnits:0,
+                        earningDaily:eD,earningHourly:0,earningCommission:0,otherEarning:0,
+                        sickLeaveHours:lh.sick,personalLeaveHours:lh.personal,
+                        vacationLeaveHours:lh.vacation,otherLeaveHours:lh.other,lateHours:0,
+                        deductLeave:0,deductSSO:dSSO,deductTax:dTax,otherDeduct:0,taxMode,
+                        totalEarning:tEar,totalDeduct:tDed,netPay:net,
+                        createdAt:new Date().toISOString(),
+                    });
+                });
+                await b2.commit();
+                showToast(`\u2705 \u0e2a\u0e23\u0e49\u0e32\u0e07 ${active.length} \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08`,'success');
+            } catch(err){showToast('\u274c '+err.message,'error');console.error(err);}
+            finally{if(btn){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-bolt mr-2"></i> \u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34';}}
+        };
+
+        window.prOpenRec = rid => {
+            const r=records.find(x=>x.id===rid); if(!r) return;
+            editId=rid;
+            const period=periods.find(p=>p.id===r.periodId);
+            const isDraft=!period||period.status==='draft';
+            const RO=isDraft?'':'readonly';
+            const av=r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=27272a&color=eab308&bold=true`;
+            sEl('pr-rec-av').src=av;
+            sEl('pr-rec-name').textContent=`${r.name}${r.nickname?` (${r.nickname})`:''}`;
+            sEl('pr-rec-code').textContent=`${r.employeeCode} \u00b7 ${r.branch||''} \u00b7 \u0e07\u0e27\u0e14 ${r.periodNo}/${r.year}`;
+            sEl('pr-rec-body').innerHTML=`
+            <div class="pr-section"><p class="pr-section-title">\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e1e\u0e37\u0e49\u0e19\u0e10\u0e32\u0e19</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div><label class="pr-lbl">\u0e0a\u0e37\u0e48\u0e2d\u0e40\u0e25\u0e48\u0e19</label><input ${RO} id="rn" class="pr-input" value="${r.nickname||''}"></div>
+                <div><label class="pr-lbl">Line ID</label><input ${RO} id="rl" class="pr-input" value="${r.lineId||''}"></div>
+                <div><label class="pr-lbl">\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48</label><input readonly id="rp" class="pr-input" value="${r.periodNo}/${r.year}"></div>
+                <div><label class="pr-lbl">\u0e2a\u0e32\u0e02\u0e32</label><input readonly class="pr-input" value="${r.branch||'-'}"></div>
+              </div>
+            </div>
+            <div class="pr-section"><p class="pr-section-title">\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div><label class="pr-lbl">\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19 (\u0e3f/\u0e40\u0e14\u0e37\u0e2d\u0e19)</label><input ${RO} id="rb" type="number" class="pr-input num" value="${r.baseSalary||0}"></div>
+                <div><label class="pr-lbl">\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e27\u0e31\u0e19 (\u0e3f/\u0e27\u0e31\u0e19)</label><input ${RO} id="rd" type="number" class="pr-input num" value="${r.dailyWage||0}"></div>
+                <div><label class="pr-lbl">\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e0a\u0e21. (\u0e3f/\u0e0a\u0e21.)</label><input ${RO} id="rh" type="number" class="pr-input num" value="${r.hourlyWage||0}"></div>
+                <div><label class="pr-lbl">\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19 (%)</label><input ${RO} id="rc" type="number" class="pr-input num" value="${r.commissionRate||0}"></div>
+              </div>
+            </div>
+            <div class="pr-section"><p class="pr-section-title">\u0e23\u0e27\u0e21\u0e27\u0e31\u0e19 / \u0e0a\u0e31\u0e48\u0e27\u0e42\u0e21\u0e07 / \u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19</p>
+              <div class="grid grid-cols-3 gap-3">
+                <div><label class="pr-lbl">\u0e23\u0e27\u0e21\u0e27\u0e31\u0e19\u0e17\u0e33\u0e07\u0e32\u0e19</label><input ${RO} id="rwd" type="number" class="pr-input num" value="${r.workDays||0}"></div>
+                <div><label class="pr-lbl">\u0e23\u0e27\u0e21\u0e0a\u0e21. OT/Extra</label><input ${RO} id="rwh" type="number" step="0.5" class="pr-input num" value="${r.workHours||0}"></div>
+                <div><label class="pr-lbl">\u0e23\u0e27\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19</label><input ${RO} id="rcu" type="number" class="pr-input num" value="${r.commissionUnits||0}"></div>
+              </div>
+            </div>
+            <div class="pr-section"><p class="pr-section-title">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49 (Earnings)</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e27\u0e31\u0e19 (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="red">${fmt(r.earningDaily||0)}</p></div>
+                <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e0a\u0e21. (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="reh">${fmt(r.earningHourly||0)}</p></div>
+                <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19 (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="rec">${fmt(r.earningCommission||0)}</p></div>
+                <div><label class="pr-lbl">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input ${RO} id="reo" type="number" class="pr-input num" value="${r.otherEarning||0}"></div>
+              </div>
+            </div>
+            <div class="pr-section"><p class="pr-section-title">\u0e01\u0e32\u0e23\u0e25\u0e32 (Leave)</p>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div><label class="pr-lbl">\u0e25\u0e32\u0e1b\u0e48\u0e27\u0e22 (\u0e0a\u0e21.)</label><input ${RO} id="rls" type="number" step="0.5" class="pr-input num" value="${r.sickLeaveHours||0}"></div>
+                <div><label class="pr-lbl">\u0e25\u0e32\u0e01\u0e34\u0e08 (\u0e0a\u0e21.)</label><input ${RO} id="rlp" type="number" step="0.5" class="pr-input num" value="${r.personalLeaveHours||0}"></div>
+                <div><label class="pr-lbl">\u0e25\u0e32\u0e1e\u0e31\u0e01\u0e23\u0e49\u0e2d\u0e19 (\u0e0a\u0e21.)</label><input ${RO} id="rlv" type="number" step="0.5" class="pr-input num" value="${r.vacationLeaveHours||0}"></div>
+                <div><label class="pr-lbl">\u0e25\u0e32\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e0a\u0e21.)</label><input ${RO} id="rlo" type="number" step="0.5" class="pr-input num" value="${r.otherLeaveHours||0}"></div>
+                <div><label class="pr-lbl">\u0e2a\u0e32\u0e22 (\u0e0a\u0e21.)</label><input ${RO} id="rlt" type="number" step="0.5" class="pr-input num" value="${r.lateHours||0}"></div>
+              </div>
+            </div>
+            <div class="pr-section"><p class="pr-section-title">\u0e01\u0e32\u0e23\u0e2b\u0e31\u0e01 (Deductions)</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e25\u0e32 (\u0e3f)</label><input ${RO} id="rdl" type="number" class="pr-input num" value="${r.deductLeave||0}"></div>
+                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e2a\u0e31\u0e07\u0e04\u0e21 (\u0e3f)</label><input ${RO} id="rds" type="number" class="pr-input num" value="${r.deductSSO||0}"></div>
+                <div><label class="pr-lbl">\u0e20\u0e32\u0e29\u0e35 \u0e13 \u0e17\u0e35\u0e48\u0e08\u0e48\u0e32\u0e22</label>
+                  <select ${RO} id="rtm" class="pr-input" onchange="prRecalc()">
+                    <option value="No" ${r.taxMode==='No'||!r.taxMode?'selected':''}>\u0e44\u0e21\u0e48\u0e2b\u0e31\u0e01</option>
+                    <option value="Yes" ${r.taxMode==='Yes'?'selected':''}>\u0e15\u0e32\u0e21\u0e02\u0e31\u0e49\u0e19\u0e1a\u0e31\u0e19\u0e44\u0e14</option>
+                    <option value="3" ${r.taxMode==='3'?'selected':''}>3% Fixed</option>
+                    <option value="custom" ${r.taxMode==='custom'?'selected':''}>\u0e23\u0e30\u0e1a\u0e38\u0e40\u0e2d\u0e07</option>
+                  </select>
+                </div>
+                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e20\u0e32\u0e29\u0e35 (\u0e3f)</label><input ${RO} id="rdt" type="number" class="pr-input num" value="${r.deductTax||0}"></div>
+                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input ${RO} id="rdo" type="number" class="pr-input num" value="${r.otherDeduct||0}"></div>
+              </div>
+            </div>
+            <div class="rounded-2xl overflow-hidden border border-zinc-200">
+              <table class="w-full text-sm">
+                <tbody>
+                  <tr class="pr-row-earn border-b border-green-100"><td class="px-5 py-3 font-bold text-green-700">\u0e23\u0e27\u0e21\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</td><td class="px-5 py-3 text-right font-black text-green-700 num" id="rte">\u0e3f${fmt(r.totalEarning)}</td></tr>
+                  <tr class="pr-row-deduct border-b border-red-100"><td class="px-5 py-3 font-bold text-red-600">\u0e23\u0e27\u0e21\u0e2b\u0e31\u0e01</td><td class="px-5 py-3 text-right font-black text-red-600 num" id="rtd">\u0e3f${fmt(r.totalDeduct)}</td></tr>
+                  <tr class="pr-row-net"><td class="px-5 py-4 font-black text-zinc-800 text-base">\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a (\u0e2a\u0e38\u0e17\u0e18\u0e34)</td><td class="px-5 py-4 text-right font-black text-green-600 text-xl num" id="rtn">\u0e3f${fmt(r.netPay)}</td></tr>
+                </tbody>
+              </table>
+            </div>`;
+
+            sEl('pr-net-prev').textContent=`\u0e3f ${fmt(r.netPay)}`;
+            if(isDraft){
+                ['rb','rd','rh','rc','rwd','rwh','rcu','reo','rdl','rds','rdt','rdo','rtm']
+                    .forEach(id=>sEl(id)?.addEventListener('input',prRecalc));
+            }
+            const sb=sEl('pr-save-btn'); if(sb) sb.style.display=isDraft?'':'none';
+            sEl('pr-modal-rec')?.classList.remove('hidden');
+            prRecalc();
+        };
+
+        window.prCloseRec = () => { sEl('pr-modal-rec')?.classList.add('hidden'); editId=null; };
+
+        window.prRecalc = () => {
+            const b=gN('rb'),d=gN('rd'),h=gN('rh'),c=gN('rc');
+            const wd=gN('rwd'),wh=gN('rwh'),cu=gN('rcu'),eo=gN('reo');
+            const tm=sEl('rtm')?.value||'No';
+            const eD=d*wd, eH=h*wh, eC=cu*(c/100)*b;
+            const setT=(id,v)=>{const e=sEl(id);if(e)e.textContent=fmt(v);};
+            setT('red',eD); setT('reh',eH); setT('rec',eC);
+            const tEar=b+eD+eH+eC+eo;
+            if(tm!=='custom'){const te=sEl('rdt');if(te)te.value=calcTax(b,tm);}
+            const tDed=gN('rdl')+gN('rds')+gN('rdt')+gN('rdo');
+            const net=tEar-tDed;
+            const setTL=(id,v)=>{const e=sEl(id);if(e)e.textContent=`\u0e3f${fmt(v)}`;};
+            setTL('rte',tEar); setTL('rtd',tDed); setTL('rtn',net);
+            const p=sEl('pr-net-prev');if(p)p.textContent=`\u0e3f ${fmt(net)}`;
+        };
+
+        window.prSaveRec = async () => {
+            if(!editId) return;
+            const b=gN('rb'),d=gN('rd'),h=gN('rh'),c=gN('rc');
+            const wd=gN('rwd'),wh=gN('rwh'),cu=gN('rcu'),eo=gN('reo');
+            const tm=sEl('rtm')?.value||'No';
+            const eD=d*wd,eH=h*wh,eC=cu*(c/100)*b;
+            const tEar=b+eD+eH+eC+eo;
+            const tDed=gN('rdl')+gN('rds')+gN('rdt')+gN('rdo');
+            const net=tEar-tDed;
+            const btn=sEl('pr-save-btn'); btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01...';
+            try {
+                await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_records',editId),{
+                    nickname:gV('rn'),lineId:gV('rl'),
+                    baseSalary:b,dailyWage:d,hourlyWage:h,commissionRate:c,
+                    workDays:wd,workHours:wh,commissionUnits:cu,
+                    earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:eo,
+                    sickLeaveHours:gN('rls'),personalLeaveHours:gN('rlp'),
+                    vacationLeaveHours:gN('rlv'),otherLeaveHours:gN('rlo'),lateHours:gN('rlt'),
+                    deductLeave:gN('rdl'),deductSSO:gN('rds'),deductTax:gN('rdt'),otherDeduct:gN('rdo'),
+                    taxMode:tm,totalEarning:tEar,totalDeduct:tDed,netPay:net,
+                    updatedAt:new Date().toISOString(),
+                });
+                showToast('\u2705 \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22','success');
+                prCloseRec();
+            } catch(err){showToast('\u274c '+err.message,'error');}
+            finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-save mr-2"></i> \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01';}
+        };
+
+        window.prFinal = async pid => {
+            if(!confirm('\u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49? \u0e08\u0e30\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e41\u0e01\u0e49\u0e44\u0e02\u0e44\u0e14\u0e49\u0e2d\u0e35\u0e01'))return;
+            try{await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
+                {status:'final',finalizedAt:new Date().toISOString(),finalizedBy:profile.name});
+                showToast('\u2705 \u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22','success');
+            }catch(err){showToast('\u274c '+err.message,'error');}
+        };
+        window.prPaid = async pid => {
+            if(!confirm('\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49?'))return;
+            try{await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
+                {status:'paid',paidAt:new Date().toISOString(),paidBy:profile.name});
+                showToast('\u2705 \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22\u0e41\u0e25\u0e49\u0e27','success');
+            }catch(err){showToast('\u274c '+err.message,'error');}
+        };
+        window.prDel = async pid => {
+            if(!confirm('\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e41\u0e25\u0e30\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14?'))return;
+            try{
+                const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
+                const b=writeBatch(db); ex.docs.forEach(d=>b.delete(d.ref));
+                b.delete(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid));
+                await b.commit(); activeId=null;
+                const panel=sEl('pr-panel');
+                if(panel)panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-72 text-zinc-300"><i class="fa-solid fa-trash-can text-4xl mb-3 opacity-30"></i><p class="font-bold text-sm">\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22</p></div>`;
+                showToast('\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e41\u0e25\u0e49\u0e27','info');
+            }catch(err){showToast('\u274c '+err.message,'error');}
+        };
+
+        window.prCSV = pid => {
+            const period=periods.find(p=>p.id===pid);
+            if(!period||!records.length){showToast('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25','error');return;}
+            const H=['\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48','\u0e1b\u0e35','\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48','\u0e16\u0e36\u0e07',
+                '\u0e23\u0e2b\u0e31\u0e2a\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19','\u0e0a\u0e37\u0e48\u0e2d-\u0e19\u0e32\u0e21\u0e2a\u0e01\u0e38\u0e25','\u0e0a\u0e37\u0e48\u0e2d\u0e40\u0e25\u0e48\u0e19','\u0e2a\u0e32\u0e02\u0e32','\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07','Line ID',
+                '\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19','\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e27\u0e31\u0e19','\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e0a\u0e21.','\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19(%)',
+                '\u0e23\u0e27\u0e21\u0e27\u0e31\u0e19\u0e17\u0e33\u0e07\u0e32\u0e19','\u0e23\u0e27\u0e21\u0e0a\u0e21.OT','\u0e23\u0e27\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19',
+                '\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e27\u0e31\u0e19','\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e0a\u0e21.','\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19','\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e2d\u0e37\u0e48\u0e19\u0e46',
+                '\u0e25\u0e32\u0e1b\u0e48\u0e27\u0e22(\u0e0a\u0e21.)','\u0e25\u0e32\u0e01\u0e34\u0e08(\u0e0a\u0e21.)','\u0e25\u0e32\u0e1e\u0e31\u0e01\u0e23\u0e49\u0e2d\u0e19(\u0e0a\u0e21.)','\u0e25\u0e32\u0e2d\u0e37\u0e48\u0e19\u0e46(\u0e0a\u0e21.)','\u0e2a\u0e32\u0e22(\u0e0a\u0e21.)',
+                '\u0e2b\u0e31\u0e01\u0e25\u0e32','\u0e2b\u0e31\u0e01\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e2a\u0e31\u0e07\u0e04\u0e21','\u0e2b\u0e31\u0e01\u0e20\u0e32\u0e29\u0e35','\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46',
+                '\u0e23\u0e27\u0e21\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49','\u0e23\u0e27\u0e21\u0e2b\u0e31\u0e01','\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a\u0e2a\u0e38\u0e17\u0e18\u0e34'];
+            const rows=records.map(r=>[
+                r.periodNo,r.year,period.startDate,period.endDate,
+                r.employeeCode,r.name,r.nickname||'',r.branch||'',r.position||'',r.lineId||'',
+                r.baseSalary||0,r.dailyWage||0,r.hourlyWage||0,r.commissionRate||0,
+                r.workDays||0,r.workHours||0,r.commissionUnits||0,
+                r.earningDaily||0,r.earningHourly||0,r.earningCommission||0,r.otherEarning||0,
+                r.sickLeaveHours||0,r.personalLeaveHours||0,r.vacationLeaveHours||0,r.otherLeaveHours||0,r.lateHours||0,
+                r.deductLeave||0,r.deductSSO||0,r.deductTax||0,r.otherDeduct||0,
+                r.totalEarning||0,r.totalDeduct||0,r.netPay||0
+            ]);
+            const csv=[H,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+            const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+            const url=URL.createObjectURL(blob);
+            const a=Object.assign(document.createElement('a'),{href:url,download:`payroll_${period.periodNo}_${period.year}.csv`});
+            a.click(); URL.revokeObjectURL(url);
+            showToast('\ud83d\udce5 Export CSV \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08','success');
+        };
+
+        return () => {
+            unsubP();
+            if(unsubRec) unsubRec();
+            ['prSel','prOpenCreate','prCloseCreate','prDoCreate','prGenAll',
+             'prOpenRec','prCloseRec','prRecalc','prSaveRec',
+             'prFinal','prPaid','prDel','prCSV'
+            ].forEach(k=>delete window[k]);
+        };
+    }
+};
+        
+        
 
     </script>
 </body>
