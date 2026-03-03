@@ -4,21 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ - Lamsang Group</title>
-    <!-- เพิ่ม Favicon โลโก้บริษัท -->
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Prompt', sans-serif; }
-    </style>
+    <style>body { font-family: 'Prompt', sans-serif; }</style>
 </head>
 <body class="bg-zinc-900 flex flex-col items-center justify-center h-screen overflow-hidden selection:bg-yellow-500 selection:text-zinc-900">
 
-    <!-- พื้นหลังตกแต่ง (วงกลมสีทองเบลอๆ) -->
     <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
     <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
 
@@ -29,44 +22,39 @@
             <p class="text-zinc-500 text-sm mt-2">ระบบจัดการทรัพยากรบุคคล (HRIS)</p>
         </div>
         
-        <div class="space-y-5">
-            <div id="login-loading" class="hidden text-center text-yellow-600 mb-4 py-4">
-                <i class="fa-solid fa-circle-notch fa-spin text-4xl"></i>
-                <p class="mt-4 text-sm font-medium text-zinc-600" id="login-loading-text">กำลังตรวจสอบข้อมูล...</p>
-            </div>
-            
-            <div id="login-form">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-zinc-700 mb-1">อีเมล (Email)</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-envelope text-zinc-400"></i>
-                        </div>
-                        <input type="email" id="login-email" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 transition-colors" placeholder="employee@lamsang.com">
+        <div id="login-loading" class="hidden text-center text-yellow-600 mb-4 py-4">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl"></i>
+            <p class="mt-4 text-sm font-medium text-zinc-600">กำลังตรวจสอบข้อมูล...</p>
+        </div>
+        
+        <div id="login-form" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-zinc-700 mb-1">อีเมล (Email)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-envelope text-zinc-400"></i>
                     </div>
+                    <input type="email" id="login-email" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 transition-colors" placeholder="employee@lamsang.com">
                 </div>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-zinc-700 mb-1">รหัสผ่าน (Password)</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-lock text-zinc-400"></i>
-                        </div>
-                        <input type="password" id="login-password" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 bg-white transition-colors" placeholder="••••••••">
-                    </div>
-                </div>
-                <!-- ปุ่มสีทอง ตัวหนังสือสีเทาเข้ม -->
-                <button onclick="handleLogin()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center">
-                    <i class="fa-solid fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
-                </button>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-zinc-700 mb-1">รหัสผ่าน (Password)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-lock text-zinc-400"></i>
+                    </div>
+                    <input type="password" id="login-password" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 bg-white transition-colors" placeholder="••••••••"
+                        onkeydown="if(event.key==='Enter') handleLogin()">
+                </div>
+            </div>
+            <button onclick="handleLogin()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
+            </button>
         </div>
     </div>
     
-    <div class="text-zinc-500 text-sm mt-8 relative z-10">
-        &copy; 2026 Lamsang Group All Rights Reserved.
-    </div>
+    <div class="text-zinc-500 text-sm mt-8 relative z-10">&copy; 2026 Lamsang Group All Rights Reserved.</div>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -78,8 +66,7 @@
             projectId: "hris-21093",
             storageBucket: "hris-21093.firebasestorage.app",
             messagingSenderId: "549158917606",
-            appId: "1:549158917606:web:cdade4e855554e57fab227",
-            measurementId: "G-1FYRH1EL2W"
+            appId: "1:549158917606:web:cdade4e855554e57fab227"
         };
         
         const app = initializeApp(firebaseConfig);
@@ -87,21 +74,18 @@
         const db = getFirestore(app);
         const appId = 'bizhris-phichit';
 
-        // เช็คว่าล็อกอินค้างไว้หรือเปล่า ถ้าใช่ให้เด้งไปหน้า home.html เลย
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('login-form').classList.add('hidden');
                 document.getElementById('login-loading').classList.remove('hidden');
-                
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
                 try {
-                    const docSnap = await getDoc(userRef);
-                    if (docSnap.exists()) {
-                        window.location.href = 'home.html'; // เตะไปหน้าหลัก
+                    const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid));
+                    if (snap.exists()) {
+                        // ✅ redirect ไป app.html (SPA shell) แทน home.html
+                        window.location.href = 'app.html';
                     } else {
                         alert("ไม่พบข้อมูลโปรไฟล์ กรุณาติดต่อ HR");
-                        signOut(auth);
-                        resetForm();
+                        signOut(auth); resetForm();
                     }
                 } catch (e) {
                     resetForm();
@@ -119,16 +103,13 @@
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             if (!email || !password) return alert("กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน");
-
             document.getElementById('login-form').classList.add('hidden');
             document.getElementById('login-loading').classList.remove('hidden');
-
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                // พอผ่าน โค้ด onAuthStateChanged ด้านบนจะทำงานและพาไปหน้า home.html เอง
             } catch (error) {
                 resetForm();
-                if(error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                if (['auth/invalid-credential','auth/user-not-found','auth/wrong-password'].includes(error.code)) {
                     alert("❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง");
                 } else {
                     alert("Error: " + error.message);
