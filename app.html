@@ -2762,7 +2762,7 @@ PAGES['payroll'] = {
                         uid:emp.uid,employeeCode:emp.employeeCode||'',name:emp.name,
                         nickname:emp.nickname||'',lineId:emp.lineId||'',photoURL:emp.photoURL||'',
                         branch:emp.branch||'',position:emp.position||'',
-                        baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,
+                        baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,commissionMin:emp.commissionMin||0,
                         workDays:wd,workHours:0,commissionUnits:0,
                         earningDaily:eD,earningHourly:0,earningCommission:0,otherEarning:0,
                         sickLeaveHours:lh.sick,personalLeaveHours:lh.personal,
@@ -2803,6 +2803,7 @@ PAGES['payroll'] = {
                 <div><label class="pr-lbl">\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e27\u0e31\u0e19 (\u0e3f/\u0e27\u0e31\u0e19)</label><input ${RO} id="rd" type="number" class="pr-input num" value="${r.dailyWage||0}"></div>
                 <div><label class="pr-lbl">\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e0a\u0e21. (\u0e3f/\u0e0a\u0e21.)</label><input ${RO} id="rh" type="number" class="pr-input num" value="${r.hourlyWage||0}"></div>
                 <div><label class="pr-lbl">\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19 (%)</label><input ${RO} id="rc" type="number" class="pr-input num" value="${r.commissionRate||0}"></div>
+                <div><label class="pr-lbl">ยอดขั้นต่ำคอมมิชชั่น (฿)</label><input ${RO} id="rcm" type="number" class="pr-input num" value="${r.commissionMin||0}"></div>
               </div>
             </div>
             <div class="pr-section"><p class="pr-section-title">\u0e23\u0e27\u0e21\u0e27\u0e31\u0e19 / \u0e0a\u0e31\u0e48\u0e27\u0e42\u0e21\u0e07 / \u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19</p>
@@ -2816,7 +2817,7 @@ PAGES['payroll'] = {
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e27\u0e31\u0e19 (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="red">${fmt(r.earningDaily||0)}</p></div>
                 <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e0a\u0e21. (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="reh">${fmt(r.earningHourly||0)}</p></div>
-                <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19 (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="rec">${fmt(r.earningCommission||0)}</p></div>
+                <div class="bg-green-50 rounded-xl p-3 border border-green-100"><label class="pr-lbl" style="color:#15803d">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19 (\u0e3f)</label><p class="font-black text-green-700 num text-base mt-0.5" id="rec">${fmt(r.earningCommission||0)}</p><p id="rec-note" class="text-[10px] mt-0.5">${(r.commissionMin>0&&(r.commissionUnits||0)<r.commissionMin&&(r.commissionUnits||0)>0)?'<span class="text-red-500 font-bold">⚠️ ยอดไม่ถึงขั้นต่ำ</span>':''}</p></div>
                 <div><label class="pr-lbl">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input ${RO} id="reo" type="number" class="pr-input num" value="${r.otherEarning||0}"></div>
               </div>
             </div>
@@ -2871,9 +2872,17 @@ PAGES['payroll'] = {
             const b=gN('rb'),d=gN('rd'),h=gN('rh'),c=gN('rc');
             const wd=gN('rwd'),wh=gN('rwh'),cu=gN('rcu'),eo=gN('reo');
             const tm=sEl('rtm')?.value||'No';
-            const eD=d*wd, eH=h*wh, eC=cu*(c/100)*b;
+            const cm=gN('rcm');
+            const eD=d*wd, eH=h*wh, eC=(cm>0&&cu<cm) ? 0 : cu*(c/100);
             const setT=(id,v)=>{const e=sEl(id);if(e)e.textContent=fmt(v);};
             setT('red',eD); setT('reh',eH); setT('rec',eC);
+            // Commission min threshold note
+            const recNote=sEl('rec-note');
+            if(recNote){
+                if(cm>0&&cu>0&&cu<cm) recNote.innerHTML='<span class="text-red-500 text-[10px] font-bold">⚠️ ยอดไม่ถึงขั้นต่ำ (' + cm.toLocaleString('th-TH') + ' ฿)</span>';
+                else if(cm>0&&cu>=cm) recNote.innerHTML='<span class="text-green-600 text-[10px] font-bold">✅ ถึงขั้นต่ำ</span>';
+                else recNote.innerHTML='';
+            }
             const tEar=b+eD+eH+eC+eo;
             if(tm!=='custom'){const te=sEl('rdt');if(te)te.value=calcTax(b,tm);}
             const tDed=gN('rdl')+gN('rds')+gN('rdt')+gN('rdo');
@@ -2888,7 +2897,8 @@ PAGES['payroll'] = {
             const b=gN('rb'),d=gN('rd'),h=gN('rh'),c=gN('rc');
             const wd=gN('rwd'),wh=gN('rwh'),cu=gN('rcu'),eo=gN('reo');
             const tm=sEl('rtm')?.value||'No';
-            const eD=d*wd,eH=h*wh,eC=cu*(c/100)*b;
+            const cm=gN('rcm');
+            const eD=d*wd,eH=h*wh,eC=(cm>0&&cu<cm) ? 0 : cu*(c/100);
             const tEar=b+eD+eH+eC+eo;
             const tDed=gN('rdl')+gN('rds')+gN('rdt')+gN('rdo');
             const net=tEar-tDed;
@@ -2896,7 +2906,7 @@ PAGES['payroll'] = {
             try {
                 await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_records',editId),{
                     nickname:gV('rn'),lineId:gV('rl'),
-                    baseSalary:b,dailyWage:d,hourlyWage:h,commissionRate:c,
+                    baseSalary:b,dailyWage:d,hourlyWage:h,commissionRate:c,commissionMin:cm,
                     workDays:wd,workHours:wh,commissionUnits:cu,
                     earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:eo,
                     sickLeaveHours:gN('rls'),personalLeaveHours:gN('rlp'),
