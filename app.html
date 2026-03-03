@@ -167,11 +167,15 @@
                 { id: 'home',         icon: 'fa-house',                label: 'หน้าหลัก',              show: true },
                 { id: 'executive',    icon: 'fa-chart-line',           label: 'แดชบอร์ดผู้บริหาร',     show: isManager },
                 { id: 'time',         icon: 'fa-clock',                label: 'เวลาทำงาน & กะ',        show: true },
+                { id: 'time-request', icon: 'fa-pen-to-square',        label: 'ชี้แจง/แก้ไขเวลา',      show: true },
                 { id: 'leave',        icon: 'fa-calendar-check',       label: 'การลา & วันหยุด',        show: true },
                 { id: 'leave-mgmt',   icon: 'fa-clipboard-list',       label: 'อนุมัติการลา',          show: isManager },
+                { id: 'time-approve', icon: 'fa-user-clock',           label: 'อนุมัติเวลา',           show: isManager },
                 { id: 'profile',      icon: 'fa-id-badge',             label: 'โปรไฟล์ของฉัน',         show: true },
                 { id: '---',          icon: '',                        label: 'Admin Panel',            show: isAdmin, divider: true },
                 { id: 'add-employee', icon: 'fa-user-plus',            label: 'เพิ่ม/แก้ไขพนักงาน',   show: isAdmin, adminStyle: true },
+                { id: 'time-import',  icon: 'fa-file-arrow-up',        label: 'นำเข้าเวลางาน',         show: isAdmin, adminStyle: true },
+                { id: 'holidays',     icon: 'fa-star',                 label: 'วันหยุดตามประเพณี',     show: isAdmin, adminStyle: true },
                 { id: 'leave-admin',  icon: 'fa-sliders',              label: 'ตั้งค่าการลา',          show: isAdmin, adminStyle: true },
                 { id: 'payroll',      icon: 'fa-file-invoice-dollar',  label: 'จัดการเงินเดือน',       show: isAdmin },
             ];
@@ -232,7 +236,7 @@
         // ── Navigate ────────────────────────────────────────────────────
         window.navigateTo = async function(pageId) {
             if (pageId === currentPageId) return;
-            if (pageId === '#' || pageId === 'executive' || pageId === 'payroll' || pageId === '---') {
+            if (pageId === '#' || pageId === 'executive' || pageId === '---') {
                 showToast('หน้านี้ยังอยู่ระหว่างพัฒนา', 'info');
                 return;
             }
@@ -322,6 +326,9 @@
             }
             userProfile = snap.data();
 
+            // โหลดวันหยุดตามประเพณี (global - ใช้ร่วมกันทุกหน้า)
+            await loadPublicHolidays();
+
             // Build sidebar & topbar ครั้งเดียว
             const startPage = (location.hash.slice(1) || 'home');
             renderNav(userProfile, startPage);
@@ -350,6 +357,28 @@
         // Auto-collapse on mobile
         if (window.innerWidth < 1024) {
             document.getElementById('app-sidebar').classList.add('collapsed');
+        }
+
+        // ================================================================
+        // GLOBAL HOLIDAYS CACHE (ใช้ร่วมกันทุกหน้า)
+        // ================================================================
+        window._publicHolidays = []; // [{ date:'YYYY-MM-DD', name:'ชื่อวันหยุด' }]
+
+        async function loadPublicHolidays() {
+            try {
+                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snap = await getDocs(collection(db, 'artifacts', APP_ID, 'public', 'data', 'public_holidays'));
+                window._publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a,b) => a.date.localeCompare(b.date));
+            } catch(e) { console.warn('loadPublicHolidays:', e); }
+        }
+
+        function isPublicHoliday(dateStr) {
+            return window._publicHolidays.some(h => h.date === dateStr);
+        }
+        function getHolidayName(dateStr) {
+            const h = window._publicHolidays.find(h => h.date === dateStr);
+            return h ? h.name : null;
         }
 
         // ================================================================
@@ -537,6 +566,10 @@
                 .has-record-dot { width: 6px; height: 6px; background-color: #22c55e; border-radius: 50%; position: absolute; bottom: 6px; }
                 .cal-cell.today .has-record-dot { background-color: #eab308; }
                 .cal-cell.selected .has-record-dot { background-color: #18181b; }
+                .cal-cell.holiday-cell { background-color:#fef2f2; color:#dc2626; }
+                .cal-cell.holiday-cell.today { background-color:#27272a; color:#fff; }
+                .cal-cell.holiday-cell.selected { background-color:#eab308; color:#18181b; }
+                .hol-dot { width:5px; height:5px; background:#ef4444; border-radius:50%; position:absolute; bottom:5px; right:5px; }
             </style>
             <div class="p-6 lg:p-8">
                 <div class="max-w-6xl mx-auto mb-6">
@@ -592,6 +625,7 @@
                                 <div class="flex items-center"><div class="w-3 h-3 bg-zinc-900 rounded-full mr-2"></div> วันนี้</div>
                                 <div class="flex items-center"><div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div> มีประวัติลงเวลา</div>
                                 <div class="flex items-center"><div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div> วันที่เลือก</div>
+                                <div class="flex items-center"><div class="w-3 h-3 bg-red-400 rounded-full mr-2"></div> วันหยุดนักขัตฤกษ์</div>
                             </div>
                         </div>
                     </div>
@@ -639,10 +673,14 @@
                     for (let d = 1; d <= daysInMonth; d++) {
                         const ds = getLocalISO(new Date(displayYear, displayMonth, d));
                         let cls = 'cal-cell';
+                        const isHol = isPublicHoliday(ds);
+                        if (isHol) cls += ' holiday-cell';
                         if (ds === todayStr) cls += ' today';
                         if (ds === selectedDateStr) cls += ' selected';
                         const dot = logsMap[ds] ? '<div class="has-record-dot"></div>' : '';
-                        html += `<div class="${cls}" onclick="selectCalDate('${ds}')">${d}${dot}</div>`;
+                        const holDot = (isHol && ds !== todayStr && ds !== selectedDateStr) ? `<div class="hol-dot" title="${getHolidayName(ds)||'วันหยุดนักขัตฤกษ์'}"></div>` : '';
+                        const ttip = isHol ? (getHolidayName(ds)||'วันหยุดนักขัตฤกษ์') : '';
+                        html += `<div class="${cls}" onclick="selectCalDate('${ds}')" title="${ttip}">${d}${dot}${holDot}</div>`;
                     }
                     const body = document.getElementById('calendar-body');
                     if (body) body.innerHTML = html;
@@ -2891,6 +2929,918 @@ PAGES['payroll'] = {
              'prOpenRec','prCloseRec','prRecalc','prSaveRec',
              'prFinal','prPaid','prDel','prCSV'
             ].forEach(k=>delete window[k]);
+        };
+    }
+};
+
+
+// ================================================================
+// PAGE: time-request — พนักงานชี้แจง/ขอแก้ไขเวลา
+// ================================================================
+PAGES['time-request'] = {
+    title: 'ชี้แจง/แก้ไขเวลา',
+    html: `
+<style>
+.tr-card { transition: all .18s; }
+.tr-card:hover { box-shadow: 0 6px 20px -4px rgba(0,0,0,.1); }
+.tr-tab.active { background:#18181b; color:#eab308; }
+</style>
+<div class="p-6 lg:p-8 max-w-4xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">ชี้แจง / แก้ไขเวลา</h2>
+      <p class="text-sm text-zinc-400 font-medium mt-0.5">ยื่นคำขอกรณีลืมลงเวลา หรือต้องการแก้ไขเวลาที่ผิดพลาด</p>
+    </div>
+    <button onclick="trOpenModal(null)"
+      class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-5 py-3 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
+      <i class="fa-solid fa-plus"></i> ยื่นคำขอใหม่
+    </button>
+  </div>
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-6 bg-zinc-100 p-1 rounded-xl w-fit">
+    <button onclick="trTab('explain')" class="tr-tab active text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg transition-all">ชี้แจง (ลืมลงเวลา)</button>
+    <button onclick="trTab('fix')" class="tr-tab text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg transition-all text-zinc-500">ขอแก้ไขเวลา</button>
+  </div>
+  <div id="tr-list" class="space-y-3">
+    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="tr-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="trCloseModal()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+      <div>
+        <h3 id="tr-modal-title" class="font-black text-white text-lg">ยื่นคำขอ</h3>
+        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Time Adjustment Request</p>
+      </div>
+      <button onclick="trCloseModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div class="p-7 space-y-4">
+      <!-- ประเภท -->
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-2 uppercase tracking-widest">ประเภทคำขอ</label>
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="trSetType('explain')" id="tr-type-explain"
+            class="p-3 rounded-xl border-2 border-yellow-500 bg-yellow-50 text-left transition-all">
+            <i class="fa-solid fa-comment-dots text-yellow-600 mb-1 block"></i>
+            <p class="text-xs font-black text-zinc-800">ชี้แจงไม่ได้บันทึก</p>
+            <p class="text-[10px] text-zinc-500">ลืม Clock In/Out</p>
+          </button>
+          <button onclick="trSetType('fix')" id="tr-type-fix"
+            class="p-3 rounded-xl border-2 border-zinc-200 text-left transition-all hover:border-zinc-400">
+            <i class="fa-solid fa-pen-to-square text-zinc-400 mb-1 block"></i>
+            <p class="text-xs font-black text-zinc-800">ขอแก้ไขเวลา</p>
+            <p class="text-[10px] text-zinc-500">เวลาผิดพลาด</p>
+          </button>
+        </div>
+      </div>
+      <!-- วันที่ -->
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">วันที่</label>
+        <input type="date" id="tr-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      </div>
+      <!-- เวลาที่ขอ -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เวลาเข้างาน</label>
+          <input type="time" id="tr-time-in" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เวลาออกงาน</label>
+          <input type="time" id="tr-time-out" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        </div>
+      </div>
+      <!-- สำหรับ fix: เวลาเดิม -->
+      <div id="tr-original-section" class="hidden">
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เวลาเดิม (ที่ต้องการแก้)</label>
+        <div class="grid grid-cols-2 gap-4">
+          <input type="time" id="tr-orig-in" placeholder="เวลาเข้าเดิม" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <input type="time" id="tr-orig-out" placeholder="เวลาออกเดิม" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        </div>
+      </div>
+      <!-- เหตุผล -->
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เหตุผล / รายละเอียด *</label>
+        <textarea id="tr-reason" rows="3" placeholder="อธิบายสาเหตุ..." class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+      </div>
+      <button onclick="trSubmit()" id="tr-submit-btn"
+        class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-4 rounded-xl transition-all shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+        <i class="fa-solid fa-paper-plane"></i> ส่งคำขอ
+      </button>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        const { collection, doc, addDoc, onSnapshot, query, where, orderBy, updateDoc }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        let allReqs = [], activeTab = 'explain', selectedType = 'explain';
+
+        const unsub = onSnapshot(
+            query(collection(db,'artifacts',APP_ID,'public','data','time_requests'),
+                  where('uid','==',user.uid), orderBy('createdAt','desc')),
+            snap => { allReqs = snap.docs.map(d=>({id:d.id,...d.data()})); renderList(); }
+        );
+
+        function renderList() {
+            const el = document.getElementById('tr-list'); if(!el) return;
+            const filtered = allReqs.filter(r => r.reqType === activeTab);
+            if (!filtered.length) {
+                el.innerHTML = `<div class="text-center py-16 text-zinc-300"><i class="fa-regular fa-calendar-xmark text-5xl mb-3"></i><p class="font-bold text-sm">ยังไม่มีคำขอ</p></div>`; return;
+            }
+            const ST = { pending:{label:'รออนุมัติ',cls:'bg-yellow-100 text-yellow-800 border border-yellow-200',icon:'fa-clock'},
+                         approved:{label:'อนุมัติแล้ว',cls:'bg-green-100 text-green-800 border border-green-200',icon:'fa-circle-check'},
+                         rejected:{label:'ไม่อนุมัติ',cls:'bg-red-100 text-red-700 border border-red-200',icon:'fa-circle-xmark'} };
+            el.innerHTML = filtered.map(r => {
+                const st = ST[r.status]||ST.pending;
+                const timeStr = r.reqType === 'explain'
+                    ? `เข้า ${r.timeIn||'-'} · ออก ${r.timeOut||'-'}`
+                    : `เดิม ${r.origIn||'-'}/${r.origOut||'-'} → ใหม่ ${r.timeIn||'-'}/${r.timeOut||'-'}`;
+                return `<div class="tr-card bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div class="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center shrink-0">
+                    <i class="fa-solid ${r.reqType==='explain'?'fa-comment-dots text-yellow-500':'fa-pen-to-square text-blue-500'} text-lg"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                      <span class="font-black text-zinc-800 text-sm">${r.reqType==='explain'?'ชี้แจงไม่ได้บันทึก':'ขอแก้ไขเวลา'}</span>
+                      <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.cls}"><i class="fa-solid ${st.icon} mr-1"></i>${st.label}</span>
+                    </div>
+                    <p class="text-sm text-zinc-600 font-medium">${r.date} · ${timeStr}</p>
+                    <p class="text-xs text-zinc-400 truncate mt-0.5">${r.reason}</p>
+                    ${r.approverNote ? `<p class="text-xs text-red-500 mt-1 font-bold"><i class="fa-solid fa-comment mr-1"></i>${r.approverNote}</p>` : ''}
+                  </div>
+                  ${r.status==='pending' ? `<button onclick="trCancel('${r.id}')" class="shrink-0 text-[10px] text-red-500 font-black bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all">ยกเลิก</button>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        window.trTab = (tab) => {
+            activeTab = tab;
+            document.querySelectorAll('.tr-tab').forEach((b,i) => {
+                const isA = (i===0&&tab==='explain')||(i===1&&tab==='fix');
+                b.classList.toggle('active', isA);
+                b.classList.toggle('text-zinc-500', !isA);
+            });
+            renderList();
+        };
+
+        window.trSetType = (t) => {
+            selectedType = t;
+            document.getElementById('tr-type-explain')?.classList.toggle('border-yellow-500', t==='explain');
+            document.getElementById('tr-type-explain')?.classList.toggle('bg-yellow-50', t==='explain');
+            document.getElementById('tr-type-explain')?.classList.toggle('border-zinc-200', t!=='explain');
+            document.getElementById('tr-type-fix')?.classList.toggle('border-yellow-500', t==='fix');
+            document.getElementById('tr-type-fix')?.classList.toggle('bg-yellow-50', t==='fix');
+            document.getElementById('tr-type-fix')?.classList.toggle('border-zinc-200', t!=='fix');
+            document.getElementById('tr-original-section')?.classList.toggle('hidden', t!=='fix');
+        };
+
+        window.trOpenModal = (prefill) => {
+            selectedType = 'explain';
+            trSetType('explain');
+            const today = new Date().toISOString().slice(0,10);
+            const d = document.getElementById('tr-date'); if(d) d.value = prefill?.date || today;
+            ['tr-time-in','tr-time-out','tr-orig-in','tr-orig-out','tr-reason'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.value = '';
+            });
+            document.getElementById('tr-modal')?.classList.remove('hidden');
+        };
+        window.trCloseModal = () => document.getElementById('tr-modal')?.classList.add('hidden');
+
+        window.trSubmit = async () => {
+            const date   = document.getElementById('tr-date')?.value;
+            const timeIn = document.getElementById('tr-time-in')?.value;
+            const timeOut= document.getElementById('tr-time-out')?.value;
+            const reason = document.getElementById('tr-reason')?.value.trim();
+            if (!date || !reason) { showToast('กรุณากรอกข้อมูลให้ครบ', 'error'); return; }
+            const btn = document.getElementById('tr-submit-btn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>';
+            try {
+                await addDoc(collection(db,'artifacts',APP_ID,'public','data','time_requests'), {
+                    uid: user.uid, employeeName: profile.name, employeeCode: profile.employeeCode||'',
+                    branch: profile.branch||'', photoURL: profile.photoURL||'',
+                    reqType: selectedType, date, timeIn: timeIn||'', timeOut: timeOut||'',
+                    origIn: document.getElementById('tr-orig-in')?.value||'',
+                    origOut: document.getElementById('tr-orig-out')?.value||'',
+                    reason, status: 'pending', createdAt: new Date().toISOString(),
+                });
+                showToast('✅ ส่งคำขอเรียบร้อย', 'success');
+                trCloseModal();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+            finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane mr-2"></i> ส่งคำขอ'; }
+        };
+
+        window.trCancel = async (id) => {
+            if (!confirm('ยกเลิกคำขอนี้?')) return;
+            try {
+                await updateDoc(doc(db,'artifacts',APP_ID,'public','data','time_requests',id),
+                    { status:'cancelled', cancelledAt: new Date().toISOString() });
+                showToast('ยกเลิกแล้ว','info');
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+        };
+
+        renderList();
+        return () => {
+            unsub();
+            ['trTab','trSetType','trOpenModal','trCloseModal','trSubmit','trCancel'].forEach(k=>delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: time-approve — Manager/Admin อนุมัติคำขอเวลา
+// ================================================================
+PAGES['time-approve'] = {
+    title: 'อนุมัติคำขอเวลา',
+    html: `
+<div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติคำขอเวลา</h2>
+      <p class="text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบคำขอชี้แจงและแก้ไขเวลาของพนักงาน</p>
+    </div>
+    <select id="ta-filter" onchange="taFilter()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+      <option value="pending">รออนุมัติ</option>
+      <option value="approved">อนุมัติแล้ว</option>
+      <option value="rejected">ไม่อนุมัติ</option>
+      <option value="all">ทั้งหมด</option>
+    </select>
+  </div>
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+      <p class="text-3xl font-black text-yellow-600" id="ta-stat-p">-</p>
+      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">รออนุมัติ</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+      <p class="text-3xl font-black text-green-600" id="ta-stat-a">-</p>
+      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">อนุมัติแล้ว</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+      <p class="text-3xl font-black text-red-600" id="ta-stat-r">-</p>
+      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">ไม่อนุมัติ</p>
+    </div>
+  </div>
+  <div id="ta-list" class="space-y-4">
+    <div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i></div>
+  </div>
+</div>
+
+<!-- Action modal -->
+<div id="ta-action-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="taCloseAction()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div id="ta-action-header" class="px-7 py-5">
+      <h3 id="ta-action-title" class="font-black text-white text-lg">-</h3>
+    </div>
+    <div class="p-7 space-y-4">
+      <div id="ta-action-detail" class="bg-zinc-50 rounded-xl p-4 text-sm space-y-1.5 border border-zinc-200"></div>
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">หมายเหตุ (ถึงพนักงาน)</label>
+        <textarea id="ta-action-note" rows="2" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="taCloseAction()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm">ยกเลิก</button>
+        <button id="ta-confirm-btn" onclick="taConfirm()" class="flex-1 py-3 font-black rounded-xl text-sm text-white">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
+        const { collection, doc, addDoc, onSnapshot, query, orderBy, updateDoc, where, getDocs }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        let allReqs = [], pendingAction = null;
+
+        const unsub = onSnapshot(
+            query(collection(db,'artifacts',APP_ID,'public','data','time_requests'), orderBy('createdAt','desc')),
+            snap => {
+                allReqs = snap.docs.map(d=>({id:d.id,...d.data()}));
+                updateStats(); taFilter();
+            }
+        );
+
+        function updateStats() {
+            const s = (st) => allReqs.filter(r=>r.status===st).length;
+            const setT = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+            setT('ta-stat-p', s('pending')); setT('ta-stat-a', s('approved')); setT('ta-stat-r', s('rejected'));
+        }
+
+        window.taFilter = () => {
+            const f = document.getElementById('ta-filter')?.value||'pending';
+            const list = f==='all' ? allReqs : allReqs.filter(r=>r.status===f);
+            renderList(list);
+        };
+
+        function renderList(list) {
+            const el = document.getElementById('ta-list'); if(!el) return;
+            if (!list.length) { el.innerHTML=`<div class="text-center py-16 text-zinc-300"><i class="fa-regular fa-folder-open text-5xl mb-3"></i><p class="font-bold text-sm">ไม่มีคำขอในหมวดนี้</p></div>`; return; }
+            const ST = { pending:{label:'รออนุมัติ',cls:'bg-yellow-100 text-yellow-800 border border-yellow-200',icon:'fa-clock'},
+                         approved:{label:'อนุมัติแล้ว',cls:'bg-green-100 text-green-800 border border-green-200',icon:'fa-circle-check'},
+                         rejected:{label:'ไม่อนุมัติ',cls:'bg-red-100 text-red-700 border border-red-200',icon:'fa-circle-xmark'},
+                         cancelled:{label:'ยกเลิก',cls:'bg-zinc-100 text-zinc-500 border border-zinc-200',icon:'fa-ban'} };
+            const av = r => r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.employeeName)}&background=f4f4f5&color=27272a&bold=true`;
+            el.innerHTML = list.map(r => {
+                const st = ST[r.status]||ST.pending;
+                const isPending = r.status==='pending';
+                const typeLabel = r.reqType==='explain' ? '💬 ชี้แจงไม่ได้บันทึก' : '✏️ ขอแก้ไขเวลา';
+                const timeInfo = r.reqType==='explain'
+                    ? `เข้า ${r.timeIn||'-'} · ออก ${r.timeOut||'-'}`
+                    : `เดิม ${r.origIn||'-'}/${r.origOut||'-'} → ใหม่ ${r.timeIn||'-'}/${r.timeOut||'-'}`;
+                return `<div class="tr-card bg-white rounded-2xl border border-zinc-200 p-5">
+                  <div class="flex flex-col lg:flex-row gap-4">
+                    <div class="flex items-center gap-3 lg:w-48 shrink-0">
+                      <img src="${av(r)}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
+                      <div class="min-w-0">
+                        <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName}</p>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p>
+                        <p class="text-[10px] text-zinc-400">${r.branch||''}</p>
+                      </div>
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span class="font-bold text-zinc-800 text-sm">${typeLabel}</span>
+                        <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.cls}"><i class="fa-solid ${st.icon} mr-1"></i>${st.label}</span>
+                      </div>
+                      <p class="text-sm font-bold text-zinc-600">📅 ${r.date} · ${timeInfo}</p>
+                      <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${r.reason}</p>
+                      ${r.approverNote ? `<p class="text-xs text-zinc-500 mt-1 bg-zinc-50 px-3 py-1 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-zinc-400"></i>${r.approverNote}</p>` : ''}
+                    </div>
+                    ${isPending ? `<div class="flex lg:flex-col gap-2 shrink-0 justify-end">
+                      <button onclick="taOpenAction('${r.id}','approve')" class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
+                        <i class="fa-solid fa-check"></i> อนุมัติ
+                      </button>
+                      <button onclick="taOpenAction('${r.id}','reject')" class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white border-2 border-red-200 hover:border-red-500 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
+                        <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
+                      </button>
+                    </div>` : `<div class="shrink-0 text-right text-xs">
+                      <p class="text-zinc-400">โดย ${r.approvedBy||'-'}</p>
+                    </div>`}
+                  </div>
+                </div>`;
+            }).join('');
+        }
+
+        window.taOpenAction = (id, action) => {
+            const r = allReqs.find(x=>x.id===id); if(!r) return;
+            pendingAction = {id, action};
+            const isApp = action==='approve';
+            const hdr = document.getElementById('ta-action-header');
+            if(hdr) hdr.className = `px-7 py-5 ${isApp?'bg-green-600':'bg-red-600'}`;
+            const title = document.getElementById('ta-action-title');
+            if(title) title.textContent = isApp ? '✅ อนุมัติคำขอ' : '❌ ไม่อนุมัติคำขอ';
+            const det = document.getElementById('ta-action-detail');
+            if(det) det.innerHTML = `
+                <div class="flex justify-between"><span class="text-zinc-400">พนักงาน</span><span class="font-bold">${r.employeeName}</span></div>
+                <div class="flex justify-between"><span class="text-zinc-400">ประเภท</span><span class="font-bold">${r.reqType==='explain'?'ชี้แจงไม่ได้บันทึก':'ขอแก้ไขเวลา'}</span></div>
+                <div class="flex justify-between"><span class="text-zinc-400">วันที่</span><span class="font-bold">${r.date}</span></div>
+                <div class="flex justify-between"><span class="text-zinc-400">เวลา</span><span class="font-bold">${r.timeIn||'-'} – ${r.timeOut||'-'}</span></div>`;
+            const btn = document.getElementById('ta-confirm-btn');
+            if(btn) { btn.className = `flex-1 py-3 font-black rounded-xl text-sm text-white ${isApp?'bg-green-500 hover:bg-green-400':'bg-red-500 hover:bg-red-400'}`; btn.textContent = isApp ? 'ยืนยันอนุมัติ' : 'ยืนยันไม่อนุมัติ'; }
+            document.getElementById('ta-action-note').value = '';
+            document.getElementById('ta-action-modal')?.classList.remove('hidden');
+        };
+        window.taCloseAction = () => { document.getElementById('ta-action-modal')?.classList.add('hidden'); pendingAction = null; };
+
+        window.taConfirm = async () => {
+            if (!pendingAction) return;
+            const {id, action} = pendingAction;
+            const note = document.getElementById('ta-action-note')?.value.trim();
+            const btn = document.getElementById('ta-confirm-btn');
+            btn.disabled=true; btn.textContent='กำลังบันทึก...';
+            try {
+                const r = allReqs.find(x=>x.id===id);
+                await updateDoc(doc(db,'artifacts',APP_ID,'public','data','time_requests',id), {
+                    status: action==='approve' ? 'approved' : 'rejected',
+                    approvedBy: profile.name, approvedAt: new Date().toISOString(), approverNote: note||'',
+                });
+                // ถ้าอนุมัติ → สร้าง time_log จริงใน Firestore
+                if (action==='approve' && r) {
+                    const logsToCreate = [];
+                    if (r.timeIn) logsToCreate.push({ type:'clock_in',  time: r.timeIn });
+                    if (r.timeOut) logsToCreate.push({ type:'clock_out', time: r.timeOut });
+                    for (const entry of logsToCreate) {
+                        const ts = new Date(`${r.date}T${entry.time}:00`).toISOString();
+                        await addDoc(collection(db,'artifacts',APP_ID,'public','data','time_logs'), {
+                            uid: r.uid, type: entry.type,
+                            timestamp: ts, localDate: r.date,
+                            note: `[${r.reqType==='explain'?'ชี้แจง':'แก้ไข'}] อนุมัติโดย ${profile.name}`,
+                            isAdjusted: true, requestId: id,
+                        });
+                    }
+                }
+                showToast(action==='approve' ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ', action==='approve'?'success':'info');
+                taCloseAction();
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+            finally { btn.disabled=false; }
+        };
+
+        return () => {
+            unsub();
+            ['taFilter','taOpenAction','taCloseAction','taConfirm'].forEach(k=>delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: time-import — Admin นำเข้าเวลางาน
+// ================================================================
+PAGES['time-import'] = {
+    title: 'นำเข้าเวลางาน',
+    html: `
+<div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <div class="mb-8">
+    <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">นำเข้าเวลางาน</h2>
+    <p class="text-sm text-zinc-400 font-medium mt-0.5">Import ข้อมูลเวลาเข้า-ออกงานจากระบบเก่าหรือเครื่องสแกนลายนิ้วมือ</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- กรอกทีละรายการ -->
+    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
+      <h3 class="font-black text-zinc-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-keyboard text-yellow-500"></i> กรอกทีละรายการ
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">พนักงาน</label>
+          <select id="ti-emp" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+            <option value="">-- เลือกพนักงาน --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วันที่</label>
+          <input type="date" id="ti-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาเข้างาน</label>
+            <input type="time" id="ti-in" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาออกงาน</label>
+            <input type="time" id="ti-out" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">หมายเหตุ</label>
+          <input type="text" id="ti-note" placeholder="เช่น นำเข้าจากระบบเก่า" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        </div>
+        <button onclick="tiSaveOne()" id="ti-save-btn"
+          class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
+          <i class="fa-solid fa-plus mr-2"></i> เพิ่มรายการ
+        </button>
+      </div>
+    </div>
+
+    <!-- Import CSV -->
+    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
+      <h3 class="font-black text-zinc-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-file-csv text-yellow-500"></i> Import จาก CSV
+      </h3>
+      <div class="mb-4 bg-zinc-50 rounded-xl p-4 border border-zinc-200">
+        <p class="text-xs font-black text-zinc-600 mb-2 uppercase tracking-widest">รูปแบบ CSV ที่รองรับ:</p>
+        <code class="text-[11px] text-zinc-500 leading-relaxed">employee_code, date, time_in, time_out, note<br>EMP001, 2025-03-01, 08:05, 17:30, import<br>EMP002, 2025-03-01, 08:10, 17:45,</code>
+        <button onclick="tiDownloadTemplate()" class="mt-3 text-xs font-bold text-yellow-600 hover:text-yellow-700 flex items-center gap-1">
+          <i class="fa-solid fa-download"></i> ดาวน์โหลด Template
+        </button>
+      </div>
+      <label class="block w-full cursor-pointer border-2 border-dashed border-zinc-300 hover:border-yellow-400 rounded-xl p-8 text-center transition-all">
+        <i class="fa-solid fa-file-arrow-up text-3xl text-zinc-400 mb-3 block"></i>
+        <p class="font-bold text-zinc-600 text-sm">คลิกหรือลากไฟล์ CSV มาวาง</p>
+        <p class="text-xs text-zinc-400 mt-1">รองรับไฟล์ .csv เท่านั้น</p>
+        <input type="file" accept=".csv" class="hidden" onchange="tiParseCSV(this)">
+      </label>
+      <div id="ti-csv-preview" class="mt-4 hidden">
+        <p class="text-xs font-black text-zinc-500 mb-2 uppercase tracking-widest" id="ti-csv-count">-</p>
+        <div class="max-h-48 overflow-y-auto rounded-xl border border-zinc-200">
+          <table class="w-full text-xs">
+            <thead><tr class="bg-zinc-50 border-b"><th class="px-3 py-2 text-left font-black text-zinc-500">รหัส</th><th class="px-3 py-2 text-left font-black text-zinc-500">วันที่</th><th class="px-3 py-2 text-left font-black text-zinc-500">เข้า</th><th class="px-3 py-2 text-left font-black text-zinc-500">ออก</th><th class="px-3 py-2 text-left font-black text-zinc-500">สถานะ</th></tr></thead>
+            <tbody id="ti-csv-rows"></tbody>
+          </table>
+        </div>
+        <button onclick="tiImportCSV()" id="ti-import-btn"
+          class="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-3 rounded-xl text-sm uppercase tracking-widest shadow-md">
+          <i class="fa-solid fa-bolt mr-2"></i> นำเข้า <span id="ti-import-count">0</span> รายการ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent imports -->
+  <div class="mt-6 bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+      <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest"><i class="fa-solid fa-history text-yellow-500 mr-2"></i> รายการที่นำเข้าล่าสุด</h3>
+      <span id="ti-log-count" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full">-</span>
+    </div>
+    <div id="ti-log-list" class="divide-y divide-zinc-100 max-h-64 overflow-y-auto">
+      <div class="p-6 text-center text-zinc-400 text-sm">กำลังโหลด...</div>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin') { navigateTo('home'); return; }
+        const { collection, doc, addDoc, getDocs, onSnapshot, query, orderBy, where, limit }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        let employees = [], csvData = [];
+
+        // Load employees
+        const empSnap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','users'));
+        employees = empSnap.docs.map(d=>d.data()).filter(e=>e.uid);
+        const sel = document.getElementById('ti-emp');
+        if(sel) {
+            employees.sort((a,b)=>a.name.localeCompare(b.name,'th')).forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.uid; opt.textContent = `${e.name} (${e.employeeCode||''})`;
+                sel.appendChild(opt);
+            });
+        }
+
+        // Set today
+        const ti = document.getElementById('ti-date');
+        if(ti) ti.value = new Date().toISOString().slice(0,10);
+
+        // Recent imports
+        const unsub = onSnapshot(
+            query(collection(db,'artifacts',APP_ID,'public','data','time_logs'),
+                  where('isImported','==',true), orderBy('importedAt','desc'), limit(50)),
+            snap => {
+                const logs = snap.docs.map(d=>({id:d.id,...d.data()}));
+                const cnt = document.getElementById('ti-log-count');
+                if(cnt) cnt.textContent = logs.length + ' รายการ';
+                const el = document.getElementById('ti-log-list');
+                if(!el) return;
+                if(!logs.length){ el.innerHTML='<div class="p-6 text-center text-zinc-400 text-sm">ยังไม่มีรายการ</div>'; return; }
+                el.innerHTML = logs.map(l => {
+                    const emp = employees.find(e=>e.uid===l.uid);
+                    return `<div class="flex items-center gap-4 px-5 py-3">
+                      <div class="w-8 h-8 rounded-lg ${l.type==='clock_in'?'bg-green-100':'bg-red-100'} flex items-center justify-center shrink-0">
+                        <i class="fa-solid ${l.type==='clock_in'?'fa-right-to-bracket text-green-600':'fa-right-from-bracket text-red-500'} text-xs"></i>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-bold text-zinc-800 text-xs truncate">${emp?.name||l.uid}</p>
+                        <p class="text-[10px] text-zinc-400">${l.localDate} · ${l.timestamp?.slice(11,16)||''} · ${l.note||''}</p>
+                      </div>
+                      <span class="text-[10px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">${l.importedBy||'Admin'}</span>
+                    </div>`;
+                }).join('');
+            }
+        );
+
+        window.tiSaveOne = async () => {
+            const uid  = document.getElementById('ti-emp')?.value;
+            const date = document.getElementById('ti-date')?.value;
+            const tin  = document.getElementById('ti-in')?.value;
+            const tout = document.getElementById('ti-out')?.value;
+            const note = document.getElementById('ti-note')?.value||'นำเข้าโดย Admin';
+            if (!uid || !date) { showToast('กรุณาเลือกพนักงานและวันที่', 'error'); return; }
+            if (!tin && !tout) { showToast('กรุณาใส่เวลาอย่างน้อย 1 รายการ', 'error'); return; }
+            const btn = document.getElementById('ti-save-btn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>';
+            try {
+                const toImport = [];
+                if (tin)  toImport.push({ type:'clock_in',  time: tin });
+                if (tout) toImport.push({ type:'clock_out', time: tout });
+                for (const e of toImport) {
+                    const ts = new Date(`${date}T${e.time}:00`).toISOString();
+                    await addDoc(collection(db,'artifacts',APP_ID,'public','data','time_logs'), {
+                        uid, type: e.type, timestamp: ts, localDate: date,
+                        note, isImported: true, importedBy: profile.name,
+                        importedAt: new Date().toISOString(),
+                    });
+                }
+                showToast(`✅ นำเข้า ${toImport.length} รายการสำเร็จ`, 'success');
+                document.getElementById('ti-in').value='';
+                document.getElementById('ti-out').value='';
+                document.getElementById('ti-note').value='';
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+            finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-plus mr-2"></i> เพิ่มรายการ'; }
+        };
+
+        window.tiParseCSV = (input) => {
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const lines = e.target.result.split('\n').filter(l=>l.trim());
+                csvData = [];
+                const rows = [];
+                lines.slice(1).forEach((line, i) => {
+                    const parts = line.split(',').map(s=>s.trim().replace(/"/g,''));
+                    const [code, date, timeIn, timeOut, note] = parts;
+                    if (!code || !date) return;
+                    const emp = employees.find(e=>e.employeeCode===code||e.uid===code);
+                    const status = emp ? '✅ พบ' : '❌ ไม่พบ';
+                    csvData.push({ uid: emp?.uid, code, date, timeIn, timeOut, note: note||'Import CSV', found: !!emp });
+                    rows.push(`<tr class="border-b border-zinc-100 ${!emp?'bg-red-50':''}">
+                      <td class="px-3 py-2 font-bold">${code}</td>
+                      <td class="px-3 py-2">${date}</td>
+                      <td class="px-3 py-2">${timeIn||'-'}</td>
+                      <td class="px-3 py-2">${timeOut||'-'}</td>
+                      <td class="px-3 py-2">${status}</td>
+                    </tr>`);
+                });
+                document.getElementById('ti-csv-rows').innerHTML = rows.join('');
+                document.getElementById('ti-csv-count').textContent = `พบ ${csvData.length} แถว (พนักงานที่รู้จัก ${csvData.filter(r=>r.found).length} คน)`;
+                document.getElementById('ti-import-count').textContent = csvData.filter(r=>r.found).length;
+                document.getElementById('ti-csv-preview').classList.remove('hidden');
+            };
+            reader.readAsText(file, 'UTF-8');
+        };
+
+        window.tiImportCSV = async () => {
+            const valid = csvData.filter(r=>r.found);
+            if (!valid.length) { showToast('ไม่มีรายการที่นำเข้าได้', 'error'); return; }
+            const btn = document.getElementById('ti-import-btn');
+            btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังนำเข้า...';
+            try {
+                let count = 0;
+                for (const row of valid) {
+                    const toAdd = [];
+                    if (row.timeIn)  toAdd.push({ type:'clock_in',  time:row.timeIn });
+                    if (row.timeOut) toAdd.push({ type:'clock_out', time:row.timeOut });
+                    for (const e of toAdd) {
+                        const ts = new Date(`${row.date}T${e.time}:00`).toISOString();
+                        await addDoc(collection(db,'artifacts',APP_ID,'public','data','time_logs'), {
+                            uid: row.uid, type: e.type, timestamp: ts, localDate: row.date,
+                            note: row.note, isImported: true, importedBy: profile.name,
+                            importedAt: new Date().toISOString(),
+                        });
+                        count++;
+                    }
+                }
+                showToast(`✅ นำเข้า ${count} รายการสำเร็จ`, 'success');
+                document.getElementById('ti-csv-preview').classList.add('hidden');
+                csvData = [];
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+            finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-bolt mr-2"></i> นำเข้า'; }
+        };
+
+        window.tiDownloadTemplate = () => {
+            const csv = 'employee_code,date,time_in,time_out,note\nEMP001,2025-03-01,08:05,17:30,import\nEMP002,2025-03-01,08:10,17:45,\n';
+            const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+            const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:'time_import_template.csv'});
+            a.click();
+        };
+
+        return () => {
+            unsub();
+            ['tiSaveOne','tiParseCSV','tiImportCSV','tiDownloadTemplate'].forEach(k=>delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: holidays — Admin จัดการวันหยุดตามประเพณี
+// ================================================================
+PAGES['holidays'] = {
+    title: 'วันหยุดตามประเพณี',
+    html: `
+<div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">วันหยุดตามประเพณี</h2>
+      <p class="text-sm text-zinc-400 font-medium mt-0.5">จัดการวันหยุดนักขัตฤกษ์ที่แสดงบนปฏิทินของพนักงานทุกคน</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="holAddPreset()" class="inline-flex items-center gap-2 border-2 border-zinc-200 hover:border-yellow-400 text-zinc-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> เพิ่ม Preset ปี 2568
+      </button>
+      <button onclick="holOpenModal(null)" class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-5 py-2.5 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-plus"></i> เพิ่มวันหยุด
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter by year -->
+  <div class="flex items-center gap-3 mb-6">
+    <label class="text-xs font-black text-zinc-500 uppercase tracking-widest">แสดงปี (พ.ศ.)</label>
+    <select id="hol-year-filter" onchange="holFilterYear()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+      <option value="all">ทั้งหมด</option>
+    </select>
+    <span id="hol-count" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full ml-auto">-</span>
+  </div>
+
+  <!-- Holiday list -->
+  <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+    <div id="hol-list" class="divide-y divide-zinc-100">
+      <div class="p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="hol-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="holCloseModal()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+      <div>
+        <h3 id="hol-modal-title" class="font-black text-white text-lg">เพิ่มวันหยุด</h3>
+        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Public Holiday</p>
+      </div>
+      <button onclick="holCloseModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div class="p-7 space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วันที่</label>
+        <input type="date" id="hol-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ชื่อวันหยุด (ภาษาไทย)</label>
+        <input type="text" id="hol-name" placeholder="เช่น วันสงกรานต์" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ชื่อ (ภาษาอังกฤษ, ไม่บังคับ)</label>
+        <input type="text" id="hol-name-en" placeholder="Songkran Festival" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ประเภท</label>
+        <select id="hol-type" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <option value="national">วันหยุดนักขัตฤกษ์</option>
+          <option value="royal">วันหยุดราชการพิเศษ</option>
+          <option value="company">วันหยุดบริษัท</option>
+          <option value="regional">วันหยุดประจำภูมิภาค</option>
+        </select>
+      </div>
+      <input type="hidden" id="hol-edit-id">
+      <button onclick="holSave()" id="hol-save-btn"
+        class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-4 rounded-xl transition-all shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+        <i class="fa-solid fa-save"></i> บันทึก
+      </button>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin') { navigateTo('home'); return; }
+        const { collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, orderBy, query, writeBatch }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        let allHolidays = [];
+
+        const unsub = onSnapshot(
+            query(collection(db,'artifacts',APP_ID,'public','data','public_holidays'), orderBy('date','asc')),
+            snap => {
+                allHolidays = snap.docs.map(d=>({id:d.id,...d.data()}));
+                window._publicHolidays = allHolidays; // sync global cache
+                buildYearFilter();
+                holFilterYear();
+            }
+        );
+
+        function buildYearFilter() {
+            const sel = document.getElementById('hol-year-filter'); if(!sel) return;
+            const years = [...new Set(allHolidays.map(h => (parseInt(h.date.slice(0,4))+543).toString()))].sort();
+            const curVal = sel.value;
+            sel.innerHTML = '<option value="all">ทั้งหมด</option>' + years.map(y=>`<option value="${y}" ${y===curVal?'selected':''}>${y}</option>`).join('');
+        }
+
+        window.holFilterYear = () => {
+            const yr = document.getElementById('hol-year-filter')?.value;
+            const filtered = yr==='all' ? allHolidays : allHolidays.filter(h => (parseInt(h.date.slice(0,4))+543).toString()===yr);
+            renderList(filtered);
+            const cnt = document.getElementById('hol-count');
+            if(cnt) cnt.textContent = filtered.length + ' วัน';
+        };
+
+        const TYPE_MAP = { national:'วันหยุดนักขัตฤกษ์', royal:'วันหยุดราชการพิเศษ', company:'วันหยุดบริษัท', regional:'วันหยุดประจำภูมิภาค' };
+        const DAY_NAMES = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+
+        function renderList(list) {
+            const el = document.getElementById('hol-list'); if(!el) return;
+            if (!list.length) { el.innerHTML=`<div class="p-10 text-center text-zinc-300"><i class="fa-regular fa-calendar-xmark text-4xl mb-3 block"></i><p class="font-bold text-sm">ยังไม่มีวันหยุด</p></div>`; return; }
+            // Group by year
+            const grouped = {};
+            list.forEach(h => {
+                const yr = (parseInt(h.date.slice(0,4))+543).toString();
+                if (!grouped[yr]) grouped[yr] = [];
+                grouped[yr].push(h);
+            });
+            let html = '';
+            Object.keys(grouped).sort().forEach(yr => {
+                html += `<div class="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days text-yellow-500 text-sm"></i>
+                    <span class="font-black text-zinc-700 text-xs uppercase tracking-widest">ปี ${yr}</span>
+                    <span class="text-[10px] text-zinc-400 font-bold ml-auto">${grouped[yr].length} วัน</span>
+                </div>`;
+                grouped[yr].forEach(h => {
+                    const d = new Date(h.date+'T00:00:00');
+                    const dayName = DAY_NAMES[d.getDay()];
+                    const thDate = d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+                    const typeBadge = { national:'bg-red-100 text-red-700', royal:'bg-purple-100 text-purple-700', company:'bg-blue-100 text-blue-700', regional:'bg-orange-100 text-orange-700' }[h.type]||'bg-zinc-100 text-zinc-600';
+                    html += `<div class="flex items-center gap-4 px-5 py-4 hover:bg-zinc-50 transition-all group">
+                      <div class="w-12 text-center shrink-0">
+                        <p class="text-lg font-black text-zinc-800">${d.getDate()}</p>
+                        <p class="text-[10px] text-zinc-400 font-bold">${dayName}</p>
+                      </div>
+                      <div class="w-px h-10 bg-zinc-200 shrink-0"></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <p class="font-black text-zinc-800 text-sm">${h.name}</p>
+                          ${h.nameEn ? `<p class="text-xs text-zinc-400">${h.nameEn}</p>` : ''}
+                          <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${typeBadge}">${TYPE_MAP[h.type]||h.type}</span>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-0.5">${thDate}</p>
+                      </div>
+                      <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                        <button onclick="holOpenModal('${h.id}')" class="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-yellow-400 flex items-center justify-center transition-all"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="holDelete('${h.id}')" class="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-red-400 hover:text-white flex items-center justify-center transition-all"><i class="fa-solid fa-trash text-xs"></i></button>
+                      </div>
+                    </div>`;
+                });
+            });
+            el.innerHTML = html;
+        }
+
+        window.holOpenModal = (id) => {
+            const h = id ? allHolidays.find(x=>x.id===id) : null;
+            const setV = (elId, v) => { const e=document.getElementById(elId); if(e) e.value=v||''; };
+            setV('hol-edit-id', id||'');
+            setV('hol-date',    h?.date||'');
+            setV('hol-name',    h?.name||'');
+            setV('hol-name-en', h?.nameEn||'');
+            setV('hol-type',    h?.type||'national');
+            const title = document.getElementById('hol-modal-title');
+            if(title) title.textContent = id ? 'แก้ไขวันหยุด' : 'เพิ่มวันหยุด';
+            document.getElementById('hol-modal')?.classList.remove('hidden');
+        };
+        window.holCloseModal = () => document.getElementById('hol-modal')?.classList.add('hidden');
+
+        window.holSave = async () => {
+            const date   = document.getElementById('hol-date')?.value;
+            const name   = document.getElementById('hol-name')?.value.trim();
+            const nameEn = document.getElementById('hol-name-en')?.value.trim();
+            const type   = document.getElementById('hol-type')?.value;
+            const editId = document.getElementById('hol-edit-id')?.value;
+            if (!date || !name) { showToast('กรุณากรอกวันที่และชื่อวันหยุด', 'error'); return; }
+            const btn = document.getElementById('hol-save-btn');
+            btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i>';
+            try {
+                const payload = { date, name, nameEn: nameEn||'', type, updatedAt: new Date().toISOString() };
+                if (editId) {
+                    await setDoc(doc(db,'artifacts',APP_ID,'public','data','public_holidays',editId), payload, {merge:true});
+                } else {
+                    payload.createdAt = new Date().toISOString();
+                    payload.createdBy = profile.name;
+                    await addDoc(collection(db,'artifacts',APP_ID,'public','data','public_holidays'), payload);
+                }
+                showToast('✅ บันทึกวันหยุดแล้ว', 'success');
+                holCloseModal();
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+            finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-save mr-2"></i> บันทึก'; }
+        };
+
+        window.holDelete = async (id) => {
+            const h = allHolidays.find(x=>x.id===id);
+            if (!confirm(`ลบวันหยุด "${h?.name}" ?`)) return;
+            try {
+                await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','public_holidays',id));
+                showToast('ลบแล้ว','info');
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+        };
+
+        // Preset วันหยุด 2568
+        window.holAddPreset = async () => {
+            const preset = [
+                {date:'2025-01-01',name:'วันขึ้นปีใหม่',nameEn:'New Year\'s Day',type:'national'},
+                {date:'2025-02-12',name:'วันมาฆบูชา',nameEn:'Makha Bucha Day',type:'national'},
+                {date:'2025-04-06',name:'วันจักรี',nameEn:'Chakri Memorial Day',type:'national'},
+                {date:'2025-04-13',name:'วันสงกรานต์',nameEn:'Songkran Festival',type:'national'},
+                {date:'2025-04-14',name:'วันสงกรานต์',nameEn:'Songkran Festival',type:'national'},
+                {date:'2025-04-15',name:'วันสงกรานต์',nameEn:'Songkran Festival',type:'national'},
+                {date:'2025-05-01',name:'วันแรงงานแห่งชาติ',nameEn:'National Labour Day',type:'national'},
+                {date:'2025-05-05',name:'วันฉัตรมงคล',nameEn:'Coronation Day',type:'national'},
+                {date:'2025-05-12',name:'วันวิสาขบูชา',nameEn:'Visakha Bucha Day',type:'national'},
+                {date:'2025-06-03',name:'วันเฉลิมพระชนมพรรษา สมเด็จพระราชินี',nameEn:'Queen\'s Birthday',type:'national'},
+                {date:'2025-07-10',name:'วันอาสาฬหบูชา',nameEn:'Asarnha Bucha Day',type:'national'},
+                {date:'2025-07-11',name:'วันเข้าพรรษา',nameEn:'Buddhist Lent Day',type:'national'},
+                {date:'2025-07-28',name:'วันเฉลิมพระชนมพรรษา ร.10',nameEn:'King\'s Birthday',type:'national'},
+                {date:'2025-08-12',name:'วันแม่แห่งชาติ',nameEn:'Mother\'s Day',type:'national'},
+                {date:'2025-10-13',name:'วันนวมินทรมหาราช',nameEn:'Navamindra Maharaj Day',type:'national'},
+                {date:'2025-10-23',name:'วันปิยมหาราช',nameEn:'Chulalongkorn Day',type:'national'},
+                {date:'2025-12-05',name:'วันพ่อแห่งชาติ',nameEn:'Father\'s Day',type:'national'},
+                {date:'2025-12-10',name:'วันรัฐธรรมนูญ',nameEn:'Constitution Day',type:'national'},
+                {date:'2025-12-31',name:'วันสิ้นปี',nameEn:'New Year\'s Eve',type:'national'},
+            ];
+            if (!confirm(`เพิ่มวันหยุดนักขัตฤกษ์ปี 2568 จำนวน ${preset.length} วัน?`)) return;
+            try {
+                const batch = writeBatch(db);
+                preset.forEach(h => {
+                    const ref = doc(collection(db,'artifacts',APP_ID,'public','data','public_holidays'));
+                    batch.set(ref, {...h, createdAt: new Date().toISOString(), createdBy: profile.name});
+                });
+                await batch.commit();
+                showToast(`✅ เพิ่ม ${preset.length} วันหยุดสำเร็จ`, 'success');
+            } catch(e) { showToast('❌ '+e.message,'error'); }
+        };
+
+        return () => {
+            unsub();
+            ['holFilterYear','holOpenModal','holCloseModal','holSave','holDelete','holAddPreset'].forEach(k=>delete window[k]);
         };
     }
 };
