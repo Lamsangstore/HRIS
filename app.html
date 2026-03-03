@@ -172,12 +172,13 @@
                 { id: 'leave-mgmt',   icon: 'fa-clipboard-list',       label: 'อนุมัติการลา',          show: isManager },
                 { id: 'time-approve', icon: 'fa-user-clock',           label: 'อนุมัติเวลา',           show: isManager },
                 { id: 'profile',      icon: 'fa-id-badge',             label: 'โปรไฟล์ของฉัน',         show: true },
-                { id: '---',          icon: '',                        label: 'Admin Panel',            show: isAdmin, divider: true },
-                { id: 'add-employee', icon: 'fa-user-plus',            label: 'เพิ่ม/แก้ไขพนักงาน',   show: isAdmin, adminStyle: true },
-                { id: 'time-import',  icon: 'fa-file-arrow-up',        label: 'นำเข้าเวลางาน',         show: isAdmin, adminStyle: true },
-                { id: 'holidays',     icon: 'fa-star',                 label: 'วันหยุดตามประเพณี',     show: isAdmin, adminStyle: true },
-                { id: 'leave-admin',  icon: 'fa-sliders',              label: 'ตั้งค่าการลา',          show: isAdmin, adminStyle: true },
-                { id: 'payslip',      icon: 'fa-file-invoice',         label: 'สลิปเงินเดือน',         show: true },
+                { id: '---',          icon: '',                        label: 'Admin Panel',               show: isAdmin, divider: true },
+                { id: 'add-employee', icon: 'fa-user-plus',            label: 'เพิ่ม/แก้ไขพนักงาน',       show: isAdmin, adminStyle: true },
+                { id: 'time-import',  icon: 'fa-file-arrow-up',        label: 'นำเข้าเวลางาน',             show: isAdmin, adminStyle: true },
+                { id: 'holidays',     icon: 'fa-star',                 label: 'วันหยุดตามประเพณี',         show: isAdmin, adminStyle: true },
+                { id: 'leave-admin',  icon: 'fa-sliders',              label: 'ตั้งค่าการลา',              show: isAdmin, adminStyle: true },
+                { id: 'payslip',      icon: 'fa-file-invoice',         label: 'สลิปเงินเดือน',             show: true },
+                { id: 'announcements', icon: 'fa-bullhorn',            label: 'จัดการประกาศ',             show: isManager, adminStyle: true },
 { id: 'payroll',      icon: 'fa-file-invoice-dollar',  label: 'จัดการเงินเดือน',       show: isAdmin },
 { id: 'payslip-admin',icon: 'fa-folder-open',          label: 'จัดการ E-Pay Slip',      show: isAdmin, adminStyle: true },
             ];
@@ -474,95 +475,249 @@
         // init() return cleanup function (optional) สำหรับ unsubscribe listeners
         // ================================================================
 
-        // ── HOME ──────────────────────────────────────────────────────
+        
+        // ================================================================
+        // PAGE: home
+        // ================================================================
         PAGES['home'] = {
             title: 'หน้าหลัก',
             html: `
-            <div class="p-6 lg:p-10">
-                <div class="mb-8">
-                    <h2 class="text-3xl font-black text-zinc-800">สวัสดี, คุณ<span id="welcome-name" class="text-yellow-600">...</span> 👋</h2>
-                    <p class="text-zinc-400 text-sm mt-1 font-medium italic">Welcome to Lamsang Group Management System</p>
+        <style>
+        .ann-body img { max-width:100%; border-radius:.75rem; margin:.5rem 0; }
+        .ann-body h1,.ann-body h2,.ann-body h3 { font-weight:800; line-height:1.3; margin:.4rem 0; }
+        .ann-body ul { list-style:disc inside; padding-left:.5rem; }
+        .ann-body ol { list-style:decimal inside; padding-left:.5rem; }
+        .ann-body a  { color:#d97706; text-decoration:underline; }
+        .ann-card { transition:all .2s; }
+        .ann-card:hover { box-shadow:0 6px 24px -6px rgba(0,0,0,.1); }
+        </style>
+        <div class="p-6 lg:p-10">
+          <div class="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <h2 class="text-3xl font-black text-zinc-800">สวัสดี, คุณ<span id="welcome-name" class="text-yellow-600">...</span> 👋</h2>
+              <p class="text-zinc-400 text-sm mt-1 font-medium italic">Welcome to Lamsang Group Management System</p>
+            </div>
+            <p id="home-date" class="text-xs font-bold text-zinc-400 hidden sm:block"></p>
+          </div>
+        
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+            <!-- ซ้าย: ประกาศ -->
+            <div class="lg:col-span-2 space-y-4">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-base font-black text-zinc-800 uppercase tracking-tight flex items-center gap-2">
+                  <i class="fa-solid fa-bullhorn text-yellow-500"></i> ประกาศองค์กร
+                </h3>
+                <div id="ann-admin-btn"></div>
+              </div>
+              <div id="ann-list">
+                <div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i></div>
+              </div>
+            </div>
+        
+            <!-- ขวา: widgets -->
+            <div class="space-y-5">
+        
+              <!-- สถานะวันนี้ -->
+              <div class="bg-zinc-900 text-white rounded-3xl shadow-xl p-6 border border-zinc-800">
+                <h3 class="text-xs font-black text-zinc-500 mb-4 uppercase tracking-widest flex items-center gap-2">
+                  <i class="fa-solid fa-clock text-yellow-500"></i> สถานะวันนี้
+                </h3>
+                <div id="today-status" class="bg-zinc-800 border border-zinc-700 rounded-2xl p-5 text-center mb-4">
+                  <p class="text-[10px] text-zinc-500 font-black uppercase tracking-tighter mb-1">กำลังโหลด...</p>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-                    <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-zinc-200 p-8 flex flex-col">
-                        <h3 class="text-lg font-black text-zinc-800 mb-6 flex items-center uppercase tracking-tight">
-                            <i class="fa-solid fa-bullhorn text-yellow-500 mr-3"></i> ประกาศองค์กร
-                        </h3>
-                        <div class="p-5 bg-yellow-50 rounded-2xl border border-yellow-100 flex items-start hover:bg-yellow-100 transition-all">
-                            <i class="fa-solid fa-circle-info mt-1 mr-4 text-yellow-600 text-xl"></i>
-                            <div>
-                                <h4 class="font-bold text-sm text-yellow-900">อัปเดตนโยบายการเบิก OT เดือนนี้</h4>
-                                <p class="text-xs mt-1 text-yellow-700 leading-relaxed">กรุณาส่งเอกสารภายในวันที่ 25 เพื่อความรวดเร็วในการประมวลผลเงินเดือน</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-zinc-900 text-white rounded-3xl shadow-xl p-8 border border-zinc-800">
-                        <h3 class="text-sm font-bold text-zinc-500 mb-4 uppercase tracking-widest flex items-center">
-                            <i class="fa-solid fa-clock text-yellow-500 mr-2"></i> สถานะวันนี้
-                        </h3>
-                        <div class="bg-zinc-800 border border-zinc-700 rounded-2xl p-6 text-center">
-                            <p class="text-[10px] text-zinc-500 font-black uppercase tracking-tighter mb-1">Time In</p>
-                            <h4 class="text-4xl font-black text-yellow-500 my-1">07:58</h4>
-                            <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">สาขาเนินปอ, พิจิตร</p>
-                        </div>
-                        <button onclick="navigateTo('time')" class="mt-6 block w-full text-center bg-yellow-500 hover:bg-yellow-400 text-zinc-900 text-xs font-black py-4 rounded-xl transition-all shadow-lg uppercase tracking-widest">
-                            ไปหน้าลงเวลา
-                        </button>
-                    </div>
+                <button onclick="navigateTo('time')"
+                  class="block w-full text-center bg-yellow-500 hover:bg-yellow-400 text-zinc-900 text-xs font-black py-3 rounded-xl transition-all shadow-md uppercase tracking-widest">
+                  ไปหน้าลงเวลา
+                </button>
+              </div>
+        
+              <!-- วันลาคงเหลือ -->
+              <div class="bg-white rounded-3xl border border-zinc-200 shadow-sm p-6">
+                <h3 class="text-xs font-black text-zinc-500 mb-4 uppercase tracking-widest flex items-center gap-2">
+                  <i class="fa-solid fa-calendar-check text-yellow-500"></i> วันลาคงเหลือ
+                </h3>
+                <div id="leave-summary" class="space-y-3">
+                  <div class="text-center py-4 text-zinc-300"><i class="fa-solid fa-spinner fa-spin"></i></div>
                 </div>
-
-                <!-- Executive Dashboard (admin/manager only) -->
-                <div id="dashboard-executive" class="hidden border-t-2 border-zinc-100 pt-10 mt-4">
-                    <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-xl font-black text-zinc-800 uppercase tracking-tighter">
-                            <i class="fa-solid fa-chart-line text-yellow-500 mr-2"></i> EXECUTIVE INSIGHTS
-                        </h3>
-                        <span class="bg-zinc-800 text-yellow-500 text-[9px] uppercase font-black px-4 py-1.5 rounded-full tracking-widest shadow-md">Privileged Access</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                        <div class="bg-white rounded-2xl shadow-sm p-6 border border-zinc-200 flex justify-between items-center group hover:border-zinc-800 transition-all">
-                            <div><p class="text-[10px] text-zinc-400 font-bold uppercase mb-1">Total Employees</p><h3 class="text-3xl font-black text-zinc-800">42</h3></div>
-                            <div class="bg-zinc-50 p-4 rounded-2xl text-zinc-400 group-hover:bg-zinc-900 group-hover:text-white transition-all"><i class="fa-solid fa-users text-xl"></i></div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
-                        <div class="bg-white rounded-3xl shadow-sm border border-zinc-200 p-8">
-                            <h3 class="text-sm font-black text-zinc-400 mb-8 text-center uppercase tracking-widest">Today's Attendance</h3>
-                            <div class="relative h-64 w-full flex justify-center"><canvas id="attendanceChart"></canvas></div>
-                        </div>
-                        <div class="bg-white rounded-3xl shadow-sm border border-zinc-200 p-8">
-                            <h3 class="text-sm font-black text-zinc-400 mb-8 text-center uppercase tracking-widest">Payroll Overview</h3>
-                            <div class="relative h-64 w-full"><canvas id="payrollChart"></canvas></div>
-                        </div>
-                    </div>
+                <button onclick="navigateTo('leave')"
+                  class="mt-4 block w-full text-center border-2 border-zinc-200 hover:border-yellow-400 text-zinc-600 hover:text-yellow-600 text-xs font-black py-2.5 rounded-xl transition-all uppercase tracking-widest">
+                  ดูรายละเอียดการลา
+                </button>
+              </div>
+        
+              <!-- วันหยุดที่กำลังจะมาถึง -->
+              <div class="bg-white rounded-3xl border border-zinc-200 shadow-sm p-6">
+                <h3 class="text-xs font-black text-zinc-500 mb-4 uppercase tracking-widest flex items-center gap-2">
+                  <i class="fa-solid fa-star text-yellow-500"></i> วันหยุดที่กำลังจะมาถึง
+                </h3>
+                <div id="upcoming-holidays" class="space-y-2">
+                  <div class="text-center py-4 text-zinc-300"><i class="fa-solid fa-spinner fa-spin"></i></div>
                 </div>
-            </div>`,
-            init: async (user, profile) => {
+              </div>
+        
+            </div>
+          </div>
+        </div>`,
+        
+            init: async (user, profile, db, APP_ID) => {
+                const { collection, query, where, orderBy, onSnapshot, limit, getDocs }
+                    = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        
+                // ── วันที่ topbar
                 document.getElementById('welcome-name').textContent = profile.name;
+                const dateEl = document.getElementById('home-date');
+                if (dateEl) dateEl.textContent = new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+        
+                // ── Admin btn
                 if (profile.role === 'admin' || profile.role === 'manager') {
-                    document.getElementById('dashboard-executive').classList.remove('hidden');
-                    // Lazy-load Chart.js
-                    if (!window.Chart) {
-                        await new Promise(resolve => {
-                            const s = document.createElement('script');
-                            s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-                            s.onload = resolve;
-                            document.head.appendChild(s);
-                        });
-                    }
-                    const ctxA = document.getElementById('attendanceChart');
-                    if (ctxA) new Chart(ctxA.getContext('2d'), {
-                        type: 'doughnut',
-                        data: { labels: ['มาทำงาน', 'ลางาน', 'ขาดงาน'], datasets: [{ data: [38,2,2], backgroundColor: ['#22c55e','#eab308','#ef4444'], borderWidth: 4, borderColor: '#ffffff' }] },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { legend: { position: 'bottom', labels: { font: { family: 'Prompt', weight: 'bold' }, usePointStyle: true } } } }
-                    });
-                    const ctxP = document.getElementById('payrollChart');
-                    if (ctxP) new Chart(ctxP.getContext('2d'), {
-                        type: 'bar',
-                        data: { labels: ['ก.ย.','ต.ค.','พ.ย.','ธ.ค.','ม.ค.','ก.พ.'], datasets: [{ label: 'BASE', data: [850000,855000,860000,920000,870000,885000], backgroundColor: '#27272a', borderRadius: 10 }, { label: 'OT/BONUS', data: [45000,50000,48000,150000,42000,55000], backgroundColor: '#eab308', borderRadius: 10 }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { display: false }, ticks: { font: { family: 'Prompt' } } }, x: { grid: { display: false }, ticks: { font: { family: 'Prompt', weight: 'bold' } } } }, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Prompt' } } } } }
-                    });
+                    const ab = document.getElementById('ann-admin-btn');
+                    if (ab) ab.innerHTML = `<button onclick="navigateTo('announcements')"
+                        class="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-zinc-900 hover:bg-yellow-500 hover:text-zinc-900 text-yellow-400 rounded-lg transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-to-square"></i> จัดการประกาศ</button>`;
                 }
+        
+                // ── สถานะวันนี้ (time logs)
+                const todayStr = new Date().toISOString().slice(0,10);
+                const logsSnap = await getDocs(
+                    query(collection(db,'artifacts',APP_ID,'public','data','time_logs'),
+                          where('uid','==',user.uid))
+                );
+                const todayLogs = logsSnap.docs.map(d=>d.data())
+                    .filter(l => (l.localDate||l.timestamp?.slice(0,10)) === todayStr)
+                    .sort((a,b) => a.timestamp > b.timestamp ? 1 : -1);
+                const inLog  = todayLogs.find(l=>l.type==='clock_in');
+                const outLog = [...todayLogs].reverse().find(l=>l.type==='clock_out');
+                const tsEl = document.getElementById('today-status');
+                if (tsEl) {
+                    if (inLog) {
+                        const inTime  = new Date(inLog.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+                        const outTime = outLog ? new Date(outLog.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : null;
+                        tsEl.innerHTML = `
+                        <div class="flex justify-around gap-2">
+                          <div>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase tracking-wider mb-1">เข้างาน</p>
+                            <p class="text-2xl font-black text-green-400">${inTime}</p>
+                          </div>
+                          ${outTime ? `<div class="w-px bg-zinc-700"></div><div>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase tracking-wider mb-1">ออกงาน</p>
+                            <p class="text-2xl font-black text-red-400">${outTime}</p>
+                          </div>` : ''}
+                        </div>
+                        ${!outTime ? '<p class="text-[10px] text-zinc-500 mt-2">ยังไม่ได้บันทึกเวลาออก</p>' : ''}`;
+                    } else {
+                        tsEl.innerHTML = `<p class="text-sm font-bold text-zinc-500 py-2">ยังไม่ได้ลงเวลาวันนี้</p>`;
+                    }
+                }
+        
+                // ── วันลาคงเหลือ
+                const balSnap = await getDocs(
+                    query(collection(db,'artifacts',APP_ID,'public','data','leave_balances'),
+                          where('__name__','==',user.uid))
+                );
+                // getDocs by doc id workaround
+                const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const balDoc = await getDoc(doc(db,'artifacts',APP_ID,'public','data','leave_balances',user.uid));
+                const bal = balDoc.exists() ? balDoc.data() : {};
+                const leaveSummaryEl = document.getElementById('leave-summary');
+                if (leaveSummaryEl) {
+                    const types = [
+                        {id:'sick',    label:'ลาป่วย',    icon:'fa-kit-medical',   color:'red',   maxDays:30},
+                        {id:'personal',label:'ลากิจ',     icon:'fa-briefcase',     color:'blue',  maxDays:6},
+                        {id:'vacation',label:'ลาพักร้อน', icon:'fa-umbrella-beach',color:'green', maxDays:10},
+                    ];
+                    leaveSummaryEl.innerHTML = types.map(t => {
+                        const b    = bal[t.id] || {};
+                        const max  = b.totalHours || (t.maxDays * 8);
+                        const used = b.usedHours  || 0;
+                        const rem  = Math.max(0, max - used);
+                        const pct  = max > 0 ? Math.min(100, Math.round(used/max*100)) : 0;
+                        const remD = Math.round(rem/8*10)/10;
+                        const colorMap = {red:'bg-red-400',blue:'bg-blue-400',green:'bg-green-400'};
+                        return `<div>
+                          <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-zinc-600 flex items-center gap-1.5">
+                              <i class="fa-solid ${t.icon} text-zinc-400 text-[10px]"></i>${t.label}
+                            </span>
+                            <span class="text-xs font-black text-zinc-800">${remD} วัน</span>
+                          </div>
+                          <div class="w-full bg-zinc-100 rounded-full h-1.5">
+                            <div class="h-1.5 rounded-full ${colorMap[t.color]} transition-all" style="width:${pct}%"></div>
+                          </div>
+                        </div>`;
+                    }).join('');
+                }
+        
+                // ── วันหยุดที่กำลังจะมาถึง
+                const upEl = document.getElementById('upcoming-holidays');
+                const today = new Date(); today.setHours(0,0,0,0);
+                const upcoming = (window._publicHolidays || [])
+                    .filter(h => new Date(h.date+'T00:00:00') >= today)
+                    .slice(0,4);
+                if (upEl) {
+                    if (!upcoming.length) {
+                        upEl.innerHTML = `<p class="text-xs text-zinc-400 text-center py-3">ไม่มีข้อมูลวันหยุด</p>`;
+                    } else {
+                        const DAYS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+                        upEl.innerHTML = upcoming.map(h => {
+                            const d    = new Date(h.date+'T00:00:00');
+                            const diff = Math.round((d-today)/(1000*60*60*24));
+                            const thD  = d.toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+                            const dayN = DAYS[d.getDay()];
+                            const badge = diff===0 ? 'bg-red-100 text-red-700' :
+                                          diff<=7  ? 'bg-yellow-100 text-yellow-700' :
+                                                     'bg-zinc-100 text-zinc-500';
+                            return `<div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-50 transition-all">
+                              <div class="w-10 h-10 rounded-xl bg-yellow-50 flex flex-col items-center justify-center shrink-0">
+                                <p class="text-[9px] font-black text-yellow-600 leading-none uppercase">${dayN}</p>
+                                <p class="text-sm font-black text-zinc-800 leading-tight">${d.getDate()}</p>
+                              </div>
+                              <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-zinc-800 truncate">${h.name}</p>
+                                <p class="text-[10px] text-zinc-400">${thD}</p>
+                              </div>
+                              <span class="text-[9px] font-black px-2 py-1 rounded-full ${badge} whitespace-nowrap">
+                                ${diff===0?'วันนี้':diff===1?'พรุ่งนี้':'อีก '+diff+' วัน'}
+                              </span>
+                            </div>`;
+                        }).join('');
+                    }
+                }
+        
+                // ── ประกาศองค์กร (realtime)
+                const unsub = onSnapshot(
+                    query(collection(db,'artifacts',APP_ID,'public','data','announcements'),
+                          where('published','==',true), orderBy('createdAt','desc'), limit(20)),
+                    snap => {
+                        const annEl = document.getElementById('ann-list');
+                        if (!annEl) return;
+                        if (snap.empty) {
+                            annEl.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-100 p-8 text-center text-zinc-300">
+                                <i class="fa-solid fa-bullhorn text-4xl mb-3 opacity-30"></i>
+                                <p class="font-bold text-sm">ยังไม่มีประกาศ</p></div>`; return;
+                        }
+                        annEl.innerHTML = snap.docs.map(d => {
+                            const a = d.data();
+                            const dateStr = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}) : '';
+                            const tagColor = {info:'bg-blue-100 text-blue-700',warning:'bg-yellow-100 text-yellow-800',urgent:'bg-red-100 text-red-700',success:'bg-green-100 text-green-700'};
+                            const tagLabel = {info:'ทั่วไป',warning:'แจ้งเตือน',urgent:'ด่วน!',success:'ข่าวดี'};
+                            const tc = tagColor[a.tag||'info']||tagColor.info;
+                            const tl = tagLabel[a.tag||'info']||'ทั่วไป';
+                            return `<div class="ann-card bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                              <div class="px-6 pt-5 pb-3 border-b border-zinc-50">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                  <h4 class="font-black text-zinc-900 text-base leading-snug flex-1">${a.title||'(ไม่มีชื่อ)'}</h4>
+                                  <span class="text-[10px] font-black px-2.5 py-1 rounded-full shrink-0 ${tc}">${tl}</span>
+                                </div>
+                                <p class="text-[11px] text-zinc-400 font-medium">${dateStr}${a.author?' · '+a.author:''}</p>
+                              </div>
+                              <div class="px-6 py-4 ann-body text-sm text-zinc-700 leading-relaxed">${a.body||''}</div>
+                            </div>`;
+                        }).join('');
+                    }
+                );
+        
+                return () => { unsub(); };
             }
         };
 
@@ -4464,6 +4619,403 @@ PAGES['payslip-admin'] = {
         };
     }
 };
+
+        // ================================================================
+        // PAGE: announcements — Admin/Manager จัดการประกาศ
+        // ================================================================
+        PAGES['announcements'] = {
+            title: 'จัดการประกาศ',
+            html: `
+        <style>
+        /* Editor toolbar */
+        .ql-toolbar-custom { display:flex; flex-wrap:wrap; gap:4px; padding:.5rem; background:#f4f4f5; border-radius:.75rem .75rem 0 0; border:2px solid #e4e4e7; border-bottom:1px solid #e4e4e7; }
+        .ql-toolbar-custom button, .ql-toolbar-custom select {
+          border:none; background:transparent; cursor:pointer; border-radius:.4rem;
+          padding:.3rem .5rem; font-size:.8rem; font-family:'Prompt',sans-serif;
+          color:#3f3f46; transition:all .15s;
+        }
+        .ql-toolbar-custom button:hover, .ql-toolbar-custom select:hover { background:#e4e4e7; }
+        .ql-toolbar-custom button.active { background:#18181b; color:#eab308; }
+        .ql-toolbar-custom .sep { width:1px; background:#d4d4d8; margin:0 2px; align-self:stretch; }
+        .ann-editor {
+          min-height:260px; border:2px solid #e4e4e7; border-top:none; border-radius:0 0 .75rem .75rem;
+          padding:1rem; outline:none; font-family:'Prompt',sans-serif; font-size:.875rem;
+          color:#27272a; line-height:1.7; overflow-y:auto;
+        }
+        .ann-editor:focus { border-color:#eab308; box-shadow:0 0 0 3px rgba(234,179,8,.1); }
+        .ann-editor img { max-width:100%; border-radius:.5rem; margin:.5rem 0; cursor:pointer; }
+        .ann-editor h1 { font-size:1.5rem; font-weight:900; }
+        .ann-editor h2 { font-size:1.2rem; font-weight:800; }
+        .ann-editor h3 { font-size:1rem;   font-weight:700; }
+        .ann-editor ul { list-style:disc inside; padding-left:.5rem; }
+        .ann-editor ol { list-style:decimal inside; padding-left:.5rem; }
+        .ann-editor a  { color:#d97706; text-decoration:underline; }
+        .ann-editor blockquote { border-left:3px solid #eab308; padding-left:1rem; color:#71717a; margin:.5rem 0; }
+        /* Color swatches */
+        .color-swatch { width:1.2rem; height:1.2rem; border-radius:.2rem; cursor:pointer; border:2px solid transparent; transition:all .12s; display:inline-block; }
+        .color-swatch:hover { transform:scale(1.2); border-color:#999; }
+        </style>
+        
+        <div class="p-6 lg:p-8 max-w-7xl mx-auto">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">จัดการประกาศองค์กร</h2>
+              <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้าง แก้ไข และจัดการประกาศที่แสดงบนหน้าหลัก</p>
+            </div>
+            <button onclick="annNew()"
+              class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-yellow-500 hover:text-zinc-900 text-yellow-400 font-black px-6 py-3 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
+              <i class="fa-solid fa-plus"></i> ประกาศใหม่
+            </button>
+          </div>
+        
+          <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        
+            <!-- List (left) -->
+            <div class="xl:col-span-2">
+              <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+                <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+                  <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest">รายการประกาศ</h3>
+                  <div class="flex gap-2">
+                    <button onclick="annFilter('all')" id="f-all" class="ann-filter-btn active text-[10px] font-black px-3 py-1 rounded-lg bg-zinc-900 text-white transition-all">ทั้งหมด</button>
+                    <button onclick="annFilter('pub')" id="f-pub" class="ann-filter-btn text-[10px] font-black px-3 py-1 rounded-lg bg-zinc-100 text-zinc-500 transition-all">เผยแพร่</button>
+                    <button onclick="annFilter('hid')" id="f-hid" class="ann-filter-btn text-[10px] font-black px-3 py-1 rounded-lg bg-zinc-100 text-zinc-500 transition-all">เก็บซ่อน</button>
+                  </div>
+                </div>
+                <div id="ann-mgmt-list" class="divide-y divide-zinc-100 max-h-[70vh] overflow-y-auto">
+                  <div class="p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i></div>
+                </div>
+              </div>
+            </div>
+        
+            <!-- Editor (right) -->
+            <div class="xl:col-span-3" id="ann-editor-panel">
+              <div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-64 text-zinc-300">
+                <i class="fa-solid fa-pen-to-square text-5xl mb-3 opacity-20"></i>
+                <p class="font-bold text-sm">เลือกประกาศหรือสร้างใหม่</p>
+              </div>
+            </div>
+        
+          </div>
+        </div>`,
+        
+            init: async (user, profile, db, APP_ID) => {
+                if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
+                const { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query }
+                    = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        
+                let allAnns = [], activeId = null, filterMode = 'all';
+        
+                const unsub = onSnapshot(
+                    query(collection(db,'artifacts',APP_ID,'public','data','announcements'), orderBy('createdAt','desc')),
+                    snap => { allAnns = snap.docs.map(d=>({id:d.id,...d.data()})); renderList(); }
+                );
+        
+                // ── Tag options
+                const TAGS = [
+                    {id:'info',    label:'ทั่วไป',    color:'bg-blue-100 text-blue-700'},
+                    {id:'warning', label:'แจ้งเตือน', color:'bg-yellow-100 text-yellow-800'},
+                    {id:'urgent',  label:'ด่วน!',     color:'bg-red-100 text-red-700'},
+                    {id:'success', label:'ข่าวดี',    color:'bg-green-100 text-green-700'},
+                ];
+        
+                function renderList() {
+                    const el = document.getElementById('ann-mgmt-list'); if (!el) return;
+                    let list = allAnns;
+                    if (filterMode==='pub') list = list.filter(a=>a.published);
+                    if (filterMode==='hid') list = list.filter(a=>!a.published);
+                    if (!list.length) {
+                        el.innerHTML=`<div class="p-8 text-center text-zinc-300"><i class="fa-solid fa-folder-open text-3xl mb-3"></i><p class="font-bold text-sm">ไม่มีรายการ</p></div>`; return;
+                    }
+                    el.innerHTML = list.map(a => {
+                        const isActive = a.id===activeId;
+                        const tag = TAGS.find(t=>t.id===a.tag)||TAGS[0];
+                        const dateStr = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '';
+                        return `<button onclick="annSelect('${a.id}')"
+                          class="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-zinc-50 transition-all ${isActive?'bg-yellow-50 border-l-4 border-yellow-500':''}">
+                          <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                              <span class="font-black text-zinc-800 text-sm truncate">${a.title||'(ไม่มีชื่อ)'}</span>
+                              <span class="text-[9px] font-black px-1.5 py-0.5 rounded-full ${tag.color}">${tag.label}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              <span class="text-[10px] text-zinc-400">${dateStr}</span>
+                              <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${a.published?'bg-green-100 text-green-700':'bg-zinc-100 text-zinc-500'}">
+                                ${a.published?'เผยแพร่':'ซ่อน'}
+                              </span>
+                            </div>
+                          </div>
+                          <i class="fa-solid fa-chevron-right text-zinc-300 text-xs shrink-0"></i>
+                        </button>`;
+                    }).join('');
+                }
+        
+                window.annFilter = (mode) => {
+                    filterMode = mode;
+                    ['all','pub','hid'].forEach(m => {
+                        const b = document.getElementById('f-'+m);
+                        if (!b) return;
+                        const isA = m===mode;
+                        b.className = `ann-filter-btn text-[10px] font-black px-3 py-1 rounded-lg transition-all ${isA?'bg-zinc-900 text-white':'bg-zinc-100 text-zinc-500'}`;
+                    });
+                    renderList();
+                };
+        
+                window.annSelect = id => { activeId=id; renderList(); renderEditor(allAnns.find(a=>a.id===id)); };
+                window.annNew    = ()  => { activeId=null; renderList(); renderEditor(null); };
+        
+                // ── Rich Text Editor ──────────────────────────────────────────
+                function renderEditor(ann) {
+                    const panel = document.getElementById('ann-editor-panel'); if (!panel) return;
+                    const isNew = !ann;
+                    panel.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+                      <div class="${isNew?'bg-zinc-900':'bg-zinc-800'} px-7 py-5 flex items-center justify-between">
+                        <div>
+                          <h3 class="font-black text-white text-lg">${isNew?'ประกาศใหม่':'แก้ไขประกาศ'}</h3>
+                          <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">${isNew?'New Announcement':'Edit Announcement'}</p>
+                        </div>
+                        <i class="fa-solid ${isNew?'fa-plus-circle':'fa-pen'} text-yellow-500 text-2xl"></i>
+                      </div>
+                      <div class="p-6 space-y-4">
+                        <!-- Meta row -->
+                        <div class="grid grid-cols-2 gap-4">
+                          <div>
+                            <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">หัวข้อประกาศ *</label>
+                            <input id="ann-title" type="text" value="${ann?.title||''}" placeholder="หัวข้อประกาศ..."
+                              class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                          </div>
+                          <div>
+                            <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">ประเภท</label>
+                            <select id="ann-tag" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none bg-white">
+                              ${TAGS.map(t=>`<option value="${t.id}" ${ann?.tag===t.id?'selected':''}>${t.label}</option>`).join('')}
+                            </select>
+                          </div>
+                        </div>
+        
+                        <!-- Toolbar -->
+                        <div>
+                          <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">เนื้อหา</label>
+                          <div class="ql-toolbar-custom" id="ann-toolbar">
+                            <!-- Font family -->
+                            <select id="tb-font" onchange="annCmd('fontName',this.value)" title="ฟ้อนต์" class="pr-1">
+                              <option value="Prompt">Prompt</option>
+                              <option value="Sarabun">Sarabun</option>
+                              <option value="Arial">Arial</option>
+                              <option value="Georgia">Georgia</option>
+                              <option value="Courier New">Courier New</option>
+                            </select>
+                            <!-- Font size -->
+                            <select id="tb-size" onchange="annCmd('fontSize',this.value)" title="ขนาด">
+                              ${[10,12,14,16,18,20,24,28,32,36,48].map(s=>`<option value="${s}pt" ${s===14?'selected':''}>${s}</option>`).join('')}
+                            </select>
+                            <div class="sep"></div>
+                            <!-- Headings -->
+                            <select id="tb-block" onchange="annBlock(this.value)" title="รูปแบบย่อหน้า">
+                              <option value="p">ย่อหน้า</option>
+                              <option value="h1">หัวข้อ 1</option>
+                              <option value="h2">หัวข้อ 2</option>
+                              <option value="h3">หัวข้อ 3</option>
+                              <option value="blockquote">อ้างอิง</option>
+                            </select>
+                            <div class="sep"></div>
+                            <!-- Inline format -->
+                            <button id="tb-bold"      onclick="annCmd('bold')"          title="ตัวหนา (Ctrl+B)"><b>B</b></button>
+                            <button id="tb-italic"    onclick="annCmd('italic')"        title="ตัวเอียง (Ctrl+I)"><i>I</i></button>
+                            <button id="tb-underline" onclick="annCmd('underline')"     title="ขีดเส้นใต้ (Ctrl+U)"><u>U</u></button>
+                            <button id="tb-strike"    onclick="annCmd('strikeThrough')" title="ขีดฆ่า"><s>S</s></button>
+                            <div class="sep"></div>
+                            <!-- Color -->
+                            <div class="relative inline-block" title="สีตัวอักษร">
+                              <button class="flex items-center gap-1 text-xs" onclick="document.getElementById('tb-color-picker').click()">
+                                <span id="tb-color-preview" style="background:#18181b" class="color-swatch"></span>A
+                              </button>
+                              <input type="color" id="tb-color-picker" class="absolute opacity-0 w-0 h-0"
+                                onchange="annCmd('foreColor',this.value);document.getElementById('tb-color-preview').style.background=this.value">
+                            </div>
+                            <div class="relative inline-block" title="สีพื้นหลัง">
+                              <button class="flex items-center gap-1 text-xs" onclick="document.getElementById('tb-bg-picker').click()">
+                                <span id="tb-bg-preview" style="background:#fef9c3" class="color-swatch"></span>BG
+                              </button>
+                              <input type="color" id="tb-bg-picker" class="absolute opacity-0 w-0 h-0" value="#fef9c3"
+                                onchange="annCmd('backColor',this.value);document.getElementById('tb-bg-preview').style.background=this.value">
+                            </div>
+                            <div class="sep"></div>
+                            <!-- Lists -->
+                            <button onclick="annCmd('insertUnorderedList')" title="รายการ"><i class="fa-solid fa-list-ul"></i></button>
+                            <button onclick="annCmd('insertOrderedList')"   title="รายการตัวเลข"><i class="fa-solid fa-list-ol"></i></button>
+                            <div class="sep"></div>
+                            <!-- Align -->
+                            <button onclick="annCmd('justifyLeft')"   title="จัดซ้าย"><i class="fa-solid fa-align-left"></i></button>
+                            <button onclick="annCmd('justifyCenter')" title="จัดกลาง"><i class="fa-solid fa-align-center"></i></button>
+                            <button onclick="annCmd('justifyRight')"  title="จัดขวา"><i class="fa-solid fa-align-right"></i></button>
+                            <button onclick="annCmd('justifyFull')"   title="จัดเต็ม"><i class="fa-solid fa-align-justify"></i></button>
+                            <div class="sep"></div>
+                            <!-- Indent -->
+                            <button onclick="annCmd('outdent')" title="ลดการย่อหน้า"><i class="fa-solid fa-outdent"></i></button>
+                            <button onclick="annCmd('indent')"  title="เพิ่มการย่อหน้า"><i class="fa-solid fa-indent"></i></button>
+                            <div class="sep"></div>
+                            <!-- Link + Image -->
+                            <button onclick="annInsertLink()"  title="แทรกลิงก์"><i class="fa-solid fa-link"></i></button>
+                            <button onclick="annInsertImage()" title="แทรกรูปภาพ (URL)"><i class="fa-solid fa-image"></i></button>
+                            <div class="sep"></div>
+                            <!-- Clear -->
+                            <button onclick="annCmd('removeFormat')" title="ล้างรูปแบบ" class="text-red-400"><i class="fa-solid fa-text-slash"></i></button>
+                          </div>
+                          <div id="ann-body-editor" class="ann-editor" contenteditable="true"
+                            onkeydown="annKeyDown(event)" oninput="annUpdateToolbar()"
+                            onmouseup="annUpdateToolbar()" onselectionchange="annUpdateToolbar()">
+                            ${ann?.body||''}
+                          </div>
+                        </div>
+        
+                        <!-- Image URL insert -->
+                        <div id="img-url-row" class="hidden">
+                          <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">URL รูปภาพ</label>
+                          <div class="flex gap-2">
+                            <input id="img-url-input" type="url" placeholder="https://..." oninput="annPreviewImg()"
+                              class="flex-1 border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+                            <button onclick="annConfirmImg()" class="bg-zinc-900 text-yellow-400 font-black px-4 py-2.5 rounded-xl text-xs uppercase hover:bg-yellow-500 hover:text-zinc-900 transition-all">แทรก</button>
+                            <button onclick="annCancelImg()"  class="bg-zinc-100 text-zinc-600 font-black px-4 py-2.5 rounded-xl text-xs hover:bg-zinc-200 transition-all">ยกเลิก</button>
+                          </div>
+                          <img id="img-url-preview" src="" class="hidden mt-2 max-h-40 rounded-xl border border-zinc-200 object-contain">
+                        </div>
+        
+                        <!-- Footer -->
+                        <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-zinc-100">
+                          <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="ann-published" ${ann?.published!==false?'checked':''} class="w-4 h-4 accent-yellow-500">
+                            <span class="text-sm font-bold text-zinc-700">เผยแพร่ทันที</span>
+                          </label>
+                          <div class="flex gap-3 ml-auto">
+                            ${!isNew ? `<button onclick="annDelete('${ann.id}')"
+                              class="px-5 py-2.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white border-2 border-red-100 hover:border-red-500 font-black rounded-xl text-xs transition-all uppercase">
+                              <i class="fa-solid fa-trash mr-1"></i>ลบ</button>` : ''}
+                            <button onclick="annSave(${isNew?'null':`'${ann.id}'`})"
+                              class="px-7 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-xs transition-all shadow-md uppercase tracking-widest flex items-center gap-2">
+                              <i class="fa-solid fa-save"></i> บันทึก
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>`;
+        
+                    // Focus editor
+                    setTimeout(() => document.getElementById('ann-body-editor')?.focus(), 80);
+                }
+        
+                // ── Editor commands ──────────────────────────────────────────
+                window.annCmd = (cmd, val) => {
+                    document.execCommand(cmd, false, val||null);
+                    document.getElementById('ann-body-editor')?.focus();
+                    annUpdateToolbar();
+                };
+        
+                window.annBlock = (tag) => {
+                    if (tag==='blockquote') document.execCommand('formatBlock',false,'<blockquote>');
+                    else document.execCommand('formatBlock',false,'<'+tag+'>');
+                    document.getElementById('ann-body-editor')?.focus();
+                };
+        
+                window.annKeyDown = (e) => {
+                    if (e.ctrlKey||e.metaKey) {
+                        if (e.key==='b') { e.preventDefault(); annCmd('bold'); }
+                        if (e.key==='i') { e.preventDefault(); annCmd('italic'); }
+                        if (e.key==='u') { e.preventDefault(); annCmd('underline'); }
+                    }
+                };
+        
+                window.annUpdateToolbar = () => {
+                    const cmds = {
+                        'tb-bold':      'bold',
+                        'tb-italic':    'italic',
+                        'tb-underline': 'underline',
+                        'tb-strike':    'strikeThrough',
+                    };
+                    Object.entries(cmds).forEach(([id,cmd]) => {
+                        const b = document.getElementById(id);
+                        if (b) b.classList.toggle('active', document.queryCommandState(cmd));
+                    });
+                };
+        
+                window.annInsertImage = () => {
+                    const row = document.getElementById('img-url-row');
+                    if (row) { row.classList.remove('hidden'); document.getElementById('img-url-input')?.focus(); }
+                };
+                window.annPreviewImg = () => {
+                    const src = document.getElementById('img-url-input')?.value;
+                    const prev = document.getElementById('img-url-preview');
+                    if (!prev) return;
+                    if (src) { prev.src=src; prev.classList.remove('hidden'); }
+                    else prev.classList.add('hidden');
+                };
+                window.annConfirmImg = () => {
+                    const src = document.getElementById('img-url-input')?.value.trim();
+                    if (!src) return;
+                    document.getElementById('ann-body-editor')?.focus();
+                    document.execCommand('insertHTML',false,`<img src="${src}" alt="รูปประกอบ">`);
+                    annCancelImg();
+                };
+                window.annCancelImg = () => {
+                    const row = document.getElementById('img-url-row');
+                    if (row) row.classList.add('hidden');
+                    const inp = document.getElementById('img-url-input'); if (inp) inp.value='';
+                    const prev = document.getElementById('img-url-preview');
+                    if (prev) { prev.src=''; prev.classList.add('hidden'); }
+                };
+        
+                window.annInsertLink = () => {
+                    const url = prompt('กรอก URL ลิงก์:');
+                    if (url) { document.getElementById('ann-body-editor')?.focus(); document.execCommand('createLink',false,url); }
+                };
+        
+                // ── Save ──────────────────────────────────────────────────────
+                window.annSave = async (id) => {
+                    const title = document.getElementById('ann-title')?.value.trim();
+                    const body  = document.getElementById('ann-body-editor')?.innerHTML||'';
+                    const tag   = document.getElementById('ann-tag')?.value||'info';
+                    const pub   = document.getElementById('ann-published')?.checked ?? true;
+                    if (!title) { showToast('กรุณากรอกหัวข้อประกาศ','error'); return; }
+                    const payload = {
+                        title, body, tag, published: pub,
+                        updatedAt: new Date().toISOString(),
+                        author: profile.name,
+                    };
+                    try {
+                        if (id) {
+                            await updateDoc(doc(db,'artifacts',APP_ID,'public','data','announcements',id), payload);
+                            showToast('✅ บันทึกการแก้ไขแล้ว','success');
+                        } else {
+                            payload.createdAt = new Date().toISOString();
+                            const ref = await addDoc(collection(db,'artifacts',APP_ID,'public','data','announcements'), payload);
+                            activeId = ref.id;
+                            showToast('✅ สร้างประกาศแล้ว','success');
+                        }
+                        renderList();
+                    } catch(e) { showToast('❌ '+e.message,'error'); }
+                };
+        
+                // ── Delete ────────────────────────────────────────────────────
+                window.annDelete = async (id) => {
+                    const a = allAnns.find(x=>x.id===id);
+                    if (!confirm(`ลบประกาศ "${a?.title}" ?`)) return;
+                    try {
+                        await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','announcements',id));
+                        showToast('ลบแล้ว','info');
+                        activeId=null;
+                        renderList();
+                        const panel=document.getElementById('ann-editor-panel');
+                        if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-64 text-zinc-300"><i class="fa-solid fa-pen-to-square text-5xl mb-3 opacity-20"></i><p class="font-bold text-sm">เลือกประกาศหรือสร้างใหม่</p></div>`;
+                    } catch(e) { showToast('❌ '+e.message,'error'); }
+                };
+        
+                return () => {
+                    unsub();
+                    ['annFilter','annSelect','annNew','annCmd','annBlock','annKeyDown','annUpdateToolbar',
+                     'annInsertImage','annPreviewImg','annConfirmImg','annCancelImg','annInsertLink',
+                     'annSave','annDelete'].forEach(k => delete window[k]);
+                };
+            }
+        };
 
 
     </script>
