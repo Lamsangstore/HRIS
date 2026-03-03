@@ -1762,7 +1762,7 @@
                     : `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}`;
                 const timeRange = r.isHourly ? ` (${r.startTime}–${r.endTime})` : '';
                 const todayStr = new Date().toISOString().slice(0,10);
-                const canCancel = r.status === 'pending' && r.startDate > todayStr;
+                const canCancel = (r.status === 'pending' || r.status === 'approved') && r.startDate > todayStr;
                 return `
                 <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                   <div class="w-12 h-12 rounded-2xl ${cv.bg} flex items-center justify-center shrink-0">
@@ -2053,6 +2053,17 @@ PAGES['leave-mgmt'] = {
                         class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white border-2 border-red-200 hover:border-red-500 font-black px-5 py-2.5 rounded-xl text-xs transition-all uppercase tracking-widest">
                         <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
                       </button>
+                    </div>` : r.status === 'approved' ? `
+                    <div class="flex lg:flex-col gap-2 shrink-0 justify-end items-end">
+                      <div class="text-right">
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">อนุมัติโดย</p>
+                        <p class="text-xs font-bold text-zinc-600">${r.approvedBy || '-'}</p>
+                        <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt.slice(0,10)) : ''}</p>
+                      </div>
+                      <button onclick="mgrCancelLeave('${r.id}')"
+                        class="inline-flex items-center gap-1.5 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border-2 border-orange-200 hover:border-orange-500 font-black px-4 py-2 rounded-xl text-[10px] transition-all uppercase tracking-widest">
+                        <i class="fa-solid fa-rotate-left"></i> ยกเลิก (คืนสิทธิ์)
+                      </button>
                     </div>` : `
                     <div class="shrink-0 text-right">
                       <p class="text-[10px] text-zinc-400 font-bold uppercase">ดำเนินการโดย</p>
@@ -2136,7 +2147,33 @@ PAGES['leave-mgmt'] = {
 
         return () => {
             unsub();
-            ['filterRequests','openActionModal','closeActionModal','confirmAction'].forEach(k => delete window[k]);
+            window.mgrCancelLeave = async (id) => {
+            const r = allRequests.find(x => x.id === id);
+            if (!r) return;
+            if (!confirm(`ยกเลิกการลาของ "${r.employeeName}" และคืนสิทธิ์ ${r.totalHours} ชม. ใช่หรือไม่?`)) return;
+            try {
+                await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
+                    status: 'cancelled',
+                    cancelledAt: new Date().toISOString(),
+                    cancelledBy: profile.name,
+                    cancelNote: 'ยกเลิกโดยหัวหน้า'
+                });
+                // คืนชั่วโมง
+                const leaveKey = ['sick','personal','vacation'].includes(r.type) ? r.type : null;
+                if (leaveKey && r.totalHours > 0) {
+                    const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', r.uid);
+                    const bs = await getDoc(balRef);
+                    if (bs.exists()) {
+                        const bal = bs.data();
+                        const newUsed = Math.max(0, (bal[leaveKey]?.usedHours || 0) - r.totalHours);
+                        await updateDoc(balRef, { [leaveKey + '.usedHours']: newUsed });
+                    }
+                }
+                showToast('✅ ยกเลิกการลาและคืนสิทธิ์แล้ว', 'success');
+            } catch(e) { showToast('❌ ' + e.message, 'error'); }
+        };
+
+                ['filterRequests','openActionModal','closeActionModal','confirmAction','mgrCancelLeave'].forEach(k => delete window[k]);
         };
     }
 };
@@ -2655,8 +2692,8 @@ PAGES['payroll'] = {
                   <i class="fa-solid fa-lock"></i> \u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14
                 </button>`:''}
                 ${p.status==='final'?`<button onclick="prPaid('${p.id}')" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm"><i class="fa-solid fa-check-double"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22</button>`:''}
-                <button onclick="prCSV('${p.id}')" class="inline-flex items-center gap-2 border-2 border-zinc-200 hover:border-zinc-400 text-zinc-600 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
-                  <i class="fa-solid fa-file-csv"></i> Export CSV
+                <button onclick="prXLSX('${p.id}')" class="inline-flex items-center gap-2 border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
+                  <i class="fa-solid fa-file-excel"></i> Export XLSX
                 </button>
                 ${isDraft?`<button onclick="prDel('${p.id}')" class="ml-auto inline-flex items-center gap-1.5 text-red-400 hover:text-red-600 font-black text-xs px-3 py-2 rounded-lg hover:bg-red-50 transition-all"><i class="fa-solid fa-trash-can"></i> \u0e25\u0e1a\u0e07\u0e27\u0e14</button>`:''}
               </div>
@@ -2948,33 +2985,113 @@ PAGES['payroll'] = {
             }catch(err){showToast('\u274c '+err.message,'error');}
         };
 
-        window.prCSV = pid => {
-            const period=periods.find(p=>p.id===pid);
-            if(!period||!records.length){showToast('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25','error');return;}
-            const H=['\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48','\u0e1b\u0e35','\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48','\u0e16\u0e36\u0e07',
-                '\u0e23\u0e2b\u0e31\u0e2a\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19','\u0e0a\u0e37\u0e48\u0e2d-\u0e19\u0e32\u0e21\u0e2a\u0e01\u0e38\u0e25','\u0e0a\u0e37\u0e48\u0e2d\u0e40\u0e25\u0e48\u0e19','\u0e2a\u0e32\u0e02\u0e32','\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07','Line ID',
-                '\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19','\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e27\u0e31\u0e19','\u0e04\u0e48\u0e32\u0e08\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e0a\u0e21.','\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19(%)',
-                '\u0e23\u0e27\u0e21\u0e27\u0e31\u0e19\u0e17\u0e33\u0e07\u0e32\u0e19','\u0e23\u0e27\u0e21\u0e0a\u0e21.OT','\u0e23\u0e27\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19',
-                '\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e27\u0e31\u0e19','\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e0a\u0e21.','\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e08\u0e32\u0e01\u0e04\u0e2d\u0e21\u0e21\u0e34\u0e0a\u0e0a\u0e31\u0e48\u0e19','\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e2d\u0e37\u0e48\u0e19\u0e46',
-                '\u0e25\u0e32\u0e1b\u0e48\u0e27\u0e22(\u0e0a\u0e21.)','\u0e25\u0e32\u0e01\u0e34\u0e08(\u0e0a\u0e21.)','\u0e25\u0e32\u0e1e\u0e31\u0e01\u0e23\u0e49\u0e2d\u0e19(\u0e0a\u0e21.)','\u0e25\u0e32\u0e2d\u0e37\u0e48\u0e19\u0e46(\u0e0a\u0e21.)','\u0e2a\u0e32\u0e22(\u0e0a\u0e21.)',
-                '\u0e2b\u0e31\u0e01\u0e25\u0e32','\u0e2b\u0e31\u0e01\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e2a\u0e31\u0e07\u0e04\u0e21','\u0e2b\u0e31\u0e01\u0e20\u0e32\u0e29\u0e35','\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46',
-                '\u0e23\u0e27\u0e21\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49','\u0e23\u0e27\u0e21\u0e2b\u0e31\u0e01','\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a\u0e2a\u0e38\u0e17\u0e18\u0e34'];
-            const rows=records.map(r=>[
-                r.periodNo,r.year,period.startDate,period.endDate,
-                r.employeeCode,r.name,r.nickname||'',r.branch||'',r.position||'',r.lineId||'',
-                r.baseSalary||0,r.dailyWage||0,r.hourlyWage||0,r.commissionRate||0,
-                r.workDays||0,r.workHours||0,r.commissionUnits||0,
-                r.earningDaily||0,r.earningHourly||0,r.earningCommission||0,r.otherEarning||0,
-                r.sickLeaveHours||0,r.personalLeaveHours||0,r.vacationLeaveHours||0,r.otherLeaveHours||0,r.lateHours||0,
-                r.deductLeave||0,r.deductSSO||0,r.deductTax||0,r.otherDeduct||0,
-                r.totalEarning||0,r.totalDeduct||0,r.netPay||0
+        window.prXLSX = async pid => {
+            const period = periods.find(p => p.id === pid);
+            if (!period || !records.length) { showToast('ไม่มีข้อมูล', 'error'); return; }
+
+            // Load SheetJS dynamically if not loaded
+            if (typeof XLSX === 'undefined') {
+                await new Promise((res, rej) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    s.onload = res; s.onerror = rej;
+                    document.head.appendChild(s);
+                });
+            }
+
+            // Headers ตาม template ของระบบ
+            const headers = [
+                'เลขที่พนักงาน',
+                'ชื่อ - นามสกุล',
+                'เงินเดือน(SAL)',
+                'ส่วนแบ่งการขาย(COM)',
+                'ค่าล่วงเวลา(OT)',
+                'ค่ากะ(R004)',
+                'โบนัส(R003)',
+                'ค่าปรับ(FN)',
+                'กองทุนเงินให้กู้ยืมเพื่อการศึกษา(STL)',
+                'ภาษีหัก ณ ที่จ่าย(WHT)',
+                'ประกันสังคม(SSF)'
+            ];
+
+            // Map payroll records → template columns
+            const dataRows = records.map(r => [
+                r.employeeCode || '',                          // เลขที่พนักงาน
+                r.name || '',                                  // ชื่อ - นามสกุล
+                r.baseSalary || 0,                             // เงินเดือน(SAL)
+                r.earningCommission || 0,                      // ส่วนแบ่งการขาย(COM)
+                r.earningHourly || 0,                          // ค่าล่วงเวลา(OT)
+                r.earningDaily || 0,                           // ค่ากะ(R004)
+                r.otherEarning || 0,                           // โบนัส(R003)
+                r.deductLeave || 0,                            // ค่าปรับ(FN)
+                r.otherDeduct || 0,                            // กองทุนเงินให้กู้ยืมเพื่อการศึกษา(STL)
+                r.deductTax || 0,                              // ภาษีหัก ณ ที่จ่าย(WHT)
+                r.deductSSO || 0,                              // ประกันสังคม(SSF)
             ]);
-            const csv=[H,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-            const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
-            const url=URL.createObjectURL(blob);
-            const a=Object.assign(document.createElement('a'),{href:url,download:`payroll_${period.periodNo}_${period.year}.csv`});
-            a.click(); URL.revokeObjectURL(url);
-            showToast('\ud83d\udce5 Export CSV \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08','success');
+
+            // Build worksheet
+            const wsData = [headers, ...dataRows];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Column widths (match template approximately)
+            ws['!cols'] = [
+                { wch: 14 },  // เลขที่พนักงาน
+                { wch: 28 },  // ชื่อ - นามสกุล
+                { wch: 16 },  // เงินเดือน
+                { wch: 20 },  // ส่วนแบ่งการขาย
+                { wch: 14 },  // OT
+                { wch: 12 },  // ค่ากะ
+                { wch: 12 },  // โบนัส
+                { wch: 10 },  // ค่าปรับ
+                { wch: 36 },  // กองทุน
+                { wch: 20 },  // ภาษี
+                { wch: 16 },  // ประกันสังคม
+            ];
+
+            // Style header row — gray fill, bold (using !ref-based approach)
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let C = range.s.c; C <= range.e.c; C++) {
+                const addr = XLSX.utils.encode_cell({ r: 0, c: C });
+                if (!ws[addr]) continue;
+                ws[addr].s = {
+                    font: { bold: true, name: 'Calibri', sz: 11 },
+                    fill: { fgColor: { rgb: 'D3D3D3' }, patternType: 'solid' },
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                    border: {
+                        top:    { style: 'thin', color: { rgb: '999999' } },
+                        bottom: { style: 'thin', color: { rgb: '999999' } },
+                        left:   { style: 'thin', color: { rgb: '999999' } },
+                        right:  { style: 'thin', color: { rgb: '999999' } },
+                    }
+                };
+            }
+            // Style data rows — number format with 2 decimal places
+            for (let R = 1; R <= dataRows.length; R++) {
+                for (let C = 0; C <= range.e.c; C++) {
+                    const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (!ws[addr]) continue;
+                    const isNum = C >= 2;
+                    ws[addr].s = {
+                        font: { name: 'Calibri', sz: 11 },
+                        numFmt: isNum ? '#,##0.00' : '@',
+                        alignment: { horizontal: isNum ? 'right' : 'left', vertical: 'center' },
+                        border: {
+                            top:    { style: 'thin', color: { rgb: 'DDDDDD' } },
+                            bottom: { style: 'thin', color: { rgb: 'DDDDDD' } },
+                            left:   { style: 'thin', color: { rgb: 'DDDDDD' } },
+                            right:  { style: 'thin', color: { rgb: 'DDDDDD' } },
+                        }
+                    };
+                }
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, 'ข้อมูลนำเข้าเงินเดือน');
+
+            // Download
+            const filename = `Import_SalaryPayRun_${period.year}_${String(period.periodNo).padStart(2,'0')}.xlsx`;
+            XLSX.writeFile(wb, filename, { bookSST: false, type: 'binary', cellStyles: true });
+            showToast('📥 Export XLSX สำเร็จ', 'success');
         };
 
         return () => {
@@ -2982,7 +3099,7 @@ PAGES['payroll'] = {
             if(unsubRec) unsubRec();
             ['prSel','prOpenCreate','prCloseCreate','prDoCreate','prGenAll',
              'prOpenRec','prCloseRec','prRecalc','prSaveRec',
-             'prFinal','prPaid','prDel','prCSV'
+             'prFinal','prPaid','prDel','prCSV','prXLSX'
             ].forEach(k=>delete window[k]);
         };
     }
