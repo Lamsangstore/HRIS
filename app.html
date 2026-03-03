@@ -4026,60 +4026,63 @@ PAGES['holidays'] = {
 
 
 // ================================================================
-// E-PAY SLIP — พนักงานดูสลิปเงินเดือน
+// ================================================================
+// E-PAY SLIP — พนักงานดูสลิปของตัวเอง + ยืนยันรหัสก่อนเปิด Drive
 // ================================================================
 PAGES['payslip'] = {
-    title: 'สลิปเงินเดือน',
+    title: 'E-Pay Slip',
     html: `
 <div class="p-6 lg:p-8 max-w-4xl mx-auto">
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-    <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight flex items-center gap-3">
-        <span class="w-10 h-10 bg-yellow-500 rounded-2xl flex items-center justify-center shrink-0">
-          <i class="fa-solid fa-file-invoice text-zinc-900"></i>
-        </span>
-        E-Pay Slip
-      </h2>
-      <p class="text-sm text-zinc-400 font-medium mt-1">สลิปเงินเดือนของคุณ — ยืนยันรหัสผ่านก่อนเปิด</p>
-    </div>
+  <div class="mb-8">
+    <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight flex items-center gap-3">
+      <span class="w-10 h-10 bg-yellow-500 rounded-2xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-file-invoice text-zinc-900"></i>
+      </span>
+      E-Pay Slip
+    </h2>
+    <p class="text-sm text-zinc-400 font-medium mt-1 ml-[52px]">สลิปเงินเดือนของคุณ — ยืนยันรหัสผ่านก่อนเปิด Google Drive</p>
   </div>
 
-  <!-- Slips list grouped by year -->
   <div id="ps-list" class="space-y-6">
-    <div class="text-center py-16 text-zinc-300">
+    <div class="text-center py-20 text-zinc-300">
       <i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i>
       <p class="font-bold text-sm">กำลังโหลด...</p>
     </div>
   </div>
 </div>
 
-<!-- PIN Confirm Modal -->
-<div id="ps-pin-modal" class="fixed inset-0 z-[300] flex items-center justify-center p-4 hidden">
+<!-- Password Modal -->
+<div id="ps-pw-modal" class="fixed inset-0 z-[300] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
     <div class="bg-zinc-900 px-7 py-5">
       <h3 class="font-black text-white text-lg flex items-center gap-2">
         <i class="fa-solid fa-lock text-yellow-400"></i> ยืนยันตัวตน
       </h3>
-      <p class="text-zinc-400 text-xs mt-1 font-medium">กรอกรหัสผ่านบัญชีของคุณเพื่อเปิดสลิป</p>
+      <p class="text-zinc-400 text-xs mt-1">กรอกรหัสผ่านบัญชีเพื่อเปิดสลิป</p>
     </div>
-    <div class="p-7 space-y-5">
-      <div id="ps-pin-slip-info" class="bg-zinc-50 rounded-xl p-4 border border-zinc-200 text-sm text-zinc-600 font-medium"></div>
-      <div>
-        <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">รหัสผ่าน</label>
-        <input type="password" id="ps-pin-input" placeholder="กรอกรหัสผ่าน"
-          class="w-full border-2 border-zinc-200 rounded-xl px-4 py-3 text-sm font-medium focus:border-yellow-500 focus:outline-none"
-          onkeydown="if(event.key==='Enter') psConfirmPin()">
+    <div class="p-7 space-y-4">
+      <div class="flex items-center gap-3 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
+        <i class="fa-solid fa-file-invoice text-yellow-500 text-xl shrink-0"></i>
+        <div>
+          <p id="ps-pw-label" class="font-black text-zinc-800 text-sm">-</p>
+          <p id="ps-pw-sub"   class="text-[10px] text-zinc-400 mt-0.5">-</p>
+        </div>
       </div>
-      <p id="ps-pin-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-xl">
-        <i class="fa-solid fa-circle-exclamation mr-1"></i> รหัสผ่านไม่ถูกต้อง
+      <div>
+        <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">รหัสผ่าน</label>
+        <input type="password" id="ps-pw-input" placeholder="กรอกรหัสผ่านของคุณ"
+          class="w-full border-2 border-zinc-200 rounded-xl px-4 py-3 text-sm font-medium focus:border-yellow-500 focus:outline-none"
+          onkeydown="if(event.key==='Enter') psConfirmPw()">
+      </div>
+      <p id="ps-pw-error" class="hidden text-xs text-red-600 font-bold bg-red-50 border border-red-200 px-3 py-2 rounded-xl">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i>รหัสผ่านไม่ถูกต้อง
       </p>
-      <div class="flex gap-3">
-        <button onclick="psClosePin()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">ยกเลิก</button>
-        <button onclick="psConfirmPin()" id="ps-pin-confirm-btn"
-          class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm transition-all">
-          <i class="fa-solid fa-unlock mr-1"></i> เปิดสลิป
+      <div class="flex gap-3 pt-1">
+        <button onclick="psClosePw()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">ยกเลิก</button>
+        <button onclick="psConfirmPw()" id="ps-pw-btn"
+          class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-unlock"></i> เปิดสลิป
         </button>
       </div>
     </div>
@@ -4087,245 +4090,267 @@ PAGES['payslip'] = {
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
-        const { collection, query, where, orderBy, onSnapshot, doc, getDoc }
+        const { collection, query, where, orderBy, onSnapshot }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const { getAuth, signInWithEmailAndPassword }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
 
+        const TM = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
         let pendingUrl = null;
 
-        // Load this employee's payslips
         const unsub = onSnapshot(
-            query(
-                collection(db, 'artifacts', APP_ID, 'public', 'data', 'payslips'),
-                where('uid', '==', user.uid),
-                orderBy('year', 'desc'),
-                orderBy('periodNo', 'desc')
-            ),
-            snap => {
-                const slips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderSlips(slips);
-            }
+            query(collection(db,'artifacts',APP_ID,'public','data','payslips'),
+                  where('uid','==',user.uid),
+                  orderBy('year','desc'), orderBy('periodNo','desc')),
+            snap => renderSlips(snap.docs.map(d=>({id:d.id,...d.data()})))
         );
 
         function renderSlips(slips) {
             const el = document.getElementById('ps-list');
             if (!el) return;
             if (!slips.length) {
-                el.innerHTML = `<div class="text-center py-20 text-zinc-300">
-                    <i class="fa-solid fa-file-circle-xmark text-5xl mb-4"></i>
-                    <p class="font-black text-base">ยังไม่มีสลิปเงินเดือน</p>
-                    <p class="text-sm mt-1">แอดมินจะอัปโหลดสลิปให้คุณ</p>
-                </div>`;
-                return;
-            }
-            // Group by year
-            const byYear = {};
-            slips.forEach(s => {
-                const y = s.year || '?';
-                if (!byYear[y]) byYear[y] = [];
-                byYear[y].push(s);
-            });
-            const THAI_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-            el.innerHTML = Object.keys(byYear).sort((a,b)=>b-a).map(yr => `
-                <div>
-                  <h3 class="text-xs font-black text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <span class="bg-zinc-900 text-yellow-400 px-3 py-1 rounded-full">ปี ${parseInt(yr)+543}</span>
-                  </h3>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    ${byYear[yr].map(s => {
-                        const mName = THAI_MONTHS[parseInt(s.month||0)] || s.month || '';
-                        const label = s.label || (mName ? `${mName} ${parseInt(yr)+543}` : `งวด ${s.periodNo}`);
-                        return `
-                        <div class="bg-white rounded-2xl border border-zinc-200 p-5 hover:border-yellow-300 hover:shadow-md transition-all group">
-                          <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 bg-yellow-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-yellow-100 transition-all">
-                              <i class="fa-solid fa-file-invoice text-yellow-600 text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                              <p class="font-black text-zinc-800 text-sm">${label}</p>
-                              <p class="text-[10px] text-zinc-400 font-bold uppercase mt-0.5">งวด ${s.periodNo || '-'} / ${yr}</p>
-                              ${s.note ? `<p class="text-xs text-zinc-400 mt-1 truncate">${s.note}</p>` : ''}
-                            </div>
-                          </div>
-                          <button onclick="psOpenPin('${s.id}','${label}','${s.driveUrl||''}')"
-                            class="mt-4 w-full bg-zinc-900 hover:bg-yellow-500 text-white hover:text-zinc-900 font-black py-2.5 rounded-xl text-xs transition-all uppercase tracking-widest flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-lock text-xs"></i> ดูสลิป
-                          </button>
-                        </div>`;
-                    }).join('')}
+                el.innerHTML = `<div class="text-center py-24 text-zinc-300">
+                  <div class="w-20 h-20 bg-zinc-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-file-circle-xmark text-4xl"></i>
                   </div>
-                </div>`
-            ).join('');
+                  <p class="font-black text-zinc-400 text-base">ยังไม่มีสลิปเงินเดือน</p>
+                  <p class="text-sm text-zinc-300 mt-1">ทีม HR จะอัปโหลดสลิปให้คุณหลังสิ้นงวด</p>
+                </div>`; return;
+            }
+            const byYear = {};
+            slips.forEach(s => { const y=String(s.year||'?'); (byYear[y]=byYear[y]||[]).push(s); });
+            el.innerHTML = Object.keys(byYear).sort((a,b)=>b-a).map(yr => `
+            <div>
+              <div class="flex items-center gap-3 mb-4">
+                <span class="text-xs font-black tracking-widest uppercase text-white bg-zinc-800 px-4 py-1.5 rounded-full">ปี ${parseInt(yr)+543}</span>
+                <span class="text-xs text-zinc-400 font-medium">${byYear[yr].length} สลิป</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${byYear[yr].map(s => {
+                    const mo = TM[parseInt(s.month||0)]||'';
+                    const label = s.label||(mo?mo+' '+(parseInt(yr)+543):'งวด '+s.periodNo);
+                    const sub = 'งวด '+(s.periodNo||'-')+' / '+yr;
+                    return '<div class="bg-white rounded-2xl border-2 border-zinc-100 hover:border-yellow-300 hover:shadow-lg transition-all p-5 flex flex-col group">'
+                      +'<div class="flex items-center gap-3 mb-4">'
+                      +'<div class="w-11 h-11 bg-yellow-50 group-hover:bg-yellow-100 rounded-xl flex items-center justify-center shrink-0 transition-all">'
+                      +'<i class="fa-solid fa-file-invoice text-yellow-500 text-lg"></i></div>'
+                      +'<div class="flex-1 min-w-0"><p class="font-black text-zinc-800 text-sm leading-tight">'+label+'</p>'
+                      +'<p class="text-[10px] text-zinc-400 font-bold uppercase mt-0.5">'+sub+'</p></div></div>'
+                      +(s.note?'<p class="text-xs text-zinc-400 mb-3 truncate">'+s.note+'</p>':'')
+                      +'<div class="mt-auto"><button onclick="psOpenPw(''+label+'',''+sub+'',''+encodeURIComponent(s.driveUrl||'')+'''+')"'
+                      +' class="w-full bg-zinc-900 hover:bg-yellow-500 text-white hover:text-zinc-900 font-black py-2.5 rounded-xl text-xs transition-all uppercase tracking-widest flex items-center justify-center gap-2">'
+                      +'<i class="fa-solid fa-lock text-xs"></i> ดูสลิป</button></div></div>';
+                }).join('')}
+              </div>
+            </div>`).join('');
         }
 
-        window.psOpenPin = (slipId, label, url) => {
-            pendingUrl = url;
-            const info = document.getElementById('ps-pin-slip-info');
-            if (info) info.innerHTML = `<i class="fa-solid fa-file-invoice text-yellow-500 mr-2"></i><strong>${label}</strong>`;
-            const inp = document.getElementById('ps-pin-input');
+        window.psOpenPw = (label, sub, encodedUrl) => {
+            pendingUrl = decodeURIComponent(encodedUrl);
+            document.getElementById('ps-pw-label').textContent = label;
+            document.getElementById('ps-pw-sub').textContent   = sub;
+            const inp = document.getElementById('ps-pw-input');
             if (inp) inp.value = '';
-            const err = document.getElementById('ps-pin-error');
-            if (err) err.classList.add('hidden');
-            document.getElementById('ps-pin-modal')?.classList.remove('hidden');
-            setTimeout(() => inp?.focus(), 100);
+            document.getElementById('ps-pw-error')?.classList.add('hidden');
+            document.getElementById('ps-pw-modal')?.classList.remove('hidden');
+            setTimeout(()=>inp?.focus(),120);
         };
 
-        window.psClosePin = () => {
-            document.getElementById('ps-pin-modal')?.classList.add('hidden');
+        window.psClosePw = () => {
+            document.getElementById('ps-pw-modal')?.classList.add('hidden');
             pendingUrl = null;
         };
 
-        window.psConfirmPin = async () => {
-            const pw = document.getElementById('ps-pin-input')?.value;
+        window.psConfirmPw = async () => {
+            const pw = document.getElementById('ps-pw-input')?.value||'';
             if (!pw) return;
-            const btn = document.getElementById('ps-pin-confirm-btn');
-            const err = document.getElementById('ps-pin-error');
+            const btn = document.getElementById('ps-pw-btn');
+            const err = document.getElementById('ps-pw-error');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังตรวจสอบ...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            err.classList.add('hidden');
             try {
-                // Re-authenticate with Firebase Auth
-                const auth = getAuth();
-                await signInWithEmailAndPassword(auth, user.email, pw);
-                // Success — open drive link
-                if (pendingUrl) window.open(pendingUrl, '_blank');
-                psClosePin();
-                showToast('✅ ยืนยันตัวตนสำเร็จ', 'success');
-            } catch(e) {
+                await signInWithEmailAndPassword(getAuth(), user.email, pw);
+                if (pendingUrl) window.open(pendingUrl,'_blank');
+                psClosePw();
+                showToast('✅ ยืนยันตัวตนสำเร็จ','success');
+            } catch {
                 err.classList.remove('hidden');
+                document.getElementById('ps-pw-input')?.select();
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-unlock mr-1"></i> เปิดสลิป';
+                btn.innerHTML = '<i class="fa-solid fa-unlock"></i> เปิดสลิป';
             }
         };
 
         return () => {
             unsub();
-            ['psOpenPin','psClosePin','psConfirmPin'].forEach(k => delete window[k]);
+            ['psOpenPw','psClosePw','psConfirmPw'].forEach(k=>delete window[k]);
         };
     }
 };
 
 // ================================================================
-// E-PAY SLIP ADMIN — จัดการโฟลเดอร์และ slip links
+// PAYSLIP ADMIN — ผูกพนักงาน ↔ Google Drive URL
 // ================================================================
 PAGES['payslip-admin'] = {
     title: 'จัดการ E-Pay Slip',
     html: `
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
       <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight flex items-center gap-3">
-        <span class="w-10 h-10 bg-yellow-500 rounded-2xl flex items-center justify-center">
+        <span class="w-10 h-10 bg-yellow-500 rounded-2xl flex items-center justify-center shrink-0">
           <i class="fa-solid fa-folder-open text-zinc-900"></i>
         </span>
         จัดการ E-Pay Slip
       </h2>
-      <p class="text-sm text-zinc-400 font-medium mt-1">เพิ่ม Google Drive link สลิปให้พนักงานแต่ละคน</p>
+      <p class="text-sm text-zinc-400 font-medium mt-1 ml-[52px]">ผูก Google Drive URL กับพนักงานแต่ละคนแต่ละงวด</p>
     </div>
-    <button onclick="psaOpenAdd(null)"
-      class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-yellow-500 hover:text-zinc-900 text-white font-black px-5 py-3 rounded-2xl text-sm transition-all shadow-sm">
-      <i class="fa-solid fa-plus"></i> เพิ่ม Slip Link
+    <button onclick="psaOpenModal(null)"
+      class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-yellow-500 hover:text-zinc-900 text-white font-black px-5 py-3 rounded-2xl text-sm transition-all shadow-sm shrink-0">
+      <i class="fa-solid fa-link"></i> ผูก Slip Link ใหม่
     </button>
+  </div>
+
+  <!-- Drive Permission Warning -->
+  <div class="mb-6 flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-2xl px-5 py-4">
+    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mt-0.5 shrink-0"></i>
+    <div>
+      <p class="font-black text-amber-800 text-sm">⚠️ อย่าลืมให้สิทธิ์พนักงานใน Google Drive ด้วย!</p>
+      <p class="text-xs text-amber-700 mt-1 leading-relaxed">
+        ก่อนผูก Link ต้องแชร์ไฟล์หรือโฟลเดอร์ใน Google Drive ให้กับ <strong>อีเมลของพนักงาน</strong> ก่อน
+        มิฉะนั้นพนักงานจะเห็น "ไม่มีสิทธิ์เข้าถึง" แม้จะกรอกรหัสผ่านถูกต้อง
+      </p>
+      <p class="text-[10px] text-amber-600 font-black mt-2 uppercase tracking-wider">
+        วิธี: Drive → คลิกขวาไฟล์/โฟลเดอร์ → แชร์ → ใส่อีเมลพนักงาน → ส่ง
+      </p>
+    </div>
   </div>
 
   <!-- Stats -->
   <div class="grid grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
       <p class="text-3xl font-black text-yellow-600" id="psa-stat-total">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">Slip ทั้งหมด</p>
+      <p class="text-[10px] text-zinc-400 font-black uppercase mt-1">Slip ทั้งหมด</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
       <p class="text-3xl font-black text-blue-600" id="psa-stat-emp">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">พนักงาน</p>
+      <p class="text-[10px] text-zinc-400 font-black uppercase mt-1">พนักงาน</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
       <p class="text-3xl font-black text-green-600" id="psa-stat-year">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">ปีล่าสุด</p>
+      <p class="text-[10px] text-zinc-400 font-black uppercase mt-1">ปีล่าสุด (พ.ศ.)</p>
     </div>
   </div>
 
-  <!-- Filter -->
-  <div class="flex flex-wrap items-center gap-3 mb-6">
-    <select id="psa-filter-year" onchange="psaRender()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none bg-white">
+  <!-- Filters -->
+  <div class="flex flex-wrap gap-3 mb-5">
+    <select id="psa-fy" onchange="psaRender()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold bg-white focus:border-yellow-500 focus:outline-none">
       <option value="all">ทุกปี</option>
     </select>
-    <select id="psa-filter-emp" onchange="psaRender()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none bg-white min-w-[180px]">
+    <select id="psa-fe" onchange="psaRender()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold bg-white focus:border-yellow-500 focus:outline-none min-w-[180px]">
       <option value="all">พนักงานทุกคน</option>
     </select>
-    <span id="psa-count" class="text-xs font-bold text-zinc-400 bg-zinc-100 px-3 py-1.5 rounded-full ml-auto"></span>
+    <span id="psa-cnt" class="ml-auto text-xs text-zinc-400 font-bold bg-zinc-100 px-3 py-2 rounded-xl self-center"></span>
   </div>
 
   <!-- List -->
   <div id="psa-list" class="space-y-3">
-    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+    <div class="text-center py-16 text-zinc-300">
+      <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
+      <p class="font-bold text-sm">กำลังโหลด...</p>
+    </div>
   </div>
 </div>
 
 <!-- Add/Edit Modal -->
 <div id="psa-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
-  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="psaCloseAdd()"></div>
-  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="psaCloseModal()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
     <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
       <div>
-        <h3 id="psa-modal-title" class="font-black text-white text-lg">เพิ่ม Slip Link</h3>
-        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">E-Pay Slip Management</p>
+        <h3 id="psa-modal-title" class="font-black text-white text-lg">ผูก Slip Link ใหม่</h3>
+        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">E-Pay Slip</p>
       </div>
-      <button onclick="psaCloseAdd()" class="text-zinc-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="psaCloseModal()" class="text-zinc-400 hover:text-white transition-colors">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
     </div>
     <div class="p-7 space-y-4">
-      <!-- Employee select -->
+
+      <!-- Warning inside modal -->
+      <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-sm mt-0.5 shrink-0"></i>
+        <p class="text-xs text-amber-700 font-medium">อย่าลืมแชร์ไฟล์/โฟลเดอร์ใน Drive ให้กับอีเมลพนักงานก่อนบันทึก</p>
+      </div>
+
+      <!-- Employee -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">พนักงาน *</label>
-        <select id="psa-emp" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none bg-white">
+        <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">พนักงาน *</label>
+        <select id="psa-emp" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-white focus:border-yellow-500 focus:outline-none">
           <option value="">-- เลือกพนักงาน --</option>
         </select>
       </div>
-      <!-- Year + Period -->
+
+      <!-- Year / Period / Month -->
       <div class="grid grid-cols-3 gap-3">
         <div>
-          <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">ปี (ค.ศ.) *</label>
-          <input type="number" id="psa-year" placeholder="2026" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">ปี (ค.ศ.) *</label>
+          <input type="number" id="psa-year" placeholder="2026" min="2020" max="2099"
+            class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">งวดที่ *</label>
-          <input type="number" id="psa-period" placeholder="1" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">งวดที่ *</label>
+          <input type="number" id="psa-period" placeholder="1" min="1"
+            class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">เดือน</label>
-          <select id="psa-month" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none bg-white">
+          <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">เดือน</label>
+          <select id="psa-month" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-medium bg-white focus:border-yellow-500 focus:outline-none">
             <option value="">--</option>
-            <option value="1">ม.ค.</option><option value="2">ก.พ.</option>
-            <option value="3">มี.ค.</option><option value="4">เม.ย.</option>
-            <option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
-            <option value="7">ก.ค.</option><option value="8">ส.ค.</option>
-            <option value="9">ก.ย.</option><option value="10">ต.ค.</option>
-            <option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
+            <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option>
+            <option value="4">เม.ย.</option><option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
+            <option value="7">ก.ค.</option><option value="8">ส.ค.</option><option value="9">ก.ย.</option>
+            <option value="10">ต.ค.</option><option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
           </select>
         </div>
       </div>
+
       <!-- Label -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">ชื่อที่แสดง (ถ้าไม่กรอกจะใช้ เดือน/ปี อัตโนมัติ)</label>
-        <input type="text" id="psa-label" placeholder="เช่น มีนาคม 2569" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">
+          ชื่อที่แสดง <span class="normal-case font-normal text-zinc-400">(ถ้าว่างใช้เดือน/งวดอัตโนมัติ)</span>
+        </label>
+        <input type="text" id="psa-label" placeholder="เช่น มีนาคม 2569"
+          class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
       </div>
+
       <!-- Google Drive URL -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Google Drive Link *</label>
-        <input type="url" id="psa-url" placeholder="https://drive.google.com/file/d/..." class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
-        <p class="text-[10px] text-zinc-400 mt-1 font-medium">วางลิงก์ไฟล์หรือโฟลเดอร์ Google Drive</p>
+        <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Google Drive URL *</label>
+        <input type="url" id="psa-url" placeholder="https://drive.google.com/file/d/..."
+          class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <p class="text-[10px] text-zinc-400 mt-1.5 flex items-center gap-1 font-medium">
+          <i class="fa-brands fa-google-drive text-green-500"></i>
+          วางลิงก์ไฟล์ PDF หรือโฟลเดอร์ Google Drive ของพนักงานคนนี้
+        </p>
       </div>
+
       <!-- Note -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">หมายเหตุ (ไม่บังคับ)</label>
-        <input type="text" id="psa-note" placeholder="เพิ่มเติม..." class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">
+          หมายเหตุ <span class="normal-case font-normal text-zinc-400">(ไม่บังคับ)</span>
+        </label>
+        <input type="text" id="psa-note" placeholder="เช่น รวมโบนัส Q1"
+          class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
       </div>
-      <!-- Actions -->
+
       <div class="flex gap-3 pt-2">
-        <button onclick="psaCloseAdd()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">ยกเลิก</button>
+        <button onclick="psaCloseModal()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">ยกเลิก</button>
         <button onclick="psaSave()" id="psa-save-btn"
-          class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm transition-all">
-          <i class="fa-solid fa-save mr-1"></i> บันทึก
+          class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-link"></i> บันทึก
         </button>
       </div>
     </div>
@@ -4334,102 +4359,95 @@ PAGES['payslip-admin'] = {
 
     init: async (user, profile, db, APP_ID) => {
         if (profile.role !== 'admin') { navigateTo('home'); return; }
-
         const { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, getDocs }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
-        let allSlips = [];
-        let allEmps  = [];
-        let editId   = null;
-        const THAI_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        const TM = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        let allSlips=[], allEmps=[], editId=null;
 
-        // Load employees
-        const empSnap = await getDocs(collection(db, 'artifacts', APP_ID, 'public', 'data', 'employees'));
-        allEmps = empSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(e => e.name);
-        allEmps.sort((a,b) => (a.name||'').localeCompare(b.name||'', 'th'));
+        // Load employees once
+        const empSnap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','employees'));
+        allEmps = empSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>e.name)
+                         .sort((a,b)=>(a.name||'').localeCompare(b.name||'','th'));
 
-        // Populate employee selects
-        function populateEmpSelects() {
-            const opts = allEmps.map(e => `<option value="${e.uid||e.id}" data-name="${e.name}" data-code="${e.employeeCode||''}">${e.employeeCode ? e.employeeCode+' — ' : ''}${e.name}</option>`).join('');
-            const filterEmp = document.getElementById('psa-filter-emp');
-            if (filterEmp) filterEmp.innerHTML = '<option value="all">พนักงานทุกคน</option>' + opts;
-            const addEmp = document.getElementById('psa-emp');
-            if (addEmp) addEmp.innerHTML = '<option value="">-- เลือกพนักงาน --</option>' + opts;
+        function buildEmpOpts(withAll) {
+            const base = withAll ? '<option value="all">พนักงานทุกคน</option>' : '<option value="">-- เลือกพนักงาน --</option>';
+            return base + allEmps.map(e=>`<option value="${e.uid||e.id}">${e.employeeCode?e.employeeCode+' — ':''}${e.name}</option>`).join('');
         }
-        populateEmpSelects();
+        const feEl=document.getElementById('psa-fe'), epEl=document.getElementById('psa-emp');
+        if(feEl) feEl.innerHTML=buildEmpOpts(true);
+        if(epEl) epEl.innerHTML=buildEmpOpts(false);
 
         // Real-time slips
         const unsub = onSnapshot(
-            query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'payslips'), orderBy('year','desc'), orderBy('periodNo','desc')),
+            query(collection(db,'artifacts',APP_ID,'public','data','payslips'),
+                  orderBy('year','desc'),orderBy('periodNo','desc')),
             snap => {
-                allSlips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                updateStats();
-                populateYearFilter();
-                psaRender();
+                allSlips = snap.docs.map(d=>({id:d.id,...d.data()}));
+                updateStats(); rebuildYearFilter(); psaRender();
             }
         );
 
         function updateStats() {
-            const years = [...new Set(allSlips.map(s => s.year))];
-            const emps  = [...new Set(allSlips.map(s => s.uid))];
-            const latestYear = years.length ? Math.max(...years.map(Number)) : '-';
-            const el = (id) => document.getElementById(id);
-            if (el('psa-stat-total')) el('psa-stat-total').textContent = allSlips.length;
-            if (el('psa-stat-emp'))   el('psa-stat-emp').textContent   = emps.length;
-            if (el('psa-stat-year'))  el('psa-stat-year').textContent  = latestYear !== '-' ? parseInt(latestYear)+543 : '-';
+            const years=[...new Set(allSlips.map(s=>s.year))];
+            const emps=[...new Set(allSlips.map(s=>s.uid))];
+            const ly=years.length?Math.max(...years.map(Number)):null;
+            const s=id=>document.getElementById(id);
+            if(s('psa-stat-total')) s('psa-stat-total').textContent=allSlips.length;
+            if(s('psa-stat-emp'))   s('psa-stat-emp').textContent=emps.length;
+            if(s('psa-stat-year'))  s('psa-stat-year').textContent=ly?parseInt(ly)+543:'-';
         }
 
-        function populateYearFilter() {
-            const years = [...new Set(allSlips.map(s => s.year))].sort((a,b)=>b-a);
-            const sel = document.getElementById('psa-filter-year');
-            if (!sel) return;
-            const cur = sel.value;
-            sel.innerHTML = '<option value="all">ทุกปี</option>' +
-                years.map(y => `<option value="${y}" ${y==cur?'selected':''}>${parseInt(y)+543}</option>`).join('');
+        function rebuildYearFilter() {
+            const sel=document.getElementById('psa-fy'); if(!sel) return;
+            const cur=sel.value;
+            const years=[...new Set(allSlips.map(s=>s.year))].sort((a,b)=>b-a);
+            sel.innerHTML='<option value="all">ทุกปี</option>'+
+                years.map(y=>`<option value="${y}" ${String(y)===cur?'selected':''}>${parseInt(y)+543}</option>`).join('');
         }
 
         window.psaRender = () => {
-            const el = document.getElementById('psa-list');
-            if (!el) return;
-            const yearF = document.getElementById('psa-filter-year')?.value || 'all';
-            const empF  = document.getElementById('psa-filter-emp')?.value  || 'all';
-            let list = allSlips;
-            if (yearF !== 'all') list = list.filter(s => String(s.year) === yearF);
-            if (empF  !== 'all') list = list.filter(s => s.uid === empF);
-            const cnt = document.getElementById('psa-count');
-            if (cnt) cnt.textContent = list.length + ' รายการ';
-            if (!list.length) {
-                el.innerHTML = `<div class="text-center py-16 text-zinc-300">
+            const el=document.getElementById('psa-list'); if(!el) return;
+            const yf=document.getElementById('psa-fy')?.value||'all';
+            const ef=document.getElementById('psa-fe')?.value||'all';
+            let list=allSlips;
+            if(yf!=='all') list=list.filter(s=>String(s.year)===yf);
+            if(ef!=='all') list=list.filter(s=>s.uid===ef);
+            const cnt=document.getElementById('psa-cnt');
+            if(cnt) cnt.textContent=list.length+' รายการ';
+            if(!list.length){
+                el.innerHTML=`<div class="text-center py-16 text-zinc-300">
                     <i class="fa-solid fa-folder-open text-4xl mb-3"></i>
-                    <p class="font-bold">ยังไม่มี Slip</p></div>`; return;
+                    <p class="font-bold text-sm">ยังไม่มี Slip Link</p></div>`; return;
             }
-            el.innerHTML = list.map(s => {
-                const mo   = THAI_MONTHS[parseInt(s.month||0)] || '';
-                const label = s.label || (mo ? `${mo} ${parseInt(s.year)+543}` : `งวด ${s.periodNo}`);
-                const empName = s.employeeName || allEmps.find(e=>(e.uid||e.id)===s.uid)?.name || s.uid;
-                return `
-                <div class="bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-yellow-200 transition-all">
+            el.innerHTML=list.map(s=>{
+                const mo=TM[parseInt(s.month||0)]||'';
+                const label=s.label||(mo?mo+' '+(parseInt(s.year)+543):'งวด '+s.periodNo);
+                const emp=allEmps.find(e=>(e.uid||e.id)===s.uid);
+                const empName=s.employeeName||emp?.name||s.uid;
+                const empCode=s.employeeCode||emp?.employeeCode||'';
+                return `<div class="bg-white rounded-2xl border border-zinc-100 hover:border-yellow-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4 transition-all">
                   <div class="w-12 h-12 bg-yellow-50 rounded-2xl flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-file-invoice text-yellow-600 text-xl"></i>
+                    <i class="fa-solid fa-file-invoice text-yellow-500 text-xl"></i>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2 mb-0.5">
                       <span class="font-black text-zinc-800 text-sm">${empName}</span>
-                      <span class="text-[10px] font-bold px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full">${s.employeeCode||''}</span>
+                      ${empCode?`<span class="text-[10px] font-bold px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full">${empCode}</span>`:''}
                     </div>
-                    <p class="text-sm font-bold text-yellow-700 mt-0.5">${label}</p>
-                    <p class="text-xs text-zinc-400 mt-0.5 truncate">
-                      <i class="fa-brands fa-google-drive mr-1 text-green-500"></i>
-                      <a href="${s.driveUrl}" target="_blank" class="hover:underline hover:text-zinc-600">${s.driveUrl}</a>
+                    <p class="text-sm font-bold text-yellow-700">${label}</p>
+                    <p class="text-xs text-zinc-400 mt-0.5 flex items-center gap-1 truncate">
+                      <i class="fa-brands fa-google-drive text-green-500 shrink-0"></i>
+                      <a href="${s.driveUrl}" target="_blank" class="hover:underline hover:text-zinc-600 truncate">${s.driveUrl}</a>
                     </p>
-                    ${s.note ? `<p class="text-[10px] text-zinc-400 mt-0.5">${s.note}</p>` : ''}
+                    ${s.note?`<p class="text-[10px] text-zinc-400 mt-0.5">${s.note}</p>`:''}
                   </div>
                   <div class="flex gap-2 shrink-0">
-                    <button onclick="psaOpenAdd('${s.id}')"
+                    <button onclick="psaOpenModal('${s.id}')" title="แก้ไข"
                       class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-black rounded-xl text-xs transition-all">
                       <i class="fa-solid fa-pen"></i>
                     </button>
-                    <button onclick="psaDelete('${s.id}','${label}')"
+                    <button onclick="psaDelete('${s.id}','${label.replace(/'/g,'')}')" title="ลบ"
                       class="px-4 py-2 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white border border-red-100 hover:border-red-500 font-black rounded-xl text-xs transition-all">
                       <i class="fa-solid fa-trash"></i>
                     </button>
@@ -4438,85 +4456,62 @@ PAGES['payslip-admin'] = {
             }).join('');
         };
 
-        window.psaOpenAdd = (id) => {
-            editId = id;
-            const modal = document.getElementById('psa-modal');
-            const title = document.getElementById('psa-modal-title');
-            if (title) title.textContent = id ? 'แก้ไข Slip Link' : 'เพิ่ม Slip Link';
-            // pre-fill if editing
-            if (id) {
-                const s = allSlips.find(x => x.id === id);
-                if (s) {
-                    const gv = (elId, val) => { const e = document.getElementById(elId); if(e) e.value = val||''; };
-                    gv('psa-emp', s.uid);
-                    gv('psa-year', s.year);
-                    gv('psa-period', s.periodNo);
-                    gv('psa-month', s.month||'');
-                    gv('psa-label', s.label||'');
-                    gv('psa-url', s.driveUrl||'');
-                    gv('psa-note', s.note||'');
-                }
+        window.psaOpenModal = id => {
+            editId=id;
+            document.getElementById('psa-modal-title').textContent = id?'แก้ไข Slip Link':'ผูก Slip Link ใหม่';
+            const gv=(elId,val)=>{const e=document.getElementById(elId);if(e)e.value=val||'';};
+            if(id){
+                const s=allSlips.find(x=>x.id===id);
+                if(s){gv('psa-emp',s.uid);gv('psa-year',s.year);gv('psa-period',s.periodNo);
+                      gv('psa-month',s.month||'');gv('psa-label',s.label||'');
+                      gv('psa-url',s.driveUrl||'');gv('psa-note',s.note||'');}
             } else {
-                ['psa-emp','psa-year','psa-period','psa-month','psa-label','psa-url','psa-note']
-                    .forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
-                const curYear = new Date().getFullYear();
-                const yearEl = document.getElementById('psa-year');
-                if (yearEl) yearEl.value = curYear;
+                ['psa-emp','psa-period','psa-month','psa-label','psa-url','psa-note'].forEach(x=>gv(x,''));
+                gv('psa-year',new Date().getFullYear());
             }
-            modal?.classList.remove('hidden');
+            document.getElementById('psa-modal')?.classList.remove('hidden');
         };
 
-        window.psaCloseAdd = () => {
+        window.psaCloseModal = () => {
             document.getElementById('psa-modal')?.classList.add('hidden');
-            editId = null;
+            editId=null;
         };
 
         window.psaSave = async () => {
-            const gv = id => document.getElementById(id)?.value?.trim() || '';
-            const uid  = gv('psa-emp');
-            const year = gv('psa-year');
-            const periodNo = parseInt(gv('psa-period')) || 1;
-            const url  = gv('psa-url');
-            if (!uid || !year || !url) { showToast('กรุณากรอกข้อมูลให้ครบ', 'error'); return; }
-            const emp = allEmps.find(e => (e.uid||e.id) === uid);
-            const btn = document.getElementById('psa-save-btn');
-            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังบันทึก...';
+            const gv=id=>document.getElementById(id)?.value?.trim()||'';
+            const uid=gv('psa-emp'), yr=gv('psa-year'), url=gv('psa-url');
+            if(!uid||!yr||!url){showToast('กรุณากรอก พนักงาน / ปี / URL ให้ครบ','error');return;}
+            const emp=allEmps.find(e=>(e.uid||e.id)===uid);
+            const btn=document.getElementById('psa-save-btn');
+            btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>';
             try {
-                const data = {
-                    uid, year: parseInt(year), periodNo,
-                    month: parseInt(gv('psa-month')) || null,
-                    label: gv('psa-label'),
-                    driveUrl: url,
-                    note: gv('psa-note'),
-                    employeeName: emp?.name || '',
-                    employeeCode: emp?.employeeCode || '',
-                    updatedAt: new Date().toISOString(),
-                };
-                if (editId) {
-                    await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payslips',editId), data);
-                    showToast('✅ อัปเดตแล้ว', 'success');
+                const data={uid,year:parseInt(yr),periodNo:parseInt(gv('psa-period'))||1,
+                    month:parseInt(gv('psa-month'))||null,label:gv('psa-label'),
+                    driveUrl:url,note:gv('psa-note'),
+                    employeeName:emp?.name||'',employeeCode:emp?.employeeCode||'',
+                    updatedAt:new Date().toISOString()};
+                if(editId){
+                    await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payslips',editId),data);
+                    showToast('✅ อัปเดตแล้ว','success');
                 } else {
-                    data.createdAt = new Date().toISOString();
-                    data.createdBy = profile.name;
-                    await addDoc(collection(db,'artifacts',APP_ID,'public','data','payslips'), data);
-                    showToast('✅ เพิ่ม Slip Link แล้ว', 'success');
+                    data.createdAt=new Date().toISOString(); data.createdBy=profile.name;
+                    await addDoc(collection(db,'artifacts',APP_ID,'public','data','payslips'),data);
+                    showToast('✅ ผูก Slip Link แล้ว','success');
                 }
-                psaCloseAdd();
-            } catch(e) { showToast('❌ '+e.message,'error'); }
-            finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-save mr-1"></i> บันทึก'; }
+                psaCloseModal();
+            } catch(e){showToast('❌ '+e.message,'error');}
+            finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-link"></i> บันทึก';}
         };
 
-        window.psaDelete = async (id, label) => {
-            if (!confirm(`ลบ Slip "${label}" ออก?`)) return;
-            try {
-                await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','payslips',id));
-                showToast('ลบแล้ว','info');
-            } catch(e) { showToast('❌ '+e.message,'error'); }
+        window.psaDelete = async (id,label) => {
+            if(!confirm('ลบ Slip "'+label+'" ออก?')) return;
+            try{await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','payslips',id));showToast('ลบแล้ว','info');}
+            catch(e){showToast('❌ '+e.message,'error');}
         };
 
         return () => {
             unsub();
-            ['psaRender','psaOpenAdd','psaCloseAdd','psaSave','psaDelete'].forEach(k => delete window[k]);
+            ['psaRender','psaOpenModal','psaCloseModal','psaSave','psaDelete'].forEach(k=>delete window[k]);
         };
     }
 };
