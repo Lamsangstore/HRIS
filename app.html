@@ -2646,13 +2646,17 @@ PAGES['leave-mgmt'] = {
                     const tid = r.type;
                     if (['sick','personal','vacation','maternity','ordain','military'].includes(tid)) {
                         const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', r.uid);
-                        // ใช้ getDoc ล่าสุดเสมอ (ไม่ใช้ cache) เพื่อความถูกต้อง
                         const balSnap = await getDoc(balRef);
                         const bal = balSnap.exists() ? balSnap.data() : {};
                         const prev = (bal[tid]?.usedHours) || 0;
-                        const newUsed = prev + (r.totalHours || 0);
-                        // setDoc merge รองรับทั้ง doc ใหม่และเก่า
-                        await setDoc(balRef, { [tid]: { usedHours: newUsed } }, { merge: true });
+                        const newUsed = Math.round((prev + (r.totalHours || 0)) * 100) / 100;
+                        // ใช้ dotted path เพื่อ update แค่ usedHours ไม่แตะ totalHours
+                        if (balSnap.exists()) {
+                            await updateDoc(balRef, { [`${tid}.usedHours`]: newUsed });
+                        } else {
+                            // doc ยังไม่มี — สร้างใหม่ด้วย setDoc
+                            await setDoc(balRef, { [tid]: { totalHours: (getLeaveTypeInfo(tid).maxDays * 8), usedHours: newUsed } }, { merge: true });
+                        }
                         invalidateBalance(r.uid);
                     }
                 }
@@ -3005,23 +3009,27 @@ PAGES['leave-admin'] = {
             );
             const curBal = curBalSnap.exists() ? curBalSnap.data() : {};
 
+            // ใช้ dotted path เพื่อ update แค่ totalHours ไม่แตะ usedHours
             const payload = {};
             LEAVE_TYPES.filter(t => t.maxDays > 0).forEach(t => {
                 const el = document.getElementById(`quota-${t.id}`);
                 if (!el) return;
                 const inputDays = parseFloat(el.value) || 0;
-                payload[t.id] = {
-                    totalHours: Math.round(inputDays * hpd * 100) / 100,
-                    usedHours: curBal[t.id]?.usedHours || 0,   // คงค่าเดิม
-                };
+                const totalHrs = Math.round(inputDays * hpd * 100) / 100;
+                payload[`${t.id}.totalHours`] = totalHrs;
+                // เขียน usedHours เฉพาะถ้ายังไม่มี field นี้ (พนักงานใหม่)
+                if (curBal[t.id]?.usedHours == null) {
+                    payload[`${t.id}.usedHours`] = 0;
+                }
             });
-        
+
             try {
-                await setDoc(
-                    doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid),
-                    payload,
-                    { merge: true }
-                );
+                const balDocRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid);
+                if (curBalSnap.exists()) {
+                    await updateDoc(balDocRef, payload);
+                } else {
+                    await setDoc(balDocRef, payload);
+                }
                 showToast('✅ บันทึกโควต้าวันลาแล้ว (คำนวณจาก ' + hpd.toFixed(1) + ' ชม./วัน)', 'success');
             } catch(e) {
                 showToast('❌ ' + e.message, 'error');
