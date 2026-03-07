@@ -6157,7 +6157,7 @@ PAGES['payslip-admin'] = {
                 let isLocked = false;
                 const THday = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 
-                (async () => {
+                await (async () => {
                     const { collection, query, orderBy, getDocs, getDoc, doc,
                             addDoc, updateDoc, onSnapshot, where, limit } =
                         await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
@@ -6706,7 +6706,7 @@ PAGES['payslip-admin'] = {
                         } catch(e) { showToast('❌ '+e.message,'error'); }
                     };
 
-                })().catch(e => { console.error('ot-claim:',e); hideLoader(); });
+                })();
 
                 return () => {
                     if (unsubHistory) unsubHistory();
