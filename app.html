@@ -97,10 +97,29 @@
                 <h2 id="topbar-title" class="text-lg font-bold text-zinc-800 uppercase tracking-tight hidden sm:block">Lamsang Group</h2>
             </div>
             <div class="flex items-center space-x-4">
-                <button class="text-zinc-400 hover:text-yellow-500 relative transition-colors p-2">
-                    <i class="fa-regular fa-bell text-xl"></i>
-                    <span class="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">3</span>
-                </button>
+                <!-- Notification Bell -->
+                <div class="relative" id="notif-wrapper">
+                  <button id="notif-btn" onclick="toggleNotifPanel()" class="text-zinc-400 hover:text-yellow-500 relative transition-colors p-2 rounded-xl hover:bg-zinc-100">
+                    <i class="fa-regular fa-bell text-xl" id="notif-bell-icon"></i>
+                    <span id="notif-badge" class="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white hidden">0</span>
+                  </button>
+                  <!-- Dropdown panel -->
+                  <div id="notif-panel" class="hidden absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-zinc-200 z-[500] overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-100 bg-zinc-50">
+                      <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-bell text-yellow-500"></i>
+                        <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest">การแจ้งเตือน</h3>
+                      </div>
+                      <button onclick="markAllRead()" class="text-[10px] text-zinc-400 hover:text-yellow-600 font-bold uppercase tracking-widest transition-colors">อ่านทั้งหมด</button>
+                    </div>
+                    <div id="notif-list" class="max-h-[420px] overflow-y-auto divide-y divide-zinc-100">
+                      <div class="p-8 text-center text-zinc-300">
+                        <i class="fa-regular fa-bell-slash text-3xl mb-2"></i>
+                        <p class="text-sm font-bold">ไม่มีการแจ้งเตือน</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="h-8 w-px bg-zinc-200"></div>
                 <button id="topbar-profile-btn" onclick="navigateTo('profile')" class="flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
                     <img id="topbar-avatar" src="https://ui-avatars.com/api/?name=LSG&background=f4f4f5&color=a1a1aa"
@@ -347,6 +366,9 @@
             renderNav(userProfile, startPage);
             updateTopbar(userProfile, null);
 
+            // เริ่ม real-time notifications
+            startNotifications(user, userProfile).catch(e => console.warn('notif:', e));
+
             // Navigate ไปหน้าแรก
             await navigateTo(startPage);
         });
@@ -354,9 +376,231 @@
         window.handleLogout = () => {
             if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
                 if (typeof pageCleanup === 'function') pageCleanup();
+                stopNotifications();
                 signOut(auth).then(() => window.location.href = 'index.html');
             }
         };
+
+        // ================================================================
+        // NOTIFICATION SYSTEM (global real-time bell)
+        // ================================================================
+        let _notifUnsubs    = [];
+        let _notifItems     = [];   // { id, type, title, body, link, ts, read }
+        let _notifPanelOpen = false;
+        let _seenIds        = new Set(JSON.parse(localStorage.getItem('_notifSeen') || '[]'));
+
+        function stopNotifications() {
+            _notifUnsubs.forEach(u => { try { u(); } catch(e){} });
+            _notifUnsubs = [];
+        }
+
+        async function startNotifications(user, profile) {
+            stopNotifications();
+            const { collection, doc, query, where, orderBy, onSnapshot, limit, getDoc }
+                = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+            const col = (name) => collection(db, 'artifacts', APP_ID, 'public', 'data', name);
+
+            function upsertNotif(item) {
+                const idx = _notifItems.findIndex(x => x.id === item.id);
+                if (idx >= 0) _notifItems[idx] = item;
+                else _notifItems.unshift(item);
+                _notifItems.sort((a,b) => (b.ts||'').localeCompare(a.ts||''));
+                if (_notifItems.length > 50) _notifItems = _notifItems.slice(0, 50);
+                renderNotifPanel();
+            }
+            function removeNotif(id) {
+                _notifItems = _notifItems.filter(x => x.id !== id);
+                renderNotifPanel();
+            }
+
+            // ── 1. ประกาศใหม่ (ทุกคน) ────────────────────────────────
+            const annQ = query(col('announcements'), orderBy('createdAt','desc'), limit(10));
+            _notifUnsubs.push(onSnapshot(annQ, snap => {
+                snap.docChanges().forEach(ch => {
+                    const d  = { id: ch.doc.id, ...ch.doc.data() };
+                    if (ch.type === 'removed') { removeNotif('ann_'+d.id); return; }
+                    upsertNotif({
+                        id:    'ann_' + d.id,
+                        type:  'announcement',
+                        icon:  'fa-bullhorn',
+                        color: 'text-blue-500 bg-blue-50',
+                        title: d.title || 'ประกาศใหม่',
+                        body:  d.content ? d.content.replace(/<[^>]*>/g,'').slice(0,80) : '',
+                        link:  'home',
+                        ts:    d.createdAt || '',
+                        read:  _seenIds.has('ann_'+d.id),
+                    });
+                });
+            }, ()=>{}));
+
+            // ── 2. สถานะคำขอลาของตัวเอง (พนักงาน) ───────────────────
+            const myLeaveQ = query(col('leave_requests'), where('uid','==',user.uid), orderBy('createdAt','desc'), limit(20));
+            _notifUnsubs.push(onSnapshot(myLeaveQ, snap => {
+                snap.docChanges().forEach(ch => {
+                    const d  = { id: ch.doc.id, ...ch.doc.data() };
+                    if (ch.type === 'removed') { removeNotif('leave_'+d.id); return; }
+                    if (!['approved','rejected','cancelled'].includes(d.status)) return;
+                    const isApproved = d.status === 'approved';
+                    const isRejected = d.status === 'rejected';
+                    upsertNotif({
+                        id:    'leave_' + d.id,
+                        type:  'leave_result',
+                        icon:  isApproved ? 'fa-circle-check' : isRejected ? 'fa-circle-xmark' : 'fa-ban',
+                        color: isApproved ? 'text-green-600 bg-green-50' : isRejected ? 'text-red-500 bg-red-50' : 'text-zinc-500 bg-zinc-100',
+                        title: isApproved ? 'อนุมัติคำขอลาแล้ว' : isRejected ? 'ไม่อนุมัติคำขอลา' : 'ยกเลิกคำขอลา',
+                        body:  `${d.typeName||d.type} ${d.startDate ? fmtNotifDate(d.startDate) : ''}${d.endDate && d.endDate!==d.startDate ? ' – '+fmtNotifDate(d.endDate) : ''}${d.approverNote ? ' · '+d.approverNote : ''}`,
+                        link:  'leave',
+                        ts:    d.approvedAt || d.createdAt || '',
+                        read:  _seenIds.has('leave_'+d.id),
+                    });
+                });
+            }, ()=>{}));
+
+            // ── 3. คำขอลา pending (manager/admin) ────────────────────
+            if (['manager','admin'].includes(profile.role)) {
+                const pendLeaveQ = query(col('leave_requests'), where('status','==','pending'), orderBy('createdAt','desc'), limit(30));
+                _notifUnsubs.push(onSnapshot(pendLeaveQ, snap => {
+                    snap.docChanges().forEach(ch => {
+                        const d  = { id: ch.doc.id, ...ch.doc.data() };
+                        if (ch.type === 'removed' || d.status !== 'pending') { removeNotif('pend_leave_'+d.id); return; }
+                        upsertNotif({
+                            id:    'pend_leave_' + d.id,
+                            type:  'pending_leave',
+                            icon:  'fa-clock',
+                            color: 'text-yellow-600 bg-yellow-50',
+                            title: `${d.employeeName||'พนักงาน'} ขอลา ${d.typeName||d.type}`,
+                            body:  `${d.startDate ? fmtNotifDate(d.startDate) : ''}${d.endDate && d.endDate!==d.startDate ? ' – '+fmtNotifDate(d.endDate) : ''} · ${d.reason||''}`.slice(0,80),
+                            link:  'leave-mgmt',
+                            ts:    d.createdAt || '',
+                            read:  _seenIds.has('pend_leave_'+d.id),
+                        });
+                    });
+                }, ()=>{}));
+
+                // ── 4. คำขอแก้ไขเวลา pending (manager/admin) ────────
+                const pendTimeQ = query(col('time_requests'), where('status','==','pending'), orderBy('requestedAt','desc'), limit(30));
+                _notifUnsubs.push(onSnapshot(pendTimeQ, snap => {
+                    snap.docChanges().forEach(ch => {
+                        const d  = { id: ch.doc.id, ...ch.doc.data() };
+                        if (ch.type === 'removed' || d.status !== 'pending') { removeNotif('pend_time_'+d.id); return; }
+                        upsertNotif({
+                            id:    'pend_time_' + d.id,
+                            type:  'pending_time',
+                            icon:  'fa-pen-to-square',
+                            color: 'text-purple-600 bg-purple-50',
+                            title: `${d.employeeName||'พนักงาน'} ขอแก้ไขเวลา`,
+                            body:  `${d.date ? fmtNotifDate(d.date) : ''} ${d.checkInReq||''} – ${d.checkOutReq||''} · ${d.reason||''}`.slice(0,80),
+                            link:  'time-approve',
+                            ts:    d.requestedAt || '',
+                            read:  _seenIds.has('pend_time_'+d.id),
+                        });
+                    });
+                }, ()=>{}));
+            }
+        }
+
+        function fmtNotifDate(ds) {
+            if (!ds) return '';
+            try {
+                return new Date(ds).toLocaleDateString('th-TH', { day:'numeric', month:'short' });
+            } catch { return ds; }
+        }
+
+        function renderNotifPanel() {
+            const listEl = document.getElementById('notif-list');
+            const badge  = document.getElementById('notif-badge');
+            const icon   = document.getElementById('notif-bell-icon');
+            if (!listEl) return;
+
+            const unread = _notifItems.filter(x => !x.read).length;
+
+            // badge
+            if (badge) {
+                if (unread > 0) {
+                    badge.textContent = unread > 99 ? '99+' : unread;
+                    badge.classList.remove('hidden');
+                    icon?.classList.replace('fa-regular','fa-solid');
+                } else {
+                    badge.classList.add('hidden');
+                    icon?.classList.replace('fa-solid','fa-regular');
+                }
+            }
+
+            if (!_notifItems.length) {
+                listEl.innerHTML = `<div class="p-8 text-center text-zinc-300">
+                    <i class="fa-regular fa-bell-slash text-3xl mb-2"></i>
+                    <p class="text-sm font-bold">ไม่มีการแจ้งเตือน</p>
+                </div>`; return;
+            }
+
+            function timeAgo(ts) {
+                if (!ts) return '';
+                const diff = Date.now() - new Date(ts).getTime();
+                const m = Math.floor(diff/60000);
+                if (m < 1)  return 'เมื่อกี้';
+                if (m < 60) return m + ' นาทีที่แล้ว';
+                const h = Math.floor(m/60);
+                if (h < 24) return h + ' ชม.ที่แล้ว';
+                return Math.floor(h/24) + ' วันที่แล้ว';
+            }
+
+            listEl.innerHTML = _notifItems.map(n => `
+                <button onclick="clickNotif('${n.id}','${n.link}')"
+                  class="w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-zinc-50 transition-all ${n.read ? 'opacity-60' : 'bg-white'}">
+                  <div class="w-9 h-9 rounded-xl ${n.color} flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="fa-solid ${n.icon} text-sm"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="font-black text-zinc-800 text-xs leading-tight ${!n.read ? '' : ''}">${n.title}</p>
+                      <span class="text-[9px] text-zinc-400 shrink-0 font-bold">${timeAgo(n.ts)}</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">${n.body}</p>
+                  </div>
+                  ${!n.read ? '<div class="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1.5"></div>' : ''}
+                </button>`).join('');
+        }
+
+        window.toggleNotifPanel = () => {
+            const panel = document.getElementById('notif-panel');
+            if (!panel) return;
+            _notifPanelOpen = !_notifPanelOpen;
+            panel.classList.toggle('hidden', !_notifPanelOpen);
+            if (_notifPanelOpen) renderNotifPanel();
+        };
+
+        window.clickNotif = (id, link) => {
+            // mark as read
+            _seenIds.add(id);
+            try { localStorage.setItem('_notifSeen', JSON.stringify([..._seenIds].slice(-200))); } catch(e){}
+            const item = _notifItems.find(x => x.id === id);
+            if (item) { item.read = true; }
+            // ปิด panel แล้ว navigate
+            const panel = document.getElementById('notif-panel');
+            if (panel) panel.classList.add('hidden');
+            _notifPanelOpen = false;
+            if (link) navigateTo(link);
+            renderNotifPanel();
+        };
+
+        window.markAllRead = () => {
+            _notifItems.forEach(n => {
+                n.read = true;
+                _seenIds.add(n.id);
+            });
+            try { localStorage.setItem('_notifSeen', JSON.stringify([..._seenIds].slice(-200))); } catch(e){}
+            renderNotifPanel();
+        };
+
+        // ปิด panel เมื่อคลิกนอก
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('notif-wrapper');
+            if (_notifPanelOpen && wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('notif-panel')?.classList.add('hidden');
+                _notifPanelOpen = false;
+            }
+        });
 
         window.toggleSidebar = () => {
             document.getElementById('app-sidebar').classList.toggle('collapsed');
