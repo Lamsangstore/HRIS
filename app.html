@@ -4100,10 +4100,6 @@ PAGES['payroll'] = {
             showToast('📥 Export XLSX สำเร็จ', 'success');
         };
 
-        return () => {
-            unsubP();
-            if(unsubRec) unsubRec();
-
         // ── LINE Payroll Send Logic ──────────────────────────────────
         let _lineActivePid = null;
         let _lineRecords   = [];
@@ -4300,6 +4296,9 @@ PAGES['payroll'] = {
             };
         }
 
+        return () => {
+            unsubP();
+            if(unsubRec) unsubRec();
             ['prSel','prOpenCreate','prCloseCreate','prDoCreate','prGenAll',
              'prOpenRec','prCloseRec','prRecalc','prSaveRec',
              'prFinal','prPaid','prDel','prCSV','prXLSX',
