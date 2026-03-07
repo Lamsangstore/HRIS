@@ -743,17 +743,22 @@
         const LINE_PROXY   = 'https://api.line.me/v2/bot/message/push';
 
         async function sendLineMessage(lineUserId, messages) {
-            if (!lineUserId) return;
-            try {
-                await fetch(LINE_PROXY, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + LINE_TOKEN,
-                    },
-                    body: JSON.stringify({ to: lineUserId, messages }),
-                });
-            } catch(e) { console.warn('LINE send error:', e); }
+            if (!lineUserId) throw new Error('ไม่มี LINE User ID');
+            // ใช้ proxy เพื่อหลีกเลี่ยง CORS (LINE API ไม่รองรับ browser request โดยตรง)
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(LINE_PROXY);
+            const res = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + LINE_TOKEN,
+                },
+                body: JSON.stringify({ to: lineUserId, messages }),
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(()=>'');
+                throw new Error(`LINE API error ${res.status}: ${text.slice(0,120)}`);
+            }
+            return res;
         }
 
         async function notifyManagersNewLeave(req) {
@@ -4117,13 +4122,27 @@ PAGES['payroll'] = {
             const sub = document.getElementById('pr-line-period-sub');
             if (sub) sub.textContent = `งวดที่ ${p.periodNo}/${p.year}  ·  ${fmtD(p.startDate)} – ${fmtD(p.endDate)}`;
 
-            // โหลด records จาก Firestore โดยตรง ไม่พึ่ง memory cache
+            // โหลด records + users พร้อมกัน เพื่อดึง lineId ล่าสุดจาก users
             try {
-                const snap = await getDocs(query(
-                    collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
-                    where('periodId','==',pid)
-                ));
-                _lineRecords = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+                const [recSnap, userSnap] = await Promise.all([
+                    getDocs(query(
+                        collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
+                        where('periodId','==',pid)
+                    )),
+                    getDocs(collection(db,'artifacts',APP_ID,'public','data','users')),
+                ]);
+                // map uid → lineId ล่าสุด
+                const userLineMap = {};
+                userSnap.docs.forEach(d => {
+                    const u = d.data();
+                    if (u.uid) userLineMap[u.uid] = u.lineId || '';
+                });
+                // merge lineId ล่าสุดเข้า records
+                _lineRecords = recSnap.docs.map(d => {
+                    const r = { id:d.id, ...d.data() };
+                    r.lineId = userLineMap[r.uid] || r.lineId || '';
+                    return r;
+                });
             } catch(e) {
                 _lineRecords = records.filter(r => r.periodId === pid); // fallback
             }
@@ -4220,7 +4239,11 @@ PAGES['payroll'] = {
                 try {
                     await sendLineMessage(r.lineId, [buildPayslipFlex(r, period_label, period_range)]);
                     ok++;
-                } catch(e) { console.warn('LINE send failed:', r.name, e); fail++; }
+                } catch(e) {
+                    console.warn('LINE send failed:', r.name, e.message);
+                    fail++;
+                    if (fail === 1) showToast(`❌ ${r.name}: ${e.message}`, 'error');
+                }
                 await new Promise(res => setTimeout(res, 300)); // rate limit
             }
 
