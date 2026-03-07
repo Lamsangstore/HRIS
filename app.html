@@ -2092,9 +2092,14 @@
                 prev?.classList.remove('flex');
             }
         }
-        ['req-start-date', 'req-end-date'].forEach(id => {
-            document.getElementById(id)?.addEventListener('change', recalcHours);
+        document.getElementById('req-start-date')?.addEventListener('change', e => {
+            const ed = document.getElementById('req-end-date');
+            if (ed && (!ed.value || ed.value < e.target.value)) {
+                ed.value = e.target.value;
+            }
+            recalcHours();
         });
+        document.getElementById('req-end-date')?.addEventListener('change', recalcHours);
 
         window.openLeaveModal  = () => document.getElementById('leave-modal')?.classList.remove('hidden');
         window.closeLeaveModal = () => document.getElementById('leave-modal')?.classList.add('hidden');
