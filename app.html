@@ -814,7 +814,22 @@
             const totalMins  = (eh * 60 + em) - (sh * 60 + sm);
             const breakMins  = schedule.breakMinutes ?? 60;
             const workMins   = totalMins - breakMins;
-            return Math.max(0.5, workMins / 60); // ขั้นต่ำ 0.5 ชม. กันหารศูนย์
+            return Math.max(0.5, workMins / 60);
+        }
+
+        // คำนวณชั่วโมง OT จริง: (ออก - เข้า - พักของพนักงาน) ปัดขึ้นชั่วโมงเต็ม
+        // ถ้าไม่มีบันทึกเวลา → ใช้ hpd (ค่าตาม schedule)
+        function calcAutoOTHours(inTime, outTime, schedule) {
+            const breakMins = schedule.breakMinutes ?? 60;
+            if (inTime && outTime) {
+                const [ih, im] = inTime.split(':').map(Number);
+                const [oh, om] = outTime.split(':').map(Number);
+                let actualMins = (oh * 60 + om) - (ih * 60 + im);
+                if (actualMins < 0) actualMins += 24 * 60; // ข้ามคืน
+                const workMins = Math.max(0, actualMins - breakMins);
+                return Math.ceil(workMins / 60); // ปัดขึ้นชั่วโมงเต็ม
+            }
+            return getDayWorkHours(schedule); // ไม่มีบันทึก ใช้ hpd
         }
         
         // แสดงผลชั่วโมง → วัน+ชั่วโมง โดยใช้ workHoursPerDay จาก schedule
@@ -6434,11 +6449,15 @@ PAGES['payslip-admin'] = {
 
                             // OT hours cell
                             const mult = isAutoOT ? 1.5 : 1.0;
-                            const hrs  = isAutoOT ? hpd : (entry.hours || 0);
+                            const hrs  = isAutoOT
+                                ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
+                                : (entry.hours || 0);
                             const conv = sel ? hrs * mult : 0;
+                            const hasRealTime = isAutoOT && d.inTime && d.outTime;
+                            const hrsLabel = `${hrs}<span class="text-[10px] text-zinc-400 ml-1">${hasRealTime ? 'ชม.' : 'hpd'}</span>`;
                             const hoursCell = !sel ? '<span class="text-zinc-300 text-xs">–</span>'
                                 : isAutoOT
-                                    ? `<span class="font-black text-zinc-700">${hpd.toFixed(1)}</span><span class="text-[10px] text-zinc-400 ml-1">auto</span>`
+                                    ? `<span class="font-black text-zinc-700">${hrsLabel}</span>`
                                     : `<input type="number" min="0.5" max="24" step="0.5" value="${entry.hours||''}" placeholder="0"
                                         oninput="otUpdateHours('${d.day}',Number(this.value))"
                                         class="w-16 text-center text-sm border border-zinc-200 rounded-lg px-1.5 py-1 focus:border-yellow-400 focus:outline-none">`;
@@ -6492,13 +6511,15 @@ PAGES['payslip-admin'] = {
                     }
 
                     function updateTotals() {
-                        const hpd = getDayWorkHours(mySchedule);
                         let convSum = 0;
                         allDays.forEach(d => {
                             if (!selectedDays[d.day]) return;
-                            const e    = selectedDays[d.day];
-                            const mult = (d.type==='holiday'||d.type==='comp') ? 1.5 : 1.0;
-                            const hrs  = (d.type==='holiday'||d.type==='comp') ? hpd : (e.hours||0);
+                            const e      = selectedDays[d.day];
+                            const isAuto = d.type==='holiday' || d.type==='comp' || d.type==='weekend';
+                            const mult   = isAuto ? 1.5 : 1.0;
+                            const hrs    = isAuto
+                                ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
+                                : (e.hours || 0);
                             convSum += hrs * mult;
                         });
                         const el  = document.getElementById('ot-conv-total');
@@ -6596,13 +6617,17 @@ PAGES['payslip-admin'] = {
 
                     // ─── Save helpers ─────────────────────────────────────
                     async function buildPayload(status) {
-                        const hpd = getDayWorkHours(mySchedule);
                         const rows = allDays.filter(d => selectedDays[d.day]).map(d => {
-                            const e   = selectedDays[d.day];
-                            const mult = (d.type==='holiday'||d.type==='comp') ? 1.5 : 1.0;
-                            const raw  = (d.type==='holiday'||d.type==='comp') ? hpd : (e.hours||0);
+                            const e      = selectedDays[d.day];
+                            const isAuto = d.type==='holiday' || d.type==='comp' || d.type==='weekend';
+                            const mult   = isAuto ? 1.5 : 1.0;
+                            const raw    = isAuto
+                                ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
+                                : (e.hours || 0);
                             return { date:d.day, inTime:d.inTime, outTime:d.outTime,
-                                     rawHours:raw, otConv:Math.round(raw*mult*100)/100,
+                                     breakMinutes: mySchedule.breakMinutes ?? 60,
+                                     rawHours: raw,
+                                     otConv: raw * mult,
                                      type:d.type, mult, note:e.note||'' };
                         });
                         const otConverted = rows.reduce((s,r) => s + r.otConv, 0);
