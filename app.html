@@ -60,12 +60,12 @@
 
     <!-- ===================== SIDEBAR (อยู่ตลอด ไม่โหลดใหม่) ===================== -->
     <aside id="app-sidebar" class="bg-zinc-900 text-zinc-300 flex flex-col shadow-xl z-20 h-full overflow-hidden shrink-0">
-        <!-- Logo -->
-        <div class="logo-container p-5 flex items-center justify-center border-b border-zinc-800">
-            <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
-                 alt="Lamsang Logo"
-                 class="h-10 w-10 min-w-[2.5rem] object-contain rounded bg-white p-1 mr-3 shrink-0">
-            <h1 class="text-lg font-bold tracking-wider truncate text-white sidebar-text">Lamsang Group</h1>
+        <!-- Sidebar Toggle Button -->
+        <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
+            <button onclick="toggleSidebar()" class="flex items-center gap-3 w-full group hover:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all">
+                <i class="fa-solid fa-bars text-xl text-zinc-400 group-hover:text-yellow-400 transition-colors shrink-0"></i>
+                <span class="sidebar-text text-sm font-black text-zinc-400 group-hover:text-yellow-400 uppercase tracking-widest transition-colors whitespace-nowrap">ปิดเมนู</span>
+            </button>
         </div>
 
         <!-- Nav -->
@@ -90,11 +90,16 @@
 
         <!-- TOPBAR (อยู่ตลอด ไม่โหลดใหม่) -->
         <header id="app-topbar" class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200 shrink-0">
-            <div class="flex items-center">
-                <button onclick="toggleSidebar()" class="text-zinc-500 hover:text-yellow-500 hover:bg-zinc-100 p-2 rounded-lg mr-4 transition-colors focus:outline-none">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
-                <h2 id="topbar-title" class="text-lg font-bold text-zinc-800 uppercase tracking-tight hidden sm:block">Lamsang Group</h2>
+            <!-- Left: page title (mobile) -->
+            <div class="flex items-center min-w-[120px]">
+                <h2 id="topbar-title" class="text-sm font-black text-zinc-500 uppercase tracking-widest sm:hidden truncate max-w-[140px]">Lamsang Group</h2>
+            </div>
+            <!-- Center: Logo + Brand -->
+            <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none select-none">
+                <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
+                     alt="Lamsang Logo"
+                     class="h-8 w-8 object-contain rounded bg-zinc-100 p-1 shrink-0">
+                <span class="text-base font-black tracking-wider text-zinc-800 hidden sm:block whitespace-nowrap">Lamsang Group</span>
             </div>
             <div class="flex items-center space-x-4">
                 <!-- Notification Bell -->
