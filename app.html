@@ -3066,13 +3066,39 @@ PAGES['leave-admin'] = {
             }));
             const emp = allEmps.find(e => e.uid === uid);
             if (!emp) return;
-            // Load schedule & balance
-            const [schedSnap, balSnap] = await Promise.all([
+
+            // โหลด schedule, balance และ approved requests พร้อมกัน
+            const [schedSnap, balSnap, reqSnap] = await Promise.all([
                 getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', uid)),
                 getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances',  uid)),
+                getDocs(query(
+                    collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'),
+                    where('uid', '==', uid),
+                    where('status', '==', 'approved')
+                )),
             ]);
+
             const sched = schedSnap.exists() ? schedSnap.data() : { workDays:[1,2,3,4,5], workStart:'08:00', workEnd:'17:00', breakMinutes:60, holidays:[] };
-            const bal   = balSnap.exists()   ? balSnap.data()   : {};
+            const balRaw = balSnap.exists() ? balSnap.data() : {};
+
+            // คำนวณ usedHours จาก approved requests (source of truth)
+            const usedFromReqs = {};
+            reqSnap.docs.forEach(d => {
+                const r = d.data();
+                if (r.type && r.totalHours > 0)
+                    usedFromReqs[r.type] = Math.round(((usedFromReqs[r.type]||0) + r.totalHours) * 100) / 100;
+            });
+
+            // merge: ใช้ค่าที่มากกว่าระหว่าง Firestore กับที่คำนวณได้
+            const bal = { ...balRaw };
+            Object.keys(usedFromReqs).forEach(tid => {
+                if (!bal[tid]) bal[tid] = {};
+                bal[tid] = {
+                    ...bal[tid],
+                    usedHours: Math.max(bal[tid]?.usedHours || 0, usedFromReqs[tid]),
+                };
+            });
+
             workDaysSel = sched.workDays || [1,2,3,4,5];
             renderAdminPanel(emp, sched, bal);
         };
