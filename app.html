@@ -1900,7 +1900,7 @@
             if (hrs > 0) {
                 prev?.classList.remove('hidden');
                 prev?.classList.add('flex');
-                if (val) val.textContent = hoursToDisplay(hrs);
+                if (val) val.textContent = hoursToDisplay(hrs, mySchedule);
             } else {
                 prev?.classList.add('hidden');
                 prev?.classList.remove('flex');
@@ -2193,8 +2193,10 @@ PAGES['leave-mgmt'] = {
 
         const unsub = onSnapshot(
             query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'), orderBy('createdAt', 'desc')),
-            snap => {
+            async snap => {
                 allRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const uids = [...new Set(allRequests.map(r => r.uid).filter(Boolean))];
+                await Promise.all(uids.map(uid => getEmpSchedule(uid)));
                 updateStats();
                 filterRequests();
             }
@@ -2206,6 +2208,22 @@ PAGES['leave-mgmt'] = {
             document.getElementById('stat-pending').textContent  = allRequests.filter(r => r.status === 'pending').length;
             document.getElementById('stat-approved').textContent = allRequests.filter(r => r.status === 'approved' && r.createdAt?.startsWith(thisMonth)).length;
             document.getElementById('stat-rejected').textContent = allRequests.filter(r => r.status === 'rejected' && r.createdAt?.startsWith(thisMonth)).length;
+        }
+
+        // ── schedule cache & display helper ──────────────────
+        const scheduleCache = {};
+        async function getEmpSchedule(uid) {
+            if (scheduleCache[uid]) return scheduleCache[uid];
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', uid));
+                const s = snap.exists() ? snap.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                scheduleCache[uid] = s;
+                return s;
+            } catch { return { workStart:'08:00', workEnd:'17:00', breakMinutes:60 }; }
+        }
+        function dispHoursForReq(r) {
+            const s = scheduleCache[r.uid];
+            return hoursToDisplay(r.totalHours, s || null);
         }
 
         window.filterRequests = () => {
@@ -2253,7 +2271,7 @@ PAGES['leave-mgmt'] = {
                         <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.badge}">
                           <i class="fa-solid ${st.icon} mr-1"></i>${st.label}
                         </span>
-                        <span class="ml-auto font-black text-zinc-800">${hoursToDisplay(r.totalHours)}</span>
+                        <span class="ml-auto font-black text-zinc-800">${dispHoursForReq(r)}</span>
                       </div>
                       <p class="text-sm font-bold text-zinc-600">${dateRange}${timeRange}</p>
                       <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${r.reason}</p>
@@ -2308,7 +2326,7 @@ PAGES['leave-mgmt'] = {
                 <div class="flex justify-between"><span class="text-zinc-400">พนักงาน</span><span class="font-bold">${r.employeeName}</span></div>
                 <div class="flex justify-between"><span class="text-zinc-400">ประเภท</span><span class="font-bold">${r.typeName}</span></div>
                 <div class="flex justify-between"><span class="text-zinc-400">วันที่</span><span class="font-bold">${fmtDate(r.startDate)}${r.startDate !== r.endDate ? ' – '+fmtDate(r.endDate) : ''}</span></div>
-                <div class="flex justify-between"><span class="text-zinc-400">จำนวน</span><span class="font-bold text-yellow-600">${hoursToDisplay(r.totalHours)}</span></div>`;
+                <div class="flex justify-between"><span class="text-zinc-400">จำนวน</span><span class="font-bold text-yellow-600">${dispHoursForReq(r)}</span></div>`;
             const btn = document.getElementById('action-confirm-btn');
             if (btn) {
                 btn.className = `flex-1 py-3 font-black rounded-xl transition-all text-sm text-white ${isApprove ? 'bg-green-500 hover:bg-green-400' : 'bg-red-500 hover:bg-red-400'}`;
