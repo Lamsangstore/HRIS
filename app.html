@@ -195,6 +195,8 @@
                 { id: 'time-approve',  icon: 'fa-user-clock',            label: 'อนุมัติเวลา',            show: isManager },
                 { id: 'profile',       icon: 'fa-id-badge',              label: 'โปรไฟล์ของฉัน',          show: true },
                 { id: 'payslip',       icon: 'fa-file-invoice',          label: 'สลิปเงินเดือน',          show: true },
+                { id: 'ot-claim',      icon: 'fa-business-time',         label: 'เบิก OT & Commission',   show: true },
+                { id: 'ot-approve',    icon: 'fa-clipboard-check',       label: 'อนุมัติ OT',              show: isManager },
                 { id: '---',           icon: '',                         label: 'Admin Panel',             show: isAdmin, divider: true },
                 { id: 'announcements', icon: 'fa-bullhorn',              label: 'จัดการประกาศ',           show: isManager, adminStyle: true },
                 { id: 'add-employee',  icon: 'fa-user-plus',             label: 'เพิ่ม/แก้ไขพนักงาน',    show: isAdmin,   adminStyle: true },
@@ -5946,6 +5948,724 @@ PAGES['payslip-admin'] = {
         };
     }
 };
+
+
+        // ================================================================
+        // PAGE: ot-claim — พนักงานเบิก OT & Commission
+        // ================================================================
+        PAGES['ot-claim'] = {
+            title: 'เบิก OT & Commission',
+            html: `
+            <style>
+                .ot-day-card { transition:all .15s; cursor:pointer; }
+                .ot-day-card:hover { box-shadow:0 0 0 2px #eab308; }
+                .ot-day-card.selected { box-shadow:0 0 0 2px #eab308; background:#fefce8; }
+                .ot-day-card.hol-card { background:#fef2f2; }
+                .ot-day-card.hol-card.selected { background:#fee2e2; box-shadow:0 0 0 2px #dc2626; }
+                .ot-day-card.comp-card { background:#fef9c3; }
+                .ot-day-card.comp-card.selected { background:#fde68a; box-shadow:0 0 0 2px #d97706; }
+                .ot-status-pending  { background:#fef9c3; color:#92400e; }
+                .ot-status-approved { background:#dcfce7; color:#166534; }
+                .ot-status-rejected { background:#fee2e2; color:#991b1b; }
+                .ot-status-draft    { background:#f4f4f5; color:#52525b; }
+            </style>
+            <div class="p-6 lg:p-8 max-w-5xl mx-auto">
+              <div class="mb-6">
+                <h2 class="text-2xl font-black text-zinc-800">เบิก OT & Commission</h2>
+                <p class="text-sm text-zinc-500 mt-1">เลือกวันที่ต้องการเบิก OT และกรอก Commission แล้วส่งให้หัวหน้าอนุมัติ</p>
+              </div>
+
+              <!-- เลือกงวด -->
+              <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm p-5 mb-5">
+                <div class="flex flex-wrap items-end gap-4">
+                  <div class="flex-1 min-w-[220px]">
+                    <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-1.5">งวดเงินเดือน</label>
+                    <select id="ot-period-sel" class="input-field" onchange="otLoadPeriod()">
+                      <option value="">— เลือกงวด —</option>
+                    </select>
+                  </div>
+                  <div class="flex gap-3 text-[10px] font-black pb-1">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-100 border border-red-300 inline-block"></span>วันหยุด ×1.5 hpd</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-yellow-100 border border-yellow-300 inline-block"></span>ชดเชย ×1.5 hpd</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-zinc-100 border border-zinc-300 inline-block"></span>วันปกติ (กรอกชม.)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- status bar (ถ้ายื่นแล้ว) -->
+              <div id="ot-claim-status-bar" class="hidden mb-5"></div>
+
+              <!-- ตารางวันทำงาน -->
+              <div id="ot-table-wrap" class="hidden">
+
+                <!-- คำแนะนำ -->
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-3 mb-5 text-xs text-blue-700 font-medium flex items-start gap-3">
+                  <i class="fa-solid fa-circle-info text-blue-400 mt-0.5 shrink-0"></i>
+                  <div>
+                    <b>วิธีใช้:</b> คลิกเลือกวันที่ต้องการเบิก OT ✓ — วันหยุด/ชดเชยระบบคำนวณให้อัตโนมัติ (1.5×hpd) 
+                    ส่วนวันปกติให้กรอกชั่วโมง OT เองและระบุเหตุผล
+                  </div>
+                </div>
+
+                <!-- grid วันทำงาน -->
+                <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden mb-5">
+                  <div class="bg-zinc-900 px-5 py-3.5 flex items-center justify-between">
+                    <h3 class="text-sm font-black text-white">วันทำงานในงวด — คลิกเลือกวันที่ต้องการเบิก OT</h3>
+                    <span id="ot-selected-count" class="text-xs font-black text-zinc-400">เลือก 0 วัน</span>
+                  </div>
+                  <div id="ot-day-grid" class="p-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                </div>
+
+                <!-- ตารางสรุป OT ที่เลือก -->
+                <div id="ot-selected-wrap" class="hidden bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden mb-5">
+                  <div class="bg-zinc-800 px-5 py-3.5">
+                    <h3 class="text-sm font-black text-white">รายละเอียด OT ที่เลือก</h3>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead class="bg-zinc-50 border-b border-zinc-100">
+                        <tr class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                          <th class="text-left px-4 py-3">วันที่</th>
+                          <th class="text-center px-4 py-3">เข้า</th>
+                          <th class="text-center px-4 py-3">ออก</th>
+                          <th class="text-center px-4 py-3 w-28">ชม. OT</th>
+                          <th class="text-center px-4 py-3">ประเภท</th>
+                          <th class="text-center px-4 py-3">換算</th>
+                          <th class="text-left px-4 py-3 min-w-[180px]">เหตุผล <span class="text-red-400">*</span></th>
+                        </tr>
+                      </thead>
+                      <tbody id="ot-sel-tbody"></tbody>
+                    </table>
+                  </div>
+                  <div class="px-5 py-3 bg-zinc-50 border-t border-zinc-100 flex flex-wrap gap-6 text-sm">
+                    <span>OT换算รวม: <b id="ot-conv-total" class="text-yellow-700">0 ชม.</b></span>
+                    <span id="ot-cap-warn" class="hidden text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>เกิน 36 ชม./งวด</span>
+                  </div>
+                </div>
+
+                <!-- Commission -->
+                <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden mb-5">
+                  <div class="bg-zinc-800 px-5 py-3.5 flex items-center justify-between">
+                    <div>
+                      <h3 class="text-sm font-black text-white">Commission</h3>
+                      <p class="text-[10px] text-zinc-400 mt-0.5">กรอกยอดขาย × % คอมมิชชั่น</p>
+                    </div>
+                  </div>
+                  <div class="p-5">
+                    <div class="grid grid-cols-12 gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">
+                      <div class="col-span-4">รายการ</div>
+                      <div class="col-span-3 text-right">ยอดขาย (฿)</div>
+                      <div class="col-span-2 text-right">% คอม</div>
+                      <div class="col-span-2 text-right">ได้รับ (฿)</div>
+                      <div class="col-span-1"></div>
+                    </div>
+                    <div id="ot-comm-rows" class="space-y-2 mb-3"></div>
+                    <button onclick="otAddCommRow()" class="text-xs font-black text-yellow-600 hover:text-yellow-700 flex items-center gap-1.5 transition-colors mt-1">
+                      <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
+                    </button>
+                    <div class="mt-4 pt-3 border-t border-zinc-100 flex justify-end">
+                      <span class="text-sm">รวม Commission: <b id="ot-comm-total" class="text-zinc-800 text-base">฿0</b></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- หมายเหตุ + ปุ่มส่ง -->
+                <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm p-5">
+                  <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">หมายเหตุรวมถึงหัวหน้า (ถ้ามี)</label>
+                  <textarea id="ot-note" rows="2" class="input-field resize-none mb-4" placeholder="เช่น ทำงานล่วงเวลาโปรเจกต์..."></textarea>
+                  <div class="flex gap-3 justify-end flex-wrap">
+                    <button onclick="otSaveDraft()" class="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-xs transition-all">
+                      <i class="fa-regular fa-floppy-disk mr-1"></i> บันทึก Draft
+                    </button>
+                    <button onclick="otSubmit()" class="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-xs transition-all shadow-md">
+                      <i class="fa-solid fa-paper-plane mr-1"></i> ยื่นขออนุมัติ
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ประวัติ -->
+              <div class="mt-8">
+                <h3 class="text-sm font-black text-zinc-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> ประวัติการยื่น OT
+                </h3>
+                <div id="ot-history-list" class="space-y-3">
+                  <div class="text-center py-8 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
+                </div>
+              </div>
+            </div>`,
+
+            init(container, user, profile) {
+                const APP_ID = appId;
+                let mySchedule = null, currentPeriod = null;
+                let allDays = [];        // ทุกวันทำงานในงวด { day, inTime, outTime, type }
+                let selectedDays = {};  // { 'YYYY-MM-DD': { hours, note } }
+                let commRows = [];
+                let otRequest = null;
+                let unsubHistory = null;
+                let isLocked = false;
+                const THday = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+                (async () => {
+                    const { collection, query, orderBy, getDocs, getDoc, doc,
+                            addDoc, updateDoc, onSnapshot, where, limit } =
+                        await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+
+                    // โหลด schedule
+                    const schedSnap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules',user.uid));
+                    mySchedule = schedSnap.exists() ? schedSnap.data()
+                        : { workStart:'08:00', workEnd:'17:00', breakMinutes:60, workDays:[1,2,3,4,5] };
+                    const hpd = getDayWorkHours(mySchedule);
+                    const workDaySet = new Set(mySchedule.workDays || [1,2,3,4,5]);
+
+                    // โหลด periods
+                    const perSnap = await getDocs(query(
+                        collection(db,'artifacts',APP_ID,'public','data','payroll_periods'),
+                        orderBy('startDate','desc')
+                    ));
+                    const sel = document.getElementById('ot-period-sel');
+                    perSnap.forEach(d => {
+                        const p = { id: d.id, ...d.data() };
+                        const o = document.createElement('option');
+                        o.value = d.id;
+                        o.textContent = `งวด ${p.periodNo}/${p.year}  (${p.startDate} – ${p.endDate})`;
+                        sel.appendChild(o);
+                    });
+
+                    // ประวัติ realtime
+                    unsubHistory = onSnapshot(
+                        query(collection(db,'artifacts',APP_ID,'public','data','ot_requests'),
+                              where('uid','==',user.uid), orderBy('createdAt','desc'), limit(20)),
+                        snap => {
+                            const list = document.getElementById('ot-history-list');
+                            if (!list) return;
+                            if (snap.empty) { list.innerHTML = '<div class="text-center py-8 text-zinc-300 text-sm">ยังไม่มีประวัติ</div>'; return; }
+                            const stMap = { draft:'Draft', pending:'รอนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
+                            const stCls = { draft:'ot-status-draft', pending:'ot-status-pending', approved:'ot-status-approved', rejected:'ot-status-rejected' };
+                            list.innerHTML = snap.docs.map(d => {
+                                const r = { id: d.id, ...d.data() };
+                                return `<div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center gap-3">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-black text-zinc-800 text-sm">${r.periodLabel||r.periodId}</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">OT換算: <b>${(r.otConverted||0).toFixed(2)} ชม.</b>  ·  Commission: <b>฿${(r.commTotal||0).toLocaleString()}</b></p>
+                                        ${r.managerNote ? `<p class="text-xs text-red-500 mt-1 italic">"${r.managerNote}"</p>` : ''}
+                                    </div>
+                                    <span class="text-[10px] font-black px-3 py-1.5 rounded-xl ${stCls[r.status]||'ot-status-draft'}">${stMap[r.status]||r.status}</span>
+                                    <p class="text-[10px] text-zinc-400 whitespace-nowrap">${(r.createdAt||'').slice(0,10)}</p>
+                                </div>`;
+                            }).join('');
+                        }
+                    );
+
+                    // ─── Load period data ──────────────────────────────────
+                    window.otLoadPeriod = async () => {
+                        const pid = document.getElementById('ot-period-sel').value;
+                        if (!pid) return;
+                        document.getElementById('ot-table-wrap').classList.add('hidden');
+                        document.getElementById('ot-claim-status-bar').classList.add('hidden');
+                        selectedDays = {};
+
+                        const pSnap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid));
+                        if (!pSnap.exists()) return;
+                        currentPeriod = { id: pid, ...pSnap.data() };
+
+                        // ตรวจว่ายื่นแล้ว
+                        const exSnap = await getDocs(query(
+                            collection(db,'artifacts',APP_ID,'public','data','ot_requests'),
+                            where('uid','==',user.uid), where('periodId','==',pid), limit(1)
+                        ));
+                        otRequest = exSnap.empty ? null : { id: exSnap.docs[0].id, ...exSnap.docs[0].data() };
+                        isLocked = otRequest?.status === 'approved' || otRequest?.status === 'pending';
+
+                        // โหลด time_logs
+                        const tSnap = await getDocs(query(
+                            collection(db,'artifacts',APP_ID,'public','data','time_logs'),
+                            where('uid','==',user.uid), orderBy('timestamp','asc')
+                        ));
+                        const dayMap = {};
+                        tSnap.forEach(d => {
+                            const t = d.data();
+                            const day = (t.timestamp||'').slice(0,10);
+                            if (day < currentPeriod.startDate || day > currentPeriod.endDate) return;
+                            if (!dayMap[day]) dayMap[day] = { in:null, out:null };
+                            if (t.type==='clock_in'  && (!dayMap[day].in  || t.timestamp < dayMap[day].in))  dayMap[day].in  = t.timestamp;
+                            if (t.type==='clock_out' && (!dayMap[day].out || t.timestamp > dayMap[day].out)) dayMap[day].out = t.timestamp;
+                        });
+
+                        // วันหยุดและชดเชย
+                        const holidays = window._publicHolidays || [];
+                        const holSet  = new Set(holidays.map(h => h.date));
+                        const holName = Object.fromEntries(holidays.map(h => [h.date, h.name]));
+                        const compDays = new Set();
+                        holidays.forEach(h => {
+                            const dow = new Date(h.date+'T00:00:00').getDay();
+                            if (!workDaySet.has(dow)) {
+                                let next = new Date(h.date+'T00:00:00');
+                                for (let i=1;i<=7;i++) {
+                                    next.setDate(next.getDate()+1);
+                                    const ns = next.toISOString().slice(0,10);
+                                    if (workDaySet.has(next.getDay()) && !holSet.has(ns)) { compDays.add(ns); break; }
+                                }
+                            }
+                        });
+
+                        // สร้าง allDays — ทุกวันในช่วง period ที่ทำงาน (มี clock_in) หรือวันหยุด/ชดเชย
+                        allDays = [];
+                        let cur = new Date(currentPeriod.startDate+'T00:00:00');
+                        const endD = new Date(currentPeriod.endDate+'T00:00:00');
+                        while (cur <= endD) {
+                            const ds = cur.toISOString().slice(0,10);
+                            const dow = cur.getDay();
+                            const isHol  = holSet.has(ds);
+                            const isComp = compDays.has(ds);
+                            const isWork = workDaySet.has(dow) && !isHol;
+                            const rec = dayMap[ds];
+                            const hasClock = !!rec?.in;
+
+                            // แสดงเฉพาะวันที่: (มี clock) หรือ (วันหยุด/ชดเชยที่มี clock)
+                            if (hasClock || (isHol && hasClock) || (isComp && hasClock)) {
+                                let type = 'normal';
+                                if (isHol)  type = 'holiday';
+                                else if (isComp) type = 'comp';
+                                allDays.push({
+                                    day: ds, dow,
+                                    inTime:  rec?.in  ? rec.in.slice(11,16)  : null,
+                                    outTime: rec?.out ? rec.out.slice(11,16) : null,
+                                    type, holName: holName[ds]||'',
+                                });
+                            }
+                            cur.setDate(cur.getDate()+1);
+                        }
+
+                        // restore จาก otRequest
+                        if (otRequest?.rows) {
+                            otRequest.rows.forEach(r => {
+                                selectedDays[r.date] = { hours: r.rawHours, note: r.note||'' };
+                            });
+                        }
+                        commRows = otRequest?.commItems ? otRequest.commItems.map(c=>({...c})) : [];
+
+                        renderDayGrid();
+                        renderCommUI();
+                        document.getElementById('ot-note').value = otRequest?.note || '';
+
+                        // status bar
+                        const sb = document.getElementById('ot-claim-status-bar');
+                        if (otRequest) {
+                            const map = { draft:'📝 Draft — ยังไม่ได้ยื่น', pending:'⏳ รออนุมัติจากหัวหน้า', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
+                            const cls = { draft:'bg-zinc-100 text-zinc-700 border border-zinc-200', pending:'bg-yellow-50 text-yellow-800 border border-yellow-200', approved:'bg-green-50 text-green-800 border border-green-200', rejected:'bg-red-50 text-red-800 border border-red-200' };
+                            sb.className = `rounded-2xl p-4 text-sm font-bold flex items-center justify-between gap-4 ${cls[otRequest.status]||cls.draft}`;
+                            sb.innerHTML = `<span>${map[otRequest.status]||otRequest.status}</span>${otRequest.managerNote?`<span class="text-xs font-medium opacity-70">"${otRequest.managerNote}"</span>`:''}`;
+                            sb.classList.remove('hidden');
+                        } else sb.classList.add('hidden');
+
+                        document.getElementById('ot-table-wrap').classList.remove('hidden');
+                    };
+
+                    // ─── Day grid ──────────────────────────────────────────
+                    function renderDayGrid() {
+                        const grid = document.getElementById('ot-day-grid');
+                        if (!grid) return;
+                        if (!allDays.length) {
+                            grid.innerHTML = '<div class="col-span-full text-center py-8 text-zinc-400 text-sm">ไม่พบบันทึกเวลาในงวดนี้</div>';
+                            return;
+                        }
+                        grid.innerHTML = allDays.map((d,i) => {
+                            const sel = !!selectedDays[d.day];
+                            const typeClass = d.type==='holiday' ? 'hol-card' : d.type==='comp' ? 'comp-card' : '';
+                            const typeBadge = d.type==='holiday'
+                                ? `<span class="text-[9px] font-black text-red-500 truncate block">${d.holName||'วันหยุด'}</span>`
+                                : d.type==='comp'
+                                ? `<span class="text-[9px] font-black text-yellow-700">วันชดเชย</span>`
+                                : '';
+                            return `<div class="ot-day-card ${typeClass} ${sel?'selected':''} rounded-2xl border border-zinc-200 p-3"
+                                onclick="${isLocked ? '' : `otToggleDay(${i})`}">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <p class="font-black text-zinc-800 text-sm">${d.day.slice(5)} <span class="text-zinc-400 font-normal text-xs">${THday[d.dow]}</span></p>
+                                        <p class="text-xs text-zinc-500">${d.inTime||'?'} – ${d.outTime||'?'}</p>
+                                        ${typeBadge}
+                                    </div>
+                                    <div class="w-5 h-5 rounded-full border-2 ${sel ? 'bg-yellow-500 border-yellow-500' : 'border-zinc-300'} flex items-center justify-center shrink-0 ml-1 mt-0.5">
+                                        ${sel ? '<i class="fa-solid fa-check text-white" style="font-size:8px"></i>' : ''}
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        updateCountBadge();
+                        renderSelectedTable();
+                    }
+
+                    window.otToggleDay = (i) => {
+                        if (isLocked) return;
+                        const d = allDays[i];
+                        if (selectedDays[d.day]) {
+                            delete selectedDays[d.day];
+                        } else {
+                            const hpd = getDayWorkHours(mySchedule);
+                            selectedDays[d.day] = {
+                                hours: (d.type==='holiday'||d.type==='comp') ? hpd : 0,
+                                note: ''
+                            };
+                        }
+                        renderDayGrid();
+                    };
+
+                    function updateCountBadge() {
+                        const cnt = Object.keys(selectedDays).length;
+                        const el = document.getElementById('ot-selected-count');
+                        if (el) el.textContent = `เลือก ${cnt} วัน`;
+                    }
+
+                    // ─── Selected table ───────────────────────────────────
+                    function renderSelectedTable() {
+                        const wrap = document.getElementById('ot-selected-wrap');
+                        const tbody = document.getElementById('ot-sel-tbody');
+                        if (!wrap||!tbody) return;
+                        const selDays = allDays.filter(d => selectedDays[d.day]);
+                        if (!selDays.length) { wrap.classList.add('hidden'); return; }
+                        wrap.classList.remove('hidden');
+                        const hpd = getDayWorkHours(mySchedule);
+                        let convSum = 0;
+                        tbody.innerHTML = selDays.map((d,i) => {
+                            const entry = selectedDays[d.day];
+                            const mult  = (d.type==='holiday'||d.type==='comp') ? 1.5 : 1.0;
+                            const hrs   = (d.type==='holiday'||d.type==='comp') ? hpd : (entry.hours||0);
+                            const conv  = hrs * mult;
+                            convSum += conv;
+                            const typeBadge = d.type==='holiday'
+                                ? '<span class="text-[10px] font-black bg-red-50 text-red-500 px-2 py-0.5 rounded-lg">วันหยุด</span>'
+                                : d.type==='comp'
+                                ? '<span class="text-[10px] font-black bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-lg">ชดเชย</span>'
+                                : '<span class="text-[10px] font-black bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-lg">ปกติ</span>';
+                            const isAuto = d.type==='holiday'||d.type==='comp';
+                            return `<tr class="border-b border-zinc-50">
+                                <td class="px-4 py-3 font-bold text-zinc-700 text-sm">${d.day} <span class="text-zinc-400 font-normal text-xs">${THday[d.dow]}</span></td>
+                                <td class="px-4 py-3 text-center text-sm text-zinc-600">${d.inTime||'-'}</td>
+                                <td class="px-4 py-3 text-center text-sm text-zinc-600">${d.outTime||'-'}</td>
+                                <td class="px-4 py-3 text-center">
+                                    ${isAuto
+                                        ? `<span class="font-black text-zinc-800 text-sm">${hpd.toFixed(1)}</span><span class="text-[10px] text-zinc-400 ml-1">auto</span>`
+                                        : `<input type="number" min="0.5" max="24" step="0.5" value="${entry.hours||''}" placeholder="0"
+                                            ${isLocked?'disabled':''}
+                                            onchange="otUpdateHours('${d.day}',Number(this.value))"
+                                            class="w-20 text-center text-sm border border-zinc-200 rounded-xl px-2 py-1.5 focus:border-yellow-500 focus:outline-none">`
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-center">${typeBadge}</td>
+                                <td class="px-4 py-3 text-center font-black text-yellow-700 text-sm">${conv.toFixed(2)}</td>
+                                <td class="px-4 py-3">
+                                    <input type="text" value="${entry.note||''}" placeholder="เหตุผล OT *"
+                                        ${isLocked?'disabled':''}
+                                        onchange="otUpdateNote('${d.day}',this.value)"
+                                        class="w-full text-xs border border-zinc-200 rounded-xl px-3 py-1.5 focus:border-yellow-500 focus:outline-none">
+                                </td>
+                            </tr>`;
+                        }).join('');
+                        const el = document.getElementById('ot-conv-total');
+                        if (el) el.textContent = convSum.toFixed(2) + ' ชม.';
+                        const capEl = document.getElementById('ot-cap-warn');
+                        if (capEl) capEl.classList.toggle('hidden', convSum <= 36);
+                        updateCountBadge();
+                    }
+
+                    window.otUpdateHours = (day, val) => {
+                        if (selectedDays[day]) { selectedDays[day].hours = val; renderSelectedTable(); }
+                    };
+                    window.otUpdateNote  = (day, val) => {
+                        if (selectedDays[day]) selectedDays[day].note = val;
+                    };
+
+                    // ─── Commission ───────────────────────────────────────
+                    function renderCommUI() {
+                        const wrap = document.getElementById('ot-comm-rows');
+                        if (!wrap) return;
+                        wrap.innerHTML = commRows.map((r,i) => `
+                            <div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
+                                <input type="text" value="${r.desc||''}" placeholder="รายการ..."
+                                    ${isLocked?'disabled':''}
+                                    onchange="commRows[${i}].desc=this.value"
+                                    class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none">
+                                <input type="number" value="${r.sales||0}" min="0" placeholder="ยอดขาย"
+                                    ${isLocked?'disabled':''}
+                                    onchange="commRows[${i}].sales=Number(this.value);otCalcComm()"
+                                    class="col-span-3 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
+                                <input type="number" value="${r.pct||0}" min="0" max="100" step="0.1" placeholder="%"
+                                    ${isLocked?'disabled':''}
+                                    onchange="commRows[${i}].pct=Number(this.value);otCalcComm()"
+                                    class="col-span-2 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
+                                <span class="col-span-2 text-xs font-black text-zinc-700 text-right">฿${Math.round((r.sales||0)*(r.pct||0)/100).toLocaleString()}</span>
+                                ${!isLocked?`<button onclick="commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
+                            </div>`).join('');
+                        otCalcComm();
+                    }
+                    window.renderCommUI_ = renderCommUI;
+                    window.otAddCommRow = () => { commRows.push({ desc:'', sales:0, pct:0 }); renderCommUI(); };
+                    window.otCalcComm  = () => {
+                        const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
+                        const el = document.getElementById('ot-comm-total');
+                        if (el) el.textContent = '฿' + total.toLocaleString();
+                        renderCommUI();
+                    };
+
+                    // ─── Save helpers ─────────────────────────────────────
+                    async function buildPayload(status) {
+                        const hpd = getDayWorkHours(mySchedule);
+                        const rows = allDays.filter(d => selectedDays[d.day]).map(d => {
+                            const e   = selectedDays[d.day];
+                            const mult = (d.type==='holiday'||d.type==='comp') ? 1.5 : 1.0;
+                            const raw  = (d.type==='holiday'||d.type==='comp') ? hpd : (e.hours||0);
+                            return { date:d.day, inTime:d.inTime, outTime:d.outTime,
+                                     rawHours:raw, otConv:Math.round(raw*mult*100)/100,
+                                     type:d.type, mult, note:e.note||'' };
+                        });
+                        const otConverted = rows.reduce((s,r) => s + r.otConv, 0);
+                        const commTotal   = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
+                        return {
+                            uid:user.uid, name:profile.name, branch:profile.branch||'',
+                            periodId:currentPeriod.id,
+                            periodLabel:`งวด ${currentPeriod.periodNo}/${currentPeriod.year}`,
+                            periodStart:currentPeriod.startDate, periodEnd:currentPeriod.endDate,
+                            rows, commItems:commRows, commTotal,
+                            otConverted:Math.round(otConverted*100)/100,
+                            note:document.getElementById('ot-note').value.trim(),
+                            status, updatedAt:new Date().toISOString(),
+                        };
+                    }
+
+                    window.otSaveDraft = async () => {
+                        if (!currentPeriod) { showToast('กรุณาเลือกงวดก่อน','error'); return; }
+                        try {
+                            const { addDoc, updateDoc, doc, collection } =
+                                await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                            const payload = await buildPayload('draft');
+                            if (otRequest?.id) {
+                                await updateDoc(doc(db,'artifacts',APP_ID,'public','data','ot_requests',otRequest.id), payload);
+                            } else {
+                                payload.createdAt = new Date().toISOString();
+                                const ref = await addDoc(collection(db,'artifacts',APP_ID,'public','data','ot_requests'), payload);
+                                otRequest = { id:ref.id, ...payload };
+                            }
+                            showToast('✅ บันทึก Draft แล้ว','success');
+                            otLoadPeriod();
+                        } catch(e) { showToast('❌ '+e.message,'error'); }
+                    };
+
+                    window.otSubmit = async () => {
+                        if (isLocked) { showToast('⚠️ ยื่นแล้วหรืออนุมัติแล้ว แก้ไขไม่ได้','error'); return; }
+                        const selCount = Object.keys(selectedDays).length;
+                        const commTotal = commRows.reduce((s,r) => s + (r.sales||0), 0);
+                        if (selCount === 0 && commTotal === 0) { showToast('⚠️ กรุณาเลือกวัน OT หรือกรอก Commission','error'); return; }
+                        // ตรวจหมายเหตุวันปกติ
+                        const missingNote = allDays.filter(d => selectedDays[d.day] && d.type==='normal' && !selectedDays[d.day].note.trim());
+                        if (missingNote.length) { showToast(`⚠️ กรุณากรอกเหตุผล OT วันที่ ${missingNote.map(d=>d.day.slice(5)).join(', ')}`, 'error'); return; }
+                        if (!confirm('ยืนยันการยื่นขออนุมัติ OT & Commission?')) return;
+                        try {
+                            const { addDoc, updateDoc, doc, collection, query, getDocs, where } =
+                                await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                            const payload = await buildPayload('pending');
+                            if (otRequest?.id) {
+                                await updateDoc(doc(db,'artifacts',APP_ID,'public','data','ot_requests',otRequest.id), payload);
+                            } else {
+                                payload.createdAt = new Date().toISOString();
+                                const ref = await addDoc(collection(db,'artifacts',APP_ID,'public','data','ot_requests'), payload);
+                                otRequest = { id:ref.id, ...payload };
+                            }
+                            showToast('✅ ยื่นขออนุมัติแล้ว','success');
+                            // แจ้ง LINE manager
+                            try {
+                                const mgrSnap = await getDocs(query(
+                                    collection(db,'artifacts',APP_ID,'public','data','users'),
+                                    where('role','in',['manager','admin'])
+                                ));
+                                for (const mgr of mgrSnap.docs) {
+                                    const m = mgr.data();
+                                    if (m.lineId) sendLineMessage(m.lineId,[{type:'text',
+                                        text:`📋 แจ้งเตือน OT\n${profile.name} ยื่นขอเบิก OT\nงวด: ${currentPeriod.periodNo}/${currentPeriod.year}\nOT換算: ${payload.otConverted.toFixed(2)} ชม.\nCommission: ฿${payload.commTotal.toLocaleString()}\n\nกรุณาตรวจสอบในระบบ HRIS`}]).catch(()=>{});
+                                }
+                            } catch(le) { console.warn('LINE:',le); }
+                            otLoadPeriod();
+                        } catch(e) { showToast('❌ '+e.message,'error'); }
+                    };
+
+                })().catch(e => { console.error('ot-claim:',e); hideLoader(); });
+
+                return () => {
+                    if (unsubHistory) unsubHistory();
+                    ['otLoadPeriod','otToggleDay','otUpdateHours','otUpdateNote',
+                     'otAddCommRow','otCalcComm','renderCommUI_','otSaveDraft','otSubmit'].forEach(k => delete window[k]);
+                };
+            }
+        };
+
+        // ================================================================
+        // PAGE: ot-approve — Manager อนุมัติ OT & Commission
+        // ================================================================
+        PAGES['ot-approve'] = {
+            title: 'อนุมัติ OT',
+            html: `
+            <style>
+                .ot-filter-btn { background:#fff; color:#52525b; transition:all .15s; }
+                .ot-filter-btn.active { background:#18181b; color:#eab308; border-color:#18181b; }
+                .ot-status-pending  { background:#fef9c3; color:#92400e; }
+                .ot-status-approved { background:#dcfce7; color:#166534; }
+                .ot-status-rejected { background:#fee2e2; color:#991b1b; }
+                .ot-status-draft    { background:#f4f4f5; color:#52525b; }
+            </style>
+            <div class="p-6 lg:p-8 max-w-5xl mx-auto">
+              <div class="mb-6 flex items-end justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 class="text-2xl font-black text-zinc-800">อนุมัติ OT & Commission</h2>
+                  <p class="text-sm text-zinc-500 mt-1">ตรวจสอบและอนุมัติคำขอเบิก OT ของพนักงาน</p>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                  <button onclick="otApprFilter('all')"      id="otaf-all"      class="ot-filter-btn active px-4 py-2 rounded-xl text-xs font-black border">ทั้งหมด</button>
+                  <button onclick="otApprFilter('pending')"  id="otaf-pending"  class="ot-filter-btn px-4 py-2 rounded-xl text-xs font-black border">⏳ รออนุมัติ</button>
+                  <button onclick="otApprFilter('approved')" id="otaf-approved" class="ot-filter-btn px-4 py-2 rounded-xl text-xs font-black border">✅ อนุมัติแล้ว</button>
+                  <button onclick="otApprFilter('rejected')" id="otaf-rejected" class="ot-filter-btn px-4 py-2 rounded-xl text-xs font-black border">❌ ไม่อนุมัติ</button>
+                </div>
+              </div>
+              <div id="ota-list" class="space-y-4">
+                <div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
+              </div>
+            </div>`,
+
+            init(container, user, profile) {
+                const APP_ID = appId;
+                let allRequests = [], filterStatus = 'all', unsubOt = null;
+                const stMap = { draft:'Draft', pending:'รออนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
+                const stCls = { draft:'ot-status-draft', pending:'ot-status-pending', approved:'ot-status-approved', rejected:'ot-status-rejected' };
+                const THday = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+                (async () => {
+                    const { collection, query, orderBy, doc, updateDoc, onSnapshot, getDoc } =
+                        await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+
+                    unsubOt = onSnapshot(
+                        query(collection(db,'artifacts',APP_ID,'public','data','ot_requests'), orderBy('createdAt','desc')),
+                        snap => {
+                            allRequests = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+                            renderList();
+                        }
+                    );
+
+                    window.otApprFilter = s => {
+                        filterStatus = s;
+                        document.querySelectorAll('.ot-filter-btn').forEach(b => b.classList.remove('active'));
+                        document.getElementById('otaf-'+s)?.classList.add('active');
+                        renderList();
+                    };
+
+                    function renderList() {
+                        const list = document.getElementById('ota-list');
+                        if (!list) return;
+                        const rows = filterStatus==='all' ? allRequests : allRequests.filter(r => r.status===filterStatus);
+                        if (!rows.length) { list.innerHTML = '<div class="text-center py-12 text-zinc-300 text-sm">ไม่มีรายการ</div>'; return; }
+
+                        list.innerHTML = rows.map(r => {
+                            const rowsHtml = (r.rows||[]).map(row => {
+                                const typeBadge = row.type==='holiday'
+                                    ? '<span class="bg-red-50 text-red-500 text-[9px] font-black px-1.5 py-0.5 rounded-lg">วันหยุด</span>'
+                                    : row.type==='comp'
+                                    ? '<span class="bg-yellow-50 text-yellow-700 text-[9px] font-black px-1.5 py-0.5 rounded-lg">ชดเชย</span>'
+                                    : '<span class="bg-zinc-100 text-zinc-500 text-[9px] font-black px-1.5 py-0.5 rounded-lg">ปกติ</span>';
+                                return `<tr class="border-b border-zinc-50 text-xs">
+                                    <td class="px-3 py-2 font-medium">${row.date}</td>
+                                    <td class="px-3 py-2 text-center">${row.inTime||'-'}</td>
+                                    <td class="px-3 py-2 text-center">${row.outTime||'-'}</td>
+                                    <td class="px-3 py-2 text-center font-bold">${(row.rawHours||0).toFixed(2)}</td>
+                                    <td class="px-3 py-2 text-center">${typeBadge}</td>
+                                    <td class="px-3 py-2 text-center font-black text-yellow-700">${(row.otConv||0).toFixed(2)}</td>
+                                    <td class="px-3 py-2 text-zinc-500 italic">${row.note||'-'}</td>
+                                </tr>`;
+                            }).join('');
+                            const commHtml = (r.commItems||[]).filter(c => c.sales||c.pct).map(c =>
+                                `<div class="flex justify-between text-xs py-1.5 border-b border-zinc-50">
+                                    <span class="text-zinc-600">${c.desc||'ไม่ระบุ'}</span>
+                                    <span>฿${(c.sales||0).toLocaleString()} × ${c.pct||0}% = <b class="text-zinc-800">฿${Math.round((c.sales||0)*(c.pct||0)/100).toLocaleString()}</b></span>
+                                </div>`
+                            ).join('');
+
+                            return `<div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                                <div class="px-5 py-4 bg-zinc-50 border-b border-zinc-100 flex flex-wrap items-center gap-3">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-black text-zinc-800">${r.name} <span class="text-zinc-400 font-normal text-sm">— ${r.periodLabel||r.periodId}</span></p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">${r.periodStart||''} ถึง ${r.periodEnd||''} · ยื่นเมื่อ ${(r.createdAt||'').slice(0,10)}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black px-3 py-1.5 rounded-xl ${stCls[r.status]||'ot-status-draft'}">${stMap[r.status]||r.status}</span>
+                                </div>
+                                <div class="p-5">
+                                    ${(r.rows||[]).length ? `
+                                    <div class="overflow-x-auto mb-4 rounded-xl border border-zinc-100">
+                                        <table class="w-full text-sm">
+                                            <thead class="bg-zinc-50">
+                                                <tr class="text-[10px] font-black text-zinc-400 uppercase">
+                                                    <th class="text-left px-3 py-2.5">วันที่</th>
+                                                    <th class="px-3 py-2.5">เข้า</th><th class="px-3 py-2.5">ออก</th>
+                                                    <th class="px-3 py-2.5">ชม.</th><th class="px-3 py-2.5">ประเภท</th>
+                                                    <th class="px-3 py-2.5">換算</th><th class="text-left px-3 py-2.5">เหตุผล</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>${rowsHtml}</tbody>
+                                        </table>
+                                    </div>` : ''}
+                                    <div class="flex flex-wrap gap-5 text-sm mb-4 p-3 bg-zinc-50 rounded-xl">
+                                        <span>OT換算รวม: <b class="text-yellow-700">${(r.otConverted||0).toFixed(2)} ชม.</b></span>
+                                        <span>Commission รวม: <b class="text-zinc-800">฿${(r.commTotal||0).toLocaleString()}</b></span>
+                                    </div>
+                                    ${commHtml ? `<div class="mb-4 bg-zinc-50 rounded-xl p-3">${commHtml}</div>` : ''}
+                                    ${r.note ? `<div class="mb-4 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 text-xs text-yellow-800"><b>หมายเหตุ:</b> ${r.note}</div>` : ''}
+                                    ${r.status==='pending' ? `
+                                    <div class="flex flex-wrap gap-3 items-end pt-3 border-t border-zinc-100">
+                                        <div class="flex-1 min-w-[200px]">
+                                            <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">หมายเหตุถึงพนักงาน (กรณีไม่อนุมัติ)</label>
+                                            <input type="text" id="ota-note-${r.id}" placeholder="ระบุเหตุผล..."
+                                                class="input-field mt-1 text-sm py-2">
+                                        </div>
+                                        <button onclick="otaDecide('${r.id}','${r.uid}','approved')"
+                                            class="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-black rounded-xl text-xs transition-all">
+                                            <i class="fa-solid fa-check mr-1.5"></i>อนุมัติ</button>
+                                        <button onclick="otaDecide('${r.id}','${r.uid}','rejected')"
+                                            class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl text-xs transition-all">
+                                            <i class="fa-solid fa-times mr-1.5"></i>ไม่อนุมัติ</button>
+                                    </div>` : ''}
+                                    ${r.managerNote ? `<p class="text-xs text-zinc-400 mt-2 italic">หมายเหตุ manager: "${r.managerNote}"</p>` : ''}
+                                </div>
+                            </div>`;
+                        }).join('');
+                    }
+
+                    window.otaDecide = async (reqId, empUid, decision) => {
+                        const mgrNote = document.getElementById('ota-note-'+reqId)?.value.trim()||'';
+                        if (decision==='rejected' && !mgrNote) { showToast('⚠️ กรุณาระบุเหตุผลที่ไม่อนุมัติ','error'); return; }
+                        if (!confirm(decision==='approved' ? 'ยืนยันการอนุมัติ OT?' : 'ยืนยันการไม่อนุมัติ?')) return;
+                        try {
+                            await updateDoc(doc(db,'artifacts',APP_ID,'public','data','ot_requests',reqId), {
+                                status:decision, managerNote:mgrNote,
+                                approvedBy:profile.name, approvedAt:new Date().toISOString()
+                            });
+                            showToast(decision==='approved' ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ', decision==='approved'?'success':'error');
+                            // แจ้ง LINE พนักงาน
+                            try {
+                                const empDoc = await getDoc(doc(db,'artifacts',APP_ID,'public','data','users',empUid));
+                                const emp = empDoc.exists() ? empDoc.data() : null;
+                                if (emp?.lineId) {
+                                    const icon = decision==='approved' ? '✅' : '❌';
+                                    sendLineMessage(emp.lineId,[{type:'text',
+                                        text:`${icon} ผลการขอเบิก OT\nคำขอของคุณ${decision==='approved'?'ได้รับการอนุมัติแล้ว 🎉':'ไม่ได้รับการอนุมัติ'}${mgrNote?`\nหมายเหตุ: "${mgrNote}"`:''}` }]).catch(()=>{});
+                                }
+                            } catch(le) { console.warn('LINE:',le); }
+                        } catch(e) { showToast('❌ '+e.message,'error'); }
+                    };
+
+                })().catch(e => { console.error('ot-approve:',e); hideLoader(); });
+
+                return () => {
+                    if (unsubOt) unsubOt();
+                    ['otApprFilter','otaDecide'].forEach(k => delete window[k]);
+                };
+            }
+        };
 
         // ================================================================
         // PAGE: announcements — Admin/Manager จัดการประกาศ
