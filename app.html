@@ -4258,74 +4258,126 @@ PAGES['payroll'] = {
         };
 
         function buildPayslipFlex(r, periodLabel, periodRange) {
-            const row = (label, val, color) => ({
-                type: 'box', layout: 'horizontal',
-                contents: [
-                    { type:'text', text: label, size:'sm', color:'#71717a', flex:3 },
-                    { type:'text', text: val,   size:'sm', weight:'bold', color: color||'#18181b', flex:2, align:'end' }
+            const fmtN = n => Number(n||0).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+            const fmtB = n => `฿${fmtN(n)}`;
+            const fmtI = n => Number(n||0) === 0 ? '0' : fmtN(n);
+
+            const row = (label, val, bold, color) => ({
+                type:'box', layout:'horizontal', margin:'xs',
+                contents:[
+                    { type:'text', text:label, size:'sm', color:'#52525b', flex:4, wrap:false },
+                    { type:'text', text:String(val), size:'sm', align:'end', flex:3,
+                      weight: bold ? 'bold' : 'regular',
+                      color:  color || (bold ? '#18181b' : '#3f3f46') }
                 ]
             });
-            const divider = { type:'separator', margin:'sm' };
-            const fmtB = n => `฿${Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+            const section = (icon, label, color) => ({
+                type:'box', layout:'horizontal', margin:'md', alignItems:'center',
+                contents:[
+                    { type:'text', text:icon+' '+label, size:'xs', weight:'bold', color:color, flex:1 }
+                ]
+            });
+            const sep = { type:'separator', margin:'sm', color:'#e4e4e7' };
+
+            // ลา — ใช้ field names จาก payroll_records จริง
+            const leaveRows = [
+                row('ลาป่วย (ชม.)',               fmtI(r.sickLeaveHours)),
+                row('ลาพักร้อน (ชม.)',             fmtI(r.vacationLeaveHours)),
+                row('ลากิจ (ชม.)',                fmtI(r.personalLeaveHours)),
+                row('ลาอื่นๆ (ชม.)',              fmtI(r.otherLeaveHours)),
+                row('ไม่ได้บันทึกเวลา (เข้า-ออก)', `${r.missingCheckIn||0}-${r.missingCheckOut||0}`),
+            ];
+
+            // รายได้
+            const earningRows = [
+                row('เงินเดือน ('+(r.workDays||0)+')', fmtI(r.baseSalary)),
+                row('รายวัน ('+(r.workDays||0)+')',     fmtI(r.earningDaily)),
+                row('รายชั่วโมง ('+(r.workHours||0)+')',fmtI(r.earningHourly)),
+                row('คอมมิชชั่น ('+(r.commissionUnits||0)+')', fmtI(r.earningCommission)),
+                row('รายได้อื่นๆ',                     fmtI(r.otherEarning)),
+                { type:'box', layout:'horizontal', margin:'xs',
+                  contents:[
+                    { type:'text', text:'รวมเงินได้', size:'sm', weight:'bold', color:'#18181b', flex:4 },
+                    { type:'text', text:fmtN(r.totalEarning), size:'sm', weight:'bold', color:'#18181b', align:'end', flex:3 }
+                  ]
+                },
+            ];
+
+            // หัก — taxMode เก็บเป็น text เช่น "3%" หรือ "No"
+            const taxLabel = r.taxMode && r.taxMode !== 'No' ? `หักภาษี ณ ที่จ่าย ${r.taxMode}` : 'หักภาษี ณ ที่จ่าย';
+            const deductRows = [
+                row(taxLabel,          fmtI(r.deductTax),   false, '#dc2626'),
+                row('หักประกันสังคม', fmtI(r.deductSSO),   false, '#dc2626'),
+                row('หักขาดงาน',      fmtI(r.deductLeave), false, '#dc2626'),
+                row('หักอื่นๆ',       fmtI(r.otherDeduct), false, '#dc2626'),
+                { type:'box', layout:'horizontal', margin:'xs',
+                  contents:[
+                    { type:'text', text:'รวมเงินหัก', size:'sm', weight:'bold', color:'#dc2626', flex:4 },
+                    { type:'text', text:fmtN(r.totalDeduct), size:'sm', weight:'bold', color:'#dc2626', align:'end', flex:3 }
+                  ]
+                },
+            ];
+
+            const heroContents = r.photoURL ? [{
+                type:'image', url: r.photoURL,
+                size:'full', aspectRatio:'20:13', aspectMode:'cover'
+            }] : [];
+
             return {
                 type: 'flex',
-                altText: `💰 สลิปเงินเดือน ${periodLabel} — ฿${Number(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2})}`,
+                altText: `สลิปเงินเดือน ${periodLabel} - ${r.name} ฿${fmtN(r.netPay)}`,
                 contents: {
-                    type: 'bubble',
-                    size: 'kilo',
-                    header: {
-                        type:'box', layout:'vertical', paddingAll:'16px',
-                        backgroundColor:'#18181b',
-                        contents:[
-                            { type:'box', layout:'horizontal', alignItems:'center',
-                              contents:[
-                                { type:'text', text:'💰', size:'xl' },
-                                { type:'box', layout:'vertical', margin:'md',
-                                  contents:[
-                                    { type:'text', text:'สลิปเงินเดือน', color:'#eab308', weight:'bold', size:'lg' },
-                                    { type:'text', text: periodLabel, color:'#a1a1aa', size:'xs' },
-                                  ]
-                                }
-                              ]
-                            }
-                        ]
-                    },
+                    type:'bubble', size:'mega',
+                    ...(r.photoURL ? {
+                        hero: {
+                            type:'image', url:r.photoURL,
+                            size:'full', aspectRatio:'20:10', aspectMode:'cover'
+                        }
+                    } : {}),
                     body: {
-                        type:'box', layout:'vertical', paddingAll:'16px', spacing:'sm',
+                        type:'box', layout:'vertical',
+                        paddingAll:'16px', spacing:'none',
                         contents:[
-                            // ชื่อ + งวด
-                            { type:'text', text: r.name+(r.nickname?` (${r.nickname})`:'')+' · '+r.branch, size:'sm', weight:'bold', color:'#18181b', wrap:true },
-                            { type:'text', text: periodRange, size:'xs', color:'#a1a1aa' },
-                            divider,
-                            // รายได้
-                            { type:'text', text:'รายได้', size:'xs', color:'#16a34a', weight:'bold', margin:'sm' },
-                            row('เงินเดือนพื้นฐาน',      fmtB(r.baseSalary)),
-                            ...(r.earningDaily>0    ? [row('ค่าแรงรายวัน',    fmtB(r.earningDaily))]    : []),
-                            ...(r.earningHourly>0   ? [row('ค่าแรงรายชั่วโมง',fmtB(r.earningHourly))]   : []),
-                            ...(r.earningCommission>0? [row('คอมมิชชั่น',      fmtB(r.earningCommission))]: []),
-                            ...(r.otherEarning>0    ? [row('รายได้อื่นๆ',      fmtB(r.otherEarning))]    : []),
-                            row('รวมรายได้', fmtB(r.totalEarning), '#16a34a'),
-                            divider,
-                            // หัก
-                            { type:'text', text:'รายการหัก', size:'xs', color:'#dc2626', weight:'bold', margin:'sm' },
-                            ...(r.deductSSO>0    ? [row('ประกันสังคม', fmtB(r.deductSSO),'#dc2626')]    : []),
-                            ...(r.deductTax>0    ? [row('ภาษีหัก ณ ที่จ่าย',fmtB(r.deductTax),'#dc2626')] : []),
-                            ...(r.deductLeave>0  ? [row('หักขาดงาน',    fmtB(r.deductLeave),'#dc2626')]  : []),
-                            ...(r.otherDeduct>0  ? [row('หักอื่นๆ',     fmtB(r.otherDeduct),'#dc2626')]  : []),
-                            row('รวมหัก', fmtB(r.totalDeduct), '#dc2626'),
-                            divider,
+                            // หัวข้อ period
+                            { type:'text', text:`เงินเดือนงวดที่ ${periodLabel.replace('งวดที่ ','')}`, size:'sm', color:'#52525b' },
+                            { type:'text', text:`ตั้งแต่ วันที่ ${periodRange.split('–')[0]?.trim()}`, size:'xs', color:'#71717a' },
+                            { type:'text', text:`ถึง วันที่ ${(periodRange.split('–')[1]||'').trim()}`, size:'xs', color:'#71717a' },
+                            sep,
+                            // ชื่อ + รหัส
+                            { type:'box', layout:'horizontal', margin:'md', alignItems:'center',
+                              contents:[
+                                { type:'text', text: r.employeeCode||'', size:'sm', color:'#52525b', flex:2 },
+                                { type:'text', text: r.nickname||r.name, size:'lg', weight:'bold', color:'#18181b', align:'end', flex:3 }
+                              ]
+                            },
+                            { type:'text', text: r.name + (r.position?' · '+r.position:''), size:'xs', color:'#71717a', align:'end' },
+                            sep,
+                            // ลารวม
+                            section('🗓️','ลารวม','#52525b'),
+                            ...leaveRows,
+                            sep,
+                            // เงินได้
+                            section('💰','เงินได้','#16a34a'),
+                            ...earningRows,
+                            sep,
+                            // เงินหัก
+                            section('💸','เงินหัก','#dc2626'),
+                            ...deductRows,
+                            sep,
+                            // สุทธิ
+                            { type:'box', layout:'horizontal', margin:'md', alignItems:'center',
+                              contents:[
+                                { type:'text', text:'เงินได้สุทธิ', size:'md', weight:'bold', color:'#18181b', flex:2 },
+                                { type:'text', text:fmtN(r.netPay), size:'xl', weight:'bold', color:'#ca8a04', align:'end', flex:3 }
+                              ]
+                            },
                         ]
                     },
                     footer: {
-                        type:'box', layout:'vertical', paddingAll:'14px',
-                        backgroundColor:'#fefce8',
+                        type:'box', layout:'vertical', paddingAll:'12px',
+                        backgroundColor:'#f4f4f5',
                         contents:[
-                            { type:'box', layout:'horizontal', alignItems:'center',
-                              contents:[
-                                { type:'text', text:'💵 สุทธิ', size:'md', weight:'bold', color:'#18181b', flex:1 },
-                                { type:'text', text: fmtB(r.netPay), size:'xl', weight:'bold', color:'#ca8a04', align:'end', flex:2 }
-                              ]
-                            }
+                            { type:'text', text:'พบปัญหาติดต่อที่ HR', size:'xs', color:'#a1a1aa', align:'center' }
                         ]
                     }
                 }
