@@ -5963,6 +5963,7 @@ PAGES['payslip-admin'] = {
             html: `
             <style>
                 .ot-row-sel td { background:#fefce8; }
+                .ot-row-weekend td { background:#f8fafc; color:#94a3b8; }
                 .ot-row-missing td { background:#fef2f2; }
                 .ot-row-normal td { background:#fff; }
                 .ot-row-holiday td { background:#fff7f7; }
@@ -6265,30 +6266,46 @@ PAGES['payslip-admin'] = {
                         // สร้าง allDays — ทุกวันทำงาน (workDay) + วันหยุด + ชดเชย ในงวด
                         // แสดงทุกวัน รวมวันที่ไม่มีบันทึก เพื่อให้พนักงานชี้แจง
                         allDays = [];
-                        let cur = new Date(currentPeriod.startDate+'T00:00:00');
-                        const endD = new Date(currentPeriod.endDate+'T00:00:00');
-                        const todayStr = new Date().toISOString().slice(0,10);
+                        // ใช้ local date string โดยตรง ไม่ผ่าน toISOString() เพื่อหลีกเลี่ยง UTC offset
+                        const localDateStr = (d) => {
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth()+1).padStart(2,'0');
+                            const dd = String(d.getDate()).padStart(2,'0');
+                            return `${y}-${m}-${dd}`;
+                        };
+                        const todayStr = localDateStr(new Date());
+                        // parse startDate/endDate อย่างถูกต้องโดยไม่มี timezone shift
+                        const [sy,sm,sd2] = currentPeriod.startDate.split('-').map(Number);
+                        const [ey,em,ed2] = currentPeriod.endDate.split('-').map(Number);
+                        let cur = new Date(sy, sm-1, sd2);        // local midnight
+                        const endD = new Date(ey, em-1, ed2);
+
                         while (cur <= endD) {
-                            const ds = cur.toISOString().slice(0,10);
+                            const ds  = localDateStr(cur);
                             if (ds > todayStr) { cur.setDate(cur.getDate()+1); continue; }
                             const dow = cur.getDay();
-                            const isHol  = holSet.has(ds);
-                            const isComp = compDays.has(ds);
+                            const isHol     = holSet.has(ds);
+                            const isComp    = compDays.has(ds);
+                            const isWeekend = !workDaySet.has(dow);
                             const isWorkDay = workDaySet.has(dow) && !isHol;
-                            if (isWorkDay || isHol || isComp) {
-                                const rec = dayMap[ds];
-                                const hasClock = !!rec?.in;
-                                let type = 'normal';
-                                if (isHol)  type = 'holiday';
-                                else if (isComp) type = 'comp';
-                                allDays.push({
-                                    day: ds, dow,
-                                    inTime:  rec?.in  ? rec.in.slice(11,16)  : null,
-                                    outTime: rec?.out ? rec.out.slice(11,16) : null,
-                                    hasClock,
-                                    type, holName: holName[ds]||'',
-                                });
-                            }
+
+                            // แสดงทุกวัน: วันทำงาน + วันหยุดสุดสัปดาห์ + วันหยุดประเพณี + ชดเชย
+                            const rec = dayMap[ds];
+                            const hasClock = !!rec?.in;
+                            let type = 'normal';
+                            if (isHol)       type = 'holiday';
+                            else if (isComp) type = 'comp';
+                            else if (isWeekend) type = 'weekend';
+
+                            allDays.push({
+                                day: ds, dow,
+                                inTime:  rec?.in  ? rec.in.slice(11,16)  : null,
+                                outTime: rec?.out ? rec.out.slice(11,16) : null,
+                                hasClock,
+                                type,
+                                isWeekend,
+                                holName: holName[ds] || (isWeekend ? (dow===0?'วันอาทิตย์':'วันเสาร์') : ''),
+                            });
                             cur.setDate(cur.getDate()+1);
                         }
 
@@ -6390,22 +6407,25 @@ PAGES['payslip-admin'] = {
                         tbody.innerHTML = allDays.map((d, i) => {
                             const sel       = !!selectedDays[d.day];
                             const noRecord  = !d.hasClock;
-                            const isAutoOT  = d.type === 'holiday' || d.type === 'comp';
+                            const isAutoOT  = d.type === 'holiday' || d.type === 'comp' || d.type === 'weekend';
                             const canOT     = !isLocked && d.hasClock;
                             const entry     = selectedDays[d.day] || { hours: 0, note: '' };
 
                             // สี row
                             let rowClass = 'ot-row-normal';
-                            if (noRecord)   rowClass = 'ot-row-missing';
-                            else if (sel)   rowClass = 'ot-row-sel';
+                            if (d.type === 'weekend')      rowClass = 'ot-row-weekend';
                             else if (d.type === 'holiday') rowClass = 'ot-row-holiday';
                             else if (d.type === 'comp')    rowClass = 'ot-row-comp';
+                            if (sel)      rowClass = 'ot-row-sel';
+                            else if (noRecord && d.type === 'normal') rowClass = 'ot-row-missing';
 
-                            // label ประเภท
+                            // label ประเภท + ชื่อวันหยุด
                             const typeLabel = d.type === 'holiday'
-                                ? `<span class="text-[10px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md">${d.holName||'วันหยุด'}</span>`
+                                ? `<span class="text-[10px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md">${d.holName||'วันหยุดนักขัตฤกษ์'}</span>`
                                 : d.type === 'comp'
-                                ? '<span class="text-[10px] font-black bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded-md">ชดเชย</span>'
+                                ? '<span class="text-[10px] font-black bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md">วันชดเชย</span>'
+                                : d.type === 'weekend'
+                                ? `<span class="text-[10px] font-medium text-zinc-400 px-1 py-0.5">${d.holName}</span>`
                                 : '';
 
                             // เวลา + สถานะ
@@ -6430,12 +6450,17 @@ PAGES['payslip-admin'] = {
 
                             // สถานะ / ปุ่ม
                             let statusCell = '';
-                            if (noRecord) {
+                            const isOffDay = d.type === 'holiday' || d.type === 'weekend' || d.type === 'comp';
+                            if (isOffDay && !d.hasClock) {
+                                // วันหยุด/เสาร์-อาทิตย์ ไม่มีบันทึก → ไม่ต้องชี้แจง
+                                statusCell = '<span class="text-[10px] text-zinc-300 font-medium">วันหยุด</span>';
+                            } else if (noRecord && d.type === 'normal') {
+                                // วันทำงานปกติ ไม่มีบันทึก → ต้องชี้แจง
                                 statusCell = `<button onclick="otOpenExplain('${d.day}')"
                                     class="text-[11px] font-black bg-fuchsia-500 hover:bg-fuchsia-600 text-white px-3 py-1.5 rounded-xl transition-all whitespace-nowrap">
                                     <i class="fa-solid fa-pen-to-square mr-1"></i>ชี้แจง</button>`;
-                            } else {
-                                statusCell = `<span class="text-[10px] font-black bg-green-50 text-green-600 px-2 py-1 rounded-lg whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span>`;
+                            } else if (d.hasClock) {
+                                statusCell = '<span class="text-[10px] font-black bg-green-50 text-green-600 px-2 py-1 rounded-lg whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span>';
                             }
 
                             // Checkbox เบิก OT
