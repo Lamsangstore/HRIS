@@ -483,13 +483,13 @@
         // แสดงผลชั่วโมง → วัน+ชั่วโมง โดยใช้ workHoursPerDay จาก schedule
         function hoursToDisplay(h, schedule) {
             if (h == null || h === '') return '-';
-            // ถ้าไม่ได้ส่ง schedule มา fallback เป็น 8 ชม./วัน
-            const hpd = schedule ? getDayWorkHours(schedule) : 8;
-            const days = Math.floor(h / hpd);
-            const rem  = Math.round((h % hpd) * 10) / 10;
+            if (h === 0) return '0 ชม.';
+            const hpd = schedule ? Math.max(0.5, getDayWorkHours(schedule)) : 8;
+            const days = Math.floor(Math.round(h / hpd * 1000) / 1000);
+            const rem  = Math.round((h - days * hpd) * 10) / 10;
             if (days > 0 && rem > 0) return `${days} วัน ${rem} ชม.`;
             if (days > 0)            return `${days} วัน`;
-            return `${rem} ชม.`;
+            return `${Math.round(h * 10) / 10} ชม.`;
         }
 
         // ================================================================
@@ -1867,10 +1867,8 @@
         unsubBal = onSnapshot(
             doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid),
             snap => {
-                if (snap.exists()) {
-                    myBalance = snap.data();
-                    renderQuota();
-                }
+                myBalance = snap.exists() ? snap.data() : {};
+                renderQuota();
             },
             err => console.warn('leave_balances listener err:', err.message)
         );
@@ -1927,6 +1925,8 @@
                 const rem  = Math.max(0, max - used);
                 const pct  = max > 0 ? Math.min(100, Math.round(used / max * 100)) : 0;
                 const cv   = colorVariants(t.color);
+                const usedD = Math.round(used / hpd * 100) / 100;
+                const maxD  = Math.round(max  / hpd * 100) / 100;
                 html += `
                 <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-5">
                   <div class="flex items-center gap-3 mb-3">
@@ -1935,17 +1935,17 @@
                     </div>
                     <div>
                       <p class="font-black text-zinc-800 text-sm">${t.label}</p>
-                      <p class="text-[10px] text-zinc-400 font-bold">
+                      <p class="text-[10px] font-bold ${rem <= 0 ? 'text-red-500' : 'text-zinc-400'}">
                         คงเหลือ ${hoursToDisplay(rem, mySchedule)}
                       </p>
                     </div>
                   </div>
-                  <div class="w-full bg-zinc-100 rounded-full h-1.5 mb-1">
-                    <div class="h-1.5 rounded-full ${cv.bg.replace('100','400')} transition-all" style="width:${pct}%"></div>
+                  <div class="w-full bg-zinc-100 rounded-full h-1.5 mb-2">
+                    <div class="h-1.5 rounded-full ${cv.bg.replace('100', pct>=100?'500':'400')} transition-all" style="width:${pct}%"></div>
                   </div>
                   <div class="flex justify-between text-[10px] text-zinc-400 font-bold">
-                    <span>ใช้ ${hoursToDisplay(used, mySchedule)}</span>
-                    <span>สิทธิ์ ${hoursToDisplay(max, mySchedule)}</span>
+                    <span class="${used > 0 ? 'text-zinc-600' : ''}">ใช้ ${usedD} วัน</span>
+                    <span>สิทธิ์ ${maxD} วัน</span>
                   </div>
                 </div>`;
             });
@@ -2654,8 +2654,11 @@ PAGES['leave-mgmt'] = {
                         if (balSnap.exists()) {
                             await updateDoc(balRef, { [`${tid}.usedHours`]: newUsed });
                         } else {
-                            // doc ยังไม่มี — สร้างใหม่ด้วย setDoc
-                            await setDoc(balRef, { [tid]: { totalHours: (getLeaveTypeInfo(tid).maxDays * 8), usedHours: newUsed } }, { merge: true });
+                            // doc ยังไม่มี — สร้างใหม่ โดยใช้ hpd จาก schedule จริง
+                            const empSched2 = scheduleCache[r.uid] || { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                            const hpd2 = getDayWorkHours(empSched2);
+                            const defaultTotal = Math.round(getLeaveTypeInfo(tid).maxDays * hpd2 * 100) / 100;
+                            await setDoc(balRef, { [tid]: { totalHours: defaultTotal, usedHours: newUsed } }, { merge: true });
                         }
                         invalidateBalance(r.uid);
                     }
