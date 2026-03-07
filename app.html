@@ -2764,7 +2764,7 @@ PAGES['leave-admin'] = {
 
     init: async (user, profile, db, APP_ID) => {
         if (profile.role !== 'admin') { navigateTo('home'); return; }
-        const { collection, doc, getDoc, setDoc, updateDoc, onSnapshot }
+        const { collection, doc, getDoc, setDoc, updateDoc, onSnapshot, getDocs, query, where }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
         let allEmps   = [];
@@ -2944,9 +2944,14 @@ PAGES['leave-admin'] = {
               <p class="text-[10px] text-zinc-400 mt-3 text-center font-medium">
                 กรอกเป็น "วัน" — ระบบแปลงเป็นชั่วโมงอัตโนมัติตาม schedule
               </p>
-              <button onclick="saveQuota()" class="w-full mt-4 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
-                <i class="fa-solid fa-save mr-2"></i> บันทึกโควต้าวันลา
-              </button>
+              <div class="mt-4 flex gap-3">
+                <button onclick="recalcUsedHours()" class="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black py-3 rounded-xl transition-all text-sm border-2 border-zinc-200">
+                  <i class="fa-solid fa-rotate mr-2 text-zinc-500"></i> คำนวณจากประวัติการลา
+                </button>
+                <button onclick="saveQuota()" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-3 rounded-xl transition-all text-sm shadow-md">
+                  <i class="fa-solid fa-save mr-2"></i> บันทึกโควต้าวันลา
+                </button>
+              </div>
             </div>`;
 
             // Bind daily hours preview (อัปเดตทันทีเมื่อเปลี่ยนเวลา/พัก)
@@ -2993,6 +2998,62 @@ PAGES['leave-admin'] = {
         };
 
        
+        window.recalcUsedHours = async () => {
+            if (!selectedEmpUid) return;
+            const btn = document.querySelector('button[onclick="recalcUsedHours()"]');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังคำนวณ...'; }
+            try {
+                // ดึง approved requests ทั้งหมดของพนักงานคนนี้
+                const reqSnap = await getDocs(query(
+                    collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'),
+                    where('uid', '==', selectedEmpUid),
+                    where('status', '==', 'approved')
+                ));
+                // รวม totalHours แยกตาม type
+                const usedMap = {};
+                reqSnap.docs.forEach(d => {
+                    const r = d.data();
+                    const tid = r.type;
+                    if (!tid) return;
+                    usedMap[tid] = Math.round(((usedMap[tid] || 0) + (r.totalHours || 0)) * 100) / 100;
+                });
+                // อ่าน balance ปัจจุบัน
+                const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid);
+                const balSnap = await getDoc(balRef);
+                // สร้าง update payload ด้วย dotted path
+                const updatePayload = {};
+                Object.entries(usedMap).forEach(([tid, hrs]) => {
+                    updatePayload[`${tid}.usedHours`] = hrs;
+                });
+                // ถ้า type ไม่มีใน usedMap แปลว่า usedHours = 0
+                ['sick','personal','vacation','maternity','ordain','military'].forEach(tid => {
+                    if (!(tid in usedMap)) updatePayload[`${tid}.usedHours`] = 0;
+                });
+                if (balSnap.exists()) {
+                    await updateDoc(balRef, updatePayload);
+                } else {
+                    // doc ไม่มีเลย — สร้างใหม่
+                    const schedSnap2 = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', selectedEmpUid));
+                    const empSched2 = schedSnap2.exists() ? schedSnap2.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                    const hpd2 = getDayWorkHours(empSched2);
+                    const initDoc = {};
+                    LEAVE_TYPES.filter(t => t.maxDays > 0).forEach(t => {
+                        initDoc[t.id] = { totalHours: Math.round(t.maxDays * hpd2 * 100)/100, usedHours: usedMap[t.id] || 0 };
+                    });
+                    await setDoc(balRef, initDoc);
+                }
+                // reload panel
+                const emp = allEmps.find(e => e.uid === selectedEmpUid);
+                if (emp) await selectAdminEmp(selectedEmpUid);
+                const total = Object.values(usedMap).reduce((a,b)=>a+b,0);
+                showToast(`✅ คำนวณจาก ${reqSnap.size} คำขอ รวม ${total.toFixed(1)} ชม.`, 'success');
+            } catch(e) {
+                showToast('❌ ' + e.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2 text-zinc-500"></i> คำนวณจากประวัติการลา'; }
+            }
+        };
+
         window.saveQuota = async () => {
             if (!selectedEmpUid) return;
         
@@ -3041,7 +3102,7 @@ PAGES['leave-admin'] = {
 
         return () => {
             unsub();
-            ['filterAdminEmpList','selectAdminEmp','toggleWorkDay','saveSchedule','saveQuota'].forEach(k => delete window[k]);
+            ['filterAdminEmpList','selectAdminEmp','toggleWorkDay','saveSchedule','saveQuota','recalcUsedHours'].forEach(k => delete window[k]);
         };
     }
 };
