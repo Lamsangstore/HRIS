@@ -1836,7 +1836,7 @@
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
-        const { collection, doc, getDoc, addDoc, onSnapshot, query, where, orderBy, updateDoc }
+        const { collection, doc, getDoc, getDocs, addDoc, onSnapshot, query, where, orderBy, updateDoc }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
         let mySchedule = { workDays: [1,2,3,4,5], workStart: '08:00', workEnd: '17:00', breakMinutes: 60 };
@@ -1851,7 +1851,7 @@
         const schedSnap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', user.uid));
         if (schedSnap.exists()) mySchedule = { ...mySchedule, ...schedSnap.data() };
 
-        // โหลดโควต้าวันลา
+        // โหลดโควต้าวันลา (one-shot ก่อน เพื่อ render เร็ว)
         const balSnap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid));
         if (balSnap.exists()) myBalance = balSnap.data();
 
@@ -1859,16 +1859,55 @@
         buildLeaveTypeGrid();
         setDefaultDates();
 
-        // Real-time คำขอของฉัน
-        const unsub = onSnapshot(
-            query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'),
-                  where('uid', '==', user.uid), orderBy('createdAt', 'desc')),
+        // Real-time balance — อัปเดตโควต้าทันทีที่ admin approve/reject
+        let unsubBal = null;
+        unsubBal = onSnapshot(
+            doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid),
             snap => {
-                myRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderMyRequests();
-                renderCalendar();
-            }
+                if (snap.exists()) {
+                    myBalance = snap.data();
+                    renderQuota();
+                }
+            },
+            err => console.warn('leave_balances listener err:', err.message)
         );
+
+        // Real-time คำขอของฉัน — มี error handler ป้องกัน index missing
+        let unsubReq = null;
+        async function loadMyRequests() {
+            try {
+                // ลอง realtime ก่อน (ต้องมี composite index uid+createdAt)
+                unsubReq = onSnapshot(
+                    query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'),
+                          where('uid', '==', user.uid), orderBy('createdAt', 'desc')),
+                    snap => {
+                        myRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderMyRequests();
+                        renderCalendar();
+                    },
+                    async err => {
+                        // index ยังไม่มี → fallback getDocs + sort ฝั่ง client
+                        console.warn('leave_requests onSnapshot err (fallback to getDocs):', err.message);
+                        try {
+                            const snap2 = await getDocs(
+                                query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'),
+                                      where('uid', '==', user.uid))
+                            );
+                            myRequests = snap2.docs
+                                .map(d => ({ id: d.id, ...d.data() }))
+                                .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                            renderMyRequests();
+                            renderCalendar();
+                        } catch(e2) {
+                            console.error('leave_requests getDocs fallback failed:', e2);
+                        }
+                    }
+                );
+            } catch(e) {
+                console.error('loadMyRequests outer error:', e);
+            }
+        }
+        await loadMyRequests();
         // ================================================================
         // แก้ใน PAGES['leave'].init — ส่วน renderQuota
         // แทนที่ function renderQuota() เดิม
@@ -2257,7 +2296,8 @@
         }
 
         return () => {
-            unsub();
+            if (typeof unsubReq === 'function') unsubReq();
+            if (typeof unsubBal === 'function') unsubBal();
             ['selectLeaveType','toggleHourly','openLeaveModal','closeLeaveModal',
              'submitLeaveRequest','cancelLeaveRequest','leaveCalPrev','leaveCalNext',
              'switchLeaveTab'].forEach(k => delete window[k]);
