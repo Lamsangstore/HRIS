@@ -508,6 +508,7 @@
         // ================================================================
         // PAGE: home
         // ================================================================
+        
         PAGES['home'] = {
             title: 'หน้าหลัก',
             html: `
@@ -590,7 +591,7 @@
         </div>`,
         
             init: async (user, profile, db, APP_ID) => {
-                const { collection, query, where, orderBy, onSnapshot, limit, getDocs }
+                const { collection, query, where, orderBy, onSnapshot, getDocs }
                     = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         
                 // ── วันที่ topbar
@@ -640,11 +641,7 @@
                 }
         
                 // ── วันลาคงเหลือ
-                const balSnap = await getDocs(
-                    query(collection(db,'artifacts',APP_ID,'public','data','leave_balances'),
-                          where('__name__','==',user.uid))
-                );
-                // getDocs by doc id workaround
+                // แก้: ลบ getDocs ที่ซ้ำซ้อน ใช้แค่ getDoc อย่างเดียว
                 const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 const balDoc = await getDoc(doc(db,'artifacts',APP_ID,'public','data','leave_balances',user.uid));
                 const bal = balDoc.exists() ? balDoc.data() : {};
@@ -722,20 +719,16 @@
                     snap => {
                         const annEl = document.getElementById('ann-list');
                         if (!annEl) return;
-        
-                        // filter published ใน JS แทน (ไม่ต้องการ composite index)
                         const docs = snap.docs
                             .map(d => d.data())
                             .filter(a => a.published === true)
                             .slice(0, 20);
-        
                         if (!docs.length) {
                             annEl.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-100 p-8 text-center text-zinc-300">
                                 <i class="fa-solid fa-bullhorn text-4xl mb-3 opacity-30"></i>
                                 <p class="font-bold text-sm">ยังไม่มีประกาศ</p></div>`;
                             return;
                         }
-        
                         annEl.innerHTML = docs.map(a => {
                             const dateStr = a.createdAt
                                 ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})
@@ -746,9 +739,7 @@
                                 urgent:  'bg-red-100 text-red-700',
                                 success: 'bg-green-100 text-green-700'
                             };
-                            const tagLabel = {
-                                info:'ทั่วไป', warning:'แจ้งเตือน', urgent:'ด่วน!', success:'ข่าวดี'
-                            };
+                            const tagLabel = { info:'ทั่วไป', warning:'แจ้งเตือน', urgent:'ด่วน!', success:'ข่าวดี' };
                             const tc = tagColor[a.tag||'info'] || tagColor.info;
                             const tl = tagLabel[a.tag||'info'] || 'ทั่วไป';
                             return `<div class="ann-card bg-white rounded-2xl border border-zinc-100 overflow-hidden">
@@ -764,7 +755,6 @@
                         }).join('');
                     },
                     err => {
-                        // แสดง error แทนหมุนค้าง
                         const annEl = document.getElementById('ann-list');
                         if (annEl) annEl.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-100 p-6 text-center text-zinc-400 text-sm">
                             <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-2xl mb-2"></i>
@@ -2124,7 +2114,6 @@ PAGES['leave-mgmt'] = {
 .req-card:hover { box-shadow: 0 4px 20px -4px rgba(0,0,0,.1); }
 </style>
 <div class="p-6 lg:p-8 max-w-7xl mx-auto">
-  <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
       <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติการลา</h2>
@@ -2144,8 +2133,6 @@ PAGES['leave-mgmt'] = {
       </select>
     </div>
   </div>
-
-  <!-- Summary stats -->
   <div class="grid grid-cols-3 gap-4 mb-8">
     <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
       <p class="text-3xl font-black text-yellow-600" id="stat-pending">-</p>
@@ -2160,8 +2147,6 @@ PAGES['leave-mgmt'] = {
       <p class="text-xs text-zinc-400 font-bold uppercase mt-1">ไม่อนุมัติ (เดือนนี้)</p>
     </div>
   </div>
-
-  <!-- Request list -->
   <div id="mgmt-request-list" class="space-y-4">
     <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
   </div>
@@ -2193,11 +2178,10 @@ PAGES['leave-mgmt'] = {
         if (profile.role !== 'admin' && profile.role !== 'manager') {
             navigateTo('home'); return;
         }
-        const { collection, doc, onSnapshot, updateDoc, query, orderBy, where, getDoc }
+        const { collection, doc, onSnapshot, updateDoc, query, orderBy, getDoc }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
-        let allRequests = [];
-        let pendingAction = null; // { id, action }
+        let allRequests = [], pendingAction = null;
 
         const unsub = onSnapshot(
             query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'), orderBy('createdAt', 'desc')),
@@ -2245,7 +2229,6 @@ PAGES['leave-mgmt'] = {
                 return `
                 <div class="req-card bg-white rounded-2xl border border-zinc-200 p-5 lg:p-6">
                   <div class="flex flex-col lg:flex-row gap-4">
-                    <!-- Left: Employee info -->
                     <div class="flex items-center gap-4 lg:w-56 shrink-0">
                       <img src="${avatarUrl(r)}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
                       <div class="min-w-0">
@@ -2254,7 +2237,6 @@ PAGES['leave-mgmt'] = {
                         <p class="text-[10px] text-zinc-400">${r.branch || ''}</p>
                       </div>
                     </div>
-                    <!-- Center: Leave detail -->
                     <div class="flex-1">
                       <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span class="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full ${cv.badge}">
@@ -2270,7 +2252,6 @@ PAGES['leave-mgmt'] = {
                       ${r.attachment ? `<a href="${r.attachment}" target="_blank" class="text-xs text-yellow-600 hover:text-yellow-700 font-bold mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> ดูเอกสารแนบ</a>` : ''}
                       ${r.approverNote ? `<p class="text-xs text-zinc-500 mt-1 bg-zinc-50 px-3 py-1.5 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-zinc-400"></i>${r.approverNote}</p>` : ''}
                     </div>
-                    <!-- Right: Actions -->
                     ${isPending ? `
                     <div class="flex lg:flex-col gap-2 shrink-0 justify-end">
                       <button onclick="openActionModal('${r.id}','approve')"
@@ -2309,9 +2290,7 @@ PAGES['leave-mgmt'] = {
             pendingAction = { id, action };
             const isApprove = action === 'approve';
             const header = document.getElementById('action-modal-header');
-            if (header) {
-                header.className = `px-8 py-5 ${isApprove ? 'bg-green-600' : 'bg-red-600'}`;
-            }
+            if (header) header.className = `px-8 py-5 ${isApprove ? 'bg-green-600' : 'bg-red-600'}`;
             const title = document.getElementById('action-modal-title');
             if (title) title.textContent = isApprove ? '✅ อนุมัติคำขอลา' : '❌ ไม่อนุมัติคำขอลา';
             const sub = document.getElementById('action-modal-sub');
@@ -2344,15 +2323,12 @@ PAGES['leave-mgmt'] = {
             btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
             try {
                 const r = allRequests.find(x => x.id === id);
-                const updatePayload = {
+                await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: action === 'approve' ? 'approved' : 'rejected',
                     approvedBy: profile.name,
                     approvedAt: new Date().toISOString(),
                     approverNote: note || '',
-                };
-                await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), updatePayload);
-
-                // ถ้าอนุมัติ → หักโควต้าจาก leave_balances
+                });
                 if (action === 'approve' && r) {
                     const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', r.uid);
                     const balSnap = await getDoc(balRef);
@@ -2361,21 +2337,15 @@ PAGES['leave-mgmt'] = {
                     const prev = (bal[tid]?.usedHours) || 0;
                     await updateDoc(balRef, { [`${tid}.usedHours`]: prev + (r.totalHours || 0) });
                 }
-
                 showToast(action === 'approve' ? '✅ อนุมัติคำขอลาแล้ว' : '❌ ไม่อนุมัติคำขอลา', action === 'approve' ? 'success' : 'info');
                 closeActionModal();
             } catch (e) { showToast('❌ ' + e.message, 'error'); }
             finally { btn.disabled = false; }
         };
 
-        function fmtDate(ds) {
-            if (!ds) return '-';
-            return new Date(ds).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-        }
-
-        return () => {
-            unsub();
-            window.mgrCancelLeave = async (id) => {
+        // แก้: ย้าย mgrCancelLeave ออกจาก return cleanup มาไว้ที่นี่
+        // ให้ถูก register เป็น window function ได้ทันทีตอน init
+        window.mgrCancelLeave = async (id) => {
             const r = allRequests.find(x => x.id === id);
             if (!r) return;
             if (!confirm(`ยกเลิกการลาของ "${r.employeeName}" และคืนสิทธิ์ ${r.totalHours} ชม. ใช่หรือไม่?`)) return;
@@ -2386,7 +2356,6 @@ PAGES['leave-mgmt'] = {
                     cancelledBy: profile.name,
                     cancelNote: 'ยกเลิกโดยหัวหน้า'
                 });
-                // คืนชั่วโมง
                 const leaveKey = ['sick','personal','vacation'].includes(r.type) ? r.type : null;
                 if (leaveKey && r.totalHours > 0) {
                     const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', r.uid);
@@ -2401,7 +2370,15 @@ PAGES['leave-mgmt'] = {
             } catch(e) { showToast('❌ ' + e.message, 'error'); }
         };
 
-                ['filterRequests','openActionModal','closeActionModal','confirmAction','mgrCancelLeave'].forEach(k => delete window[k]);
+        function fmtDate(ds) {
+            if (!ds) return '-';
+            return new Date(ds).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        return () => {
+            unsub();
+            // แก้: เพิ่ม mgrCancelLeave เข้า cleanup ด้วย
+            ['filterRequests','openActionModal','closeActionModal','confirmAction','mgrCancelLeave'].forEach(k => delete window[k]);
         };
     }
 };
@@ -2679,15 +2656,15 @@ PAGES['leave-admin'] = {
        
         window.saveQuota = async () => {
             if (!selectedEmpUid) return;
-            // โหลด schedule ของพนักงานคนที่เลือกเพื่อได้ hpd ที่ถูกต้อง
-            const { doc: fDoc, getDoc: fGetDoc }
-                = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-            const schedSnap = await fGetDoc(
-                fDoc(db,'artifacts',APP_ID,'public','data','work_schedules',selectedEmpUid)
+        
+            // แก้: ใช้ doc และ getDoc จาก scope ของ init โดยตรง
+            // ไม่ import Firestore ใหม่ซ้ำอีกครั้ง
+            const schedSnap = await getDoc(
+                doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', selectedEmpUid)
             );
             const empSched = schedSnap.exists()
                 ? schedSnap.data()
-                : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                : { workStart: '08:00', workEnd: '17:00', breakMinutes: 60 };
             const hpd = getDayWorkHours(empSched);
         
             const payload = {};
@@ -2695,21 +2672,23 @@ PAGES['leave-admin'] = {
                 const el = document.getElementById(`quota-${t.id}`);
                 if (!el) return;
                 const inputDays = parseFloat(el.value) || 0;
-                // input เป็น "วัน" → แปลงเป็นชั่วโมงตาม hpd จริง
                 payload[t.id] = {
                     totalHours: Math.round(inputDays * hpd * 100) / 100,
                     usedHours: 0,
                 };
             });
+        
             try {
-                const { doc: fDoc2, setDoc: fSetDoc }
-                    = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                await fSetDoc(
-                    fDoc2(db,'artifacts',APP_ID,'public','data','leave_balances',selectedEmpUid),
-                    payload, { merge: true }
+                // แก้: ใช้ setDoc และ doc จาก scope ของ init โดยตรง
+                await setDoc(
+                    doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid),
+                    payload,
+                    { merge: true }
                 );
-                showToast('✅ บันทึกโควต้าวันลาแล้ว (คำนวณจาก '+hpd.toFixed(1)+' ชม./วัน)', 'success');
-            } catch(e) { showToast('❌ '+e.message,'error'); }
+                showToast('✅ บันทึกโควต้าวันลาแล้ว (คำนวณจาก ' + hpd.toFixed(1) + ' ชม./วัน)', 'success');
+            } catch(e) {
+                showToast('❌ ' + e.message, 'error');
+            }
         };
 
         return () => {
@@ -3785,6 +3764,7 @@ PAGES['time-approve'] = {
 // ================================================================
 // PAGE: time-import — Admin นำเข้าเวลางาน
 // ================================================================
+
 PAGES['time-import'] = {
     title: 'นำเข้าเวลางาน',
     html: `
@@ -3854,7 +3834,13 @@ PAGES['time-import'] = {
         <p class="text-xs font-black text-zinc-500 mb-2 uppercase tracking-widest" id="ti-csv-count">-</p>
         <div class="max-h-48 overflow-y-auto rounded-xl border border-zinc-200">
           <table class="w-full text-xs">
-            <thead><tr class="bg-zinc-50 border-b"><th class="px-3 py-2 text-left font-black text-zinc-500">รหัส</th><th class="px-3 py-2 text-left font-black text-zinc-500">วันที่</th><th class="px-3 py-2 text-left font-black text-zinc-500">เข้า</th><th class="px-3 py-2 text-left font-black text-zinc-500">ออก</th><th class="px-3 py-2 text-left font-black text-zinc-500">สถานะ</th></tr></thead>
+            <thead><tr class="bg-zinc-50 border-b">
+              <th class="px-3 py-2 text-left font-black text-zinc-500">รหัส</th>
+              <th class="px-3 py-2 text-left font-black text-zinc-500">วันที่</th>
+              <th class="px-3 py-2 text-left font-black text-zinc-500">เข้า</th>
+              <th class="px-3 py-2 text-left font-black text-zinc-500">ออก</th>
+              <th class="px-3 py-2 text-left font-black text-zinc-500">สถานะ</th>
+            </tr></thead>
             <tbody id="ti-csv-rows"></tbody>
           </table>
         </div>
@@ -3869,7 +3855,9 @@ PAGES['time-import'] = {
   <!-- Recent imports -->
   <div class="mt-6 bg-white rounded-2xl border border-zinc-200 overflow-hidden">
     <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-      <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest"><i class="fa-solid fa-history text-yellow-500 mr-2"></i> รายการที่นำเข้าล่าสุด</h3>
+      <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-history text-yellow-500 mr-2"></i> รายการที่นำเข้าล่าสุด
+      </h3>
       <span id="ti-log-count" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full">-</span>
     </div>
     <div id="ti-log-list" class="divide-y divide-zinc-100 max-h-64 overflow-y-auto">
@@ -3885,33 +3873,34 @@ PAGES['time-import'] = {
 
         let employees = [], csvData = [];
 
-        // Load employees
+        // โหลดรายชื่อพนักงาน
         const empSnap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','users'));
         employees = empSnap.docs.map(d=>d.data()).filter(e=>e.uid);
         const sel = document.getElementById('ti-emp');
-        if(sel) {
+        if (sel) {
             employees.sort((a,b)=>a.name.localeCompare(b.name,'th')).forEach(e => {
                 const opt = document.createElement('option');
-                opt.value = e.uid; opt.textContent = `${e.name} (${e.employeeCode||''})`;
+                opt.value = e.uid;
+                opt.textContent = `${e.name} (${e.employeeCode||''})`;
                 sel.appendChild(opt);
             });
         }
 
-        // Set today
+        // ตั้งวันที่เริ่มต้นเป็นวันนี้
         const ti = document.getElementById('ti-date');
-        if(ti) ti.value = new Date().toISOString().slice(0,10);
+        if (ti) ti.value = new Date().toISOString().slice(0,10);
 
-        // Recent imports
+        // Recent imports listener
         const unsub = onSnapshot(
             query(collection(db,'artifacts',APP_ID,'public','data','time_logs'),
                   where('isImported','==',true), orderBy('importedAt','desc'), limit(50)),
             snap => {
                 const logs = snap.docs.map(d=>({id:d.id,...d.data()}));
                 const cnt = document.getElementById('ti-log-count');
-                if(cnt) cnt.textContent = logs.length + ' รายการ';
+                if (cnt) cnt.textContent = logs.length + ' รายการ';
                 const el = document.getElementById('ti-log-list');
-                if(!el) return;
-                if(!logs.length){ el.innerHTML='<div class="p-6 text-center text-zinc-400 text-sm">ยังไม่มีรายการ</div>'; return; }
+                if (!el) return;
+                if (!logs.length) { el.innerHTML='<div class="p-6 text-center text-zinc-400 text-sm">ยังไม่มีรายการ</div>'; return; }
                 el.innerHTML = logs.map(l => {
                     const emp = employees.find(e=>e.uid===l.uid);
                     return `<div class="flex items-center gap-4 px-5 py-3">
@@ -3933,7 +3922,7 @@ PAGES['time-import'] = {
             const date = document.getElementById('ti-date')?.value;
             const tin  = document.getElementById('ti-in')?.value;
             const tout = document.getElementById('ti-out')?.value;
-            const note = document.getElementById('ti-note')?.value||'นำเข้าโดย Admin';
+            const note = document.getElementById('ti-note')?.value || 'นำเข้าโดย Admin';
             if (!uid || !date) { showToast('กรุณาเลือกพนักงานและวันที่', 'error'); return; }
             if (!tin && !tout) { showToast('กรุณาใส่เวลาอย่างน้อย 1 รายการ', 'error'); return; }
             const btn = document.getElementById('ti-save-btn');
@@ -3951,27 +3940,35 @@ PAGES['time-import'] = {
                     });
                 }
                 showToast(`✅ นำเข้า ${toImport.length} รายการสำเร็จ`, 'success');
-                document.getElementById('ti-in').value='';
-                document.getElementById('ti-out').value='';
-                document.getElementById('ti-note').value='';
+                document.getElementById('ti-in').value = '';
+                document.getElementById('ti-out').value = '';
+                document.getElementById('ti-note').value = '';
             } catch(e) { showToast('❌ '+e.message,'error'); }
             finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-plus mr-2"></i> เพิ่มรายการ'; }
         };
 
         window.tiParseCSV = (input) => {
-            const file = input.files[0]; if(!file) return;
+            const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                const lines = e.target.result.split('\n').filter(l=>l.trim());
+                // แก้: ใช้ /\r?\n/ แทน '\n' เพื่อรองรับ Windows CSV ที่ใช้ \r\n
+                const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
                 csvData = [];
                 const rows = [];
-                lines.slice(1).forEach((line, i) => {
-                    const parts = line.split(',').map(s=>s.trim().replace(/"/g,''));
+                lines.slice(1).forEach((line) => {
+                    // แก้: trim แต่ละ field เพื่อกำจัด \r ที่อาจติดมาจาก Windows
+                    const parts = line.split(',').map(s => s.trim().replace(/"/g,''));
                     const [code, date, timeIn, timeOut, note] = parts;
                     if (!code || !date) return;
-                    const emp = employees.find(e=>e.employeeCode===code||e.uid===code);
+                    const emp = employees.find(e => e.employeeCode === code || e.uid === code);
                     const status = emp ? '✅ พบ' : '❌ ไม่พบ';
-                    csvData.push({ uid: emp?.uid, code, date, timeIn, timeOut, note: note||'Import CSV', found: !!emp });
+                    csvData.push({
+                        uid: emp?.uid, code, date,
+                        timeIn:  timeIn  || '',
+                        timeOut: timeOut || '',
+                        note: note || 'Import CSV',
+                        found: !!emp
+                    });
                     rows.push(`<tr class="border-b border-zinc-100 ${!emp?'bg-red-50':''}">
                       <td class="px-3 py-2 font-bold">${code}</td>
                       <td class="px-3 py-2">${date}</td>
@@ -3981,7 +3978,8 @@ PAGES['time-import'] = {
                     </tr>`);
                 });
                 document.getElementById('ti-csv-rows').innerHTML = rows.join('');
-                document.getElementById('ti-csv-count').textContent = `พบ ${csvData.length} แถว (พนักงานที่รู้จัก ${csvData.filter(r=>r.found).length} คน)`;
+                document.getElementById('ti-csv-count').textContent =
+                    `พบ ${csvData.length} แถว (พนักงานที่รู้จัก ${csvData.filter(r=>r.found).length} คน)`;
                 document.getElementById('ti-import-count').textContent = csvData.filter(r=>r.found).length;
                 document.getElementById('ti-csv-preview').classList.remove('hidden');
             };
@@ -3989,16 +3987,16 @@ PAGES['time-import'] = {
         };
 
         window.tiImportCSV = async () => {
-            const valid = csvData.filter(r=>r.found);
+            const valid = csvData.filter(r => r.found);
             if (!valid.length) { showToast('ไม่มีรายการที่นำเข้าได้', 'error'); return; }
             const btn = document.getElementById('ti-import-btn');
-            btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังนำเข้า...';
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังนำเข้า...';
             try {
                 let count = 0;
                 for (const row of valid) {
                     const toAdd = [];
-                    if (row.timeIn)  toAdd.push({ type:'clock_in',  time:row.timeIn });
-                    if (row.timeOut) toAdd.push({ type:'clock_out', time:row.timeOut });
+                    if (row.timeIn)  toAdd.push({ type:'clock_in',  time: row.timeIn });
+                    if (row.timeOut) toAdd.push({ type:'clock_out', time: row.timeOut });
                     for (const e of toAdd) {
                         const ts = new Date(`${row.date}T${e.time}:00`).toISOString();
                         await addDoc(collection(db,'artifacts',APP_ID,'public','data','time_logs'), {
@@ -4019,13 +4017,16 @@ PAGES['time-import'] = {
         window.tiDownloadTemplate = () => {
             const csv = 'employee_code,date,time_in,time_out,note\nEMP001,2025-03-01,08:05,17:30,import\nEMP002,2025-03-01,08:10,17:45,\n';
             const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-            const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:'time_import_template.csv'});
+            const a = Object.assign(document.createElement('a'), {
+                href: URL.createObjectURL(blob),
+                download: 'time_import_template.csv'
+            });
             a.click();
         };
 
         return () => {
             unsub();
-            ['tiSaveOne','tiParseCSV','tiImportCSV','tiDownloadTemplate'].forEach(k=>delete window[k]);
+            ['tiSaveOne','tiParseCSV','tiImportCSV','tiDownloadTemplate'].forEach(k => delete window[k]);
         };
     }
 };
