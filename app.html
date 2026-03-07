@@ -2949,6 +2949,74 @@ PAGES['payroll'] = {
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     LINE Payroll Send Modal
+═══════════════════════════════════════════════════════ -->
+<div id="pr-line-modal" class="fixed inset-0 z-[300] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="prLineClose()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="bg-[#06C755] px-7 py-5 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+          <i class="fa-brands fa-line text-white text-2xl"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-white text-lg leading-tight">ส่งสลิปเงินเดือนทาง LINE</h3>
+          <p id="pr-line-period-sub" class="text-green-100 text-[11px] font-bold uppercase tracking-widest mt-0.5">กำลังโหลด...</p>
+        </div>
+      </div>
+      <button onclick="prLineClose()" class="text-white/70 hover:text-white transition-colors">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="px-6 py-3 border-b border-zinc-100 flex items-center gap-3 shrink-0 bg-zinc-50">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="pr-line-all" onchange="prLineToggleAll(this.checked)"
+          class="w-4 h-4 accent-[#06C755] cursor-pointer">
+        <span class="text-sm font-bold text-zinc-700">เลือกทั้งหมด</span>
+      </label>
+      <span id="pr-line-sel-cnt" class="text-xs font-black text-[#06C755] bg-green-50 px-3 py-1 rounded-full ml-auto">0 คน</span>
+      <div class="relative">
+        <i class="fa-solid fa-search absolute left-3 top-2.5 text-zinc-400 text-xs"></i>
+        <input type="text" id="pr-line-search" oninput="prLineFilter()"
+          placeholder="ค้นหา..." class="border-2 border-zinc-200 rounded-xl pl-8 pr-3 py-2 text-xs font-medium focus:border-[#06C755] focus:outline-none w-40">
+      </div>
+    </div>
+
+    <!-- Employee list -->
+    <div class="flex-1 overflow-y-auto px-6 py-4">
+      <div id="pr-line-list" class="space-y-2">
+        <div class="text-center py-10 text-zinc-300">
+          <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-zinc-100 flex items-center gap-3 shrink-0 bg-white">
+      <div class="flex-1">
+        <p class="text-xs text-zinc-500 font-medium">ส่งเฉพาะพนักงานที่มี LINE User ID เท่านั้น</p>
+        <p id="pr-line-no-id-warn" class="text-[10px] text-amber-600 font-bold hidden">
+          <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+          <span id="pr-line-no-id-cnt"></span> คนไม่มี LINE ID (จะไม่ถูกส่ง)
+        </p>
+      </div>
+      <button onclick="prLineClose()"
+        class="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">
+        ยกเลิก
+      </button>
+      <button id="pr-line-send-btn" onclick="prLineSend()"
+        class="px-6 py-2.5 bg-[#06C755] hover:bg-[#05b04a] text-white font-black rounded-xl text-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
+        <i class="fa-brands fa-line"></i>
+        <span id="pr-line-send-label">ส่งสลิป</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Create Period -->
 <div id="pr-modal-create" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseCreate()"></div>
@@ -3119,6 +3187,9 @@ PAGES['payroll'] = {
                 ${p.status==='final'?`<button onclick="prPaid('${p.id}')" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm"><i class="fa-solid fa-check-double"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22</button>`:''}
                 <button onclick="prXLSX('${p.id}')" class="inline-flex items-center gap-2 border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
                   <i class="fa-solid fa-file-excel"></i> Export XLSX
+                </button>
+                <button onclick="prLineOpen('${p.id}')" class="inline-flex items-center gap-2 bg-[#06C755] hover:bg-[#05b04a] text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
+                  <i class="fa-brands fa-line"></i> ส่งสลิปทาง LINE
                 </button>
                 ${isDraft?`<button onclick="prDel('${p.id}')" class="ml-auto inline-flex items-center gap-1.5 text-red-400 hover:text-red-600 font-black text-xs px-3 py-2 rounded-lg hover:bg-red-50 transition-all"><i class="fa-solid fa-trash-can"></i> \u0e25\u0e1a\u0e07\u0e27\u0e14</button>`:''}
               </div>
@@ -3522,9 +3593,207 @@ PAGES['payroll'] = {
         return () => {
             unsubP();
             if(unsubRec) unsubRec();
+
+        // ── LINE Payroll Send Logic ──────────────────────────────────
+        let _lineActivePid = null;
+        let _lineRecords   = [];
+
+        window.prLineOpen = (pid) => {
+            _lineActivePid = pid;
+            const p = periods.find(x => x.id === pid);
+            if (!p) return;
+            const recs = records.filter(r => r.periodId === pid);
+            _lineRecords = recs;
+
+            const sub = document.getElementById('pr-line-period-sub');
+            if (sub) sub.textContent = `งวดที่ ${p.periodNo}/${p.year}  ·  ${fmtD(p.startDate)} – ${fmtD(p.endDate)}`;
+
+            // count no-lineId
+            const noId = recs.filter(r => !r.lineId).length;
+            const warnEl = document.getElementById('pr-line-no-id-warn');
+            const cntEl  = document.getElementById('pr-line-no-id-cnt');
+            if (warnEl && cntEl) {
+                if (noId > 0) { warnEl.classList.remove('hidden'); cntEl.textContent = noId; }
+                else            { warnEl.classList.add('hidden'); }
+            }
+
+            // reset
+            const allCb = document.getElementById('pr-line-all');
+            if (allCb) allCb.checked = false;
+            const searchEl = document.getElementById('pr-line-search');
+            if (searchEl) searchEl.value = '';
+
+            prLineFilter();
+            document.getElementById('pr-line-modal')?.classList.remove('hidden');
+        };
+
+        window.prLineClose = () => {
+            document.getElementById('pr-line-modal')?.classList.add('hidden');
+        };
+
+        window.prLineFilter = () => {
+            const q = (document.getElementById('pr-line-search')?.value || '').toLowerCase();
+            const list = document.getElementById('pr-line-list');
+            if (!list) return;
+            const filtered = _lineRecords.filter(r =>
+                !q || r.name.toLowerCase().includes(q) ||
+                (r.branch||'').toLowerCase().includes(q) ||
+                (r.employeeCode||'').toLowerCase().includes(q)
+            );
+            list.innerHTML = filtered.length ? filtered.map(r => {
+                const hasLine = !!r.lineId;
+                const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=06C755&color=fff&bold=true`;
+                return `<label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zinc-100 hover:border-[#06C755] cursor-pointer transition-all group ${hasLine ? '' : 'opacity-50 cursor-not-allowed'}" ${!hasLine ? 'title="ไม่มี LINE User ID"' : ''}>
+                    <input type="checkbox" class="pr-line-cb w-4 h-4 accent-[#06C755] cursor-pointer shrink-0" data-rid="${r.id}" ${!hasLine ? 'disabled' : ''}>
+                    <img src="${av}" class="w-9 h-9 rounded-full object-cover border-2 border-zinc-200 group-hover:border-[#06C755] transition-all shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-zinc-800 truncate">${r.name}${r.nickname ? ` <span class="text-zinc-400 font-normal">(${r.nickname})</span>` : ''}</p>
+                        <p class="text-[10px] text-zinc-400 font-medium truncate">${r.branch||''} · ${r.position||''}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="text-sm font-black text-zinc-800 num">฿${fmt(r.netPay||0)}</p>
+                        ${hasLine
+                            ? '<span class="text-[9px] font-black text-[#06C755] bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-wider">มี LINE</span>'
+                            : '<span class="text-[9px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full uppercase tracking-wider">ไม่มี LINE ID</span>'}
+                    </div>
+                </label>`;
+            }).join('') : '<p class="text-center text-zinc-400 text-sm py-8">ไม่พบรายการ</p>';
+            prLineUpdateCount();
+        };
+
+        window.prLineToggleAll = (checked) => {
+            document.querySelectorAll('.pr-line-cb:not(:disabled)').forEach(cb => { cb.checked = checked; });
+            prLineUpdateCount();
+        };
+
+        function prLineUpdateCount() {
+            const sel = document.querySelectorAll('.pr-line-cb:checked').length;
+            const el = document.getElementById('pr-line-sel-cnt');
+            if (el) el.textContent = `${sel} คน`;
+            const allEl = document.getElementById('pr-line-all');
+            const total = document.querySelectorAll('.pr-line-cb:not(:disabled)').length;
+            if (allEl) allEl.checked = total > 0 && sel === total;
+            document.getElementById('pr-line-list')?.querySelectorAll('label').forEach(lbl => {
+                lbl.addEventListener('change', prLineUpdateCount);
+            });
+        }
+        document.getElementById('pr-line-list')?.addEventListener('change', prLineUpdateCount);
+
+        window.prLineSend = async () => {
+            const pid = _lineActivePid;
+            const p   = periods.find(x => x.id === pid);
+            if (!p) return;
+            const selectedIds = [...document.querySelectorAll('.pr-line-cb:checked')].map(cb => cb.dataset.rid);
+            if (!selectedIds.length) { showToast('กรุณาเลือกพนักงานอย่างน้อย 1 คน', 'error'); return; }
+
+            const btn = document.getElementById('pr-line-send-btn');
+            const lbl = document.getElementById('pr-line-send-label');
+            btn.disabled = true; lbl.textContent = 'กำลังส่ง...';
+
+            const period_label = `งวดที่ ${p.periodNo}/${p.year}`;
+            const period_range = `${fmtD(p.startDate)} – ${fmtD(p.endDate)}`;
+            let ok = 0, fail = 0;
+
+            for (const rid of selectedIds) {
+                const r = _lineRecords.find(x => x.id === rid);
+                if (!r || !r.lineId) { fail++; continue; }
+                lbl.textContent = `กำลังส่ง ${r.name}...`;
+                try {
+                    await sendLineMessage(r.lineId, [buildPayslipFlex(r, period_label, period_range)]);
+                    ok++;
+                } catch(e) { console.warn('LINE send failed:', r.name, e); fail++; }
+                await new Promise(res => setTimeout(res, 300)); // rate limit
+            }
+
+            btn.disabled = false; lbl.textContent = 'ส่งสลิป';
+            prLineClose();
+            showToast(
+                fail === 0
+                    ? `✅ ส่งสลิปทาง LINE สำเร็จ ${ok} คน`
+                    : `⚠️ สำเร็จ ${ok} คน, ล้มเหลว ${fail} คน`,
+                fail === 0 ? 'success' : 'info'
+            );
+        };
+
+        function buildPayslipFlex(r, periodLabel, periodRange) {
+            const row = (label, val, color) => ({
+                type: 'box', layout: 'horizontal',
+                contents: [
+                    { type:'text', text: label, size:'sm', color:'#71717a', flex:3 },
+                    { type:'text', text: val,   size:'sm', weight:'bold', color: color||'#18181b', flex:2, align:'end' }
+                ]
+            });
+            const divider = { type:'separator', margin:'sm' };
+            const fmtB = n => `฿${Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+            return {
+                type: 'flex',
+                altText: `💰 สลิปเงินเดือน ${periodLabel} — ฿${Number(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2})}`,
+                contents: {
+                    type: 'bubble',
+                    size: 'kilo',
+                    header: {
+                        type:'box', layout:'vertical', paddingAll:'16px',
+                        backgroundColor:'#18181b',
+                        contents:[
+                            { type:'box', layout:'horizontal', alignItems:'center',
+                              contents:[
+                                { type:'text', text:'💰', size:'xl' },
+                                { type:'box', layout:'vertical', margin:'md',
+                                  contents:[
+                                    { type:'text', text:'สลิปเงินเดือน', color:'#eab308', weight:'bold', size:'lg' },
+                                    { type:'text', text: periodLabel, color:'#a1a1aa', size:'xs' },
+                                  ]
+                                }
+                              ]
+                            }
+                        ]
+                    },
+                    body: {
+                        type:'box', layout:'vertical', paddingAll:'16px', spacing:'sm',
+                        contents:[
+                            // ชื่อ + งวด
+                            { type:'text', text: r.name+(r.nickname?` (${r.nickname})`:'')+' · '+r.branch, size:'sm', weight:'bold', color:'#18181b', wrap:true },
+                            { type:'text', text: periodRange, size:'xs', color:'#a1a1aa' },
+                            divider,
+                            // รายได้
+                            { type:'text', text:'รายได้', size:'xs', color:'#16a34a', weight:'bold', margin:'sm' },
+                            row('เงินเดือนพื้นฐาน',      fmtB(r.baseSalary)),
+                            ...(r.earningDaily>0    ? [row('ค่าแรงรายวัน',    fmtB(r.earningDaily))]    : []),
+                            ...(r.earningHourly>0   ? [row('ค่าแรงรายชั่วโมง',fmtB(r.earningHourly))]   : []),
+                            ...(r.earningCommission>0? [row('คอมมิชชั่น',      fmtB(r.earningCommission))]: []),
+                            ...(r.otherEarning>0    ? [row('รายได้อื่นๆ',      fmtB(r.otherEarning))]    : []),
+                            row('รวมรายได้', fmtB(r.totalEarning), '#16a34a'),
+                            divider,
+                            // หัก
+                            { type:'text', text:'รายการหัก', size:'xs', color:'#dc2626', weight:'bold', margin:'sm' },
+                            ...(r.deductSSO>0    ? [row('ประกันสังคม', fmtB(r.deductSSO),'#dc2626')]    : []),
+                            ...(r.deductTax>0    ? [row('ภาษีหัก ณ ที่จ่าย',fmtB(r.deductTax),'#dc2626')] : []),
+                            ...(r.deductLeave>0  ? [row('หักขาดงาน',    fmtB(r.deductLeave),'#dc2626')]  : []),
+                            ...(r.otherDeduct>0  ? [row('หักอื่นๆ',     fmtB(r.otherDeduct),'#dc2626')]  : []),
+                            row('รวมหัก', fmtB(r.totalDeduct), '#dc2626'),
+                            divider,
+                        ]
+                    },
+                    footer: {
+                        type:'box', layout:'vertical', paddingAll:'14px',
+                        backgroundColor:'#fefce8',
+                        contents:[
+                            { type:'box', layout:'horizontal', alignItems:'center',
+                              contents:[
+                                { type:'text', text:'💵 สุทธิ', size:'md', weight:'bold', color:'#18181b', flex:1 },
+                                { type:'text', text: fmtB(r.netPay), size:'xl', weight:'bold', color:'#ca8a04', align:'end', flex:2 }
+                              ]
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+
             ['prSel','prOpenCreate','prCloseCreate','prDoCreate','prGenAll',
              'prOpenRec','prCloseRec','prRecalc','prSaveRec',
-             'prFinal','prPaid','prDel','prCSV','prXLSX'
+             'prFinal','prPaid','prDel','prCSV','prXLSX',
+             'prLineOpen','prLineClose','prLineFilter','prLineToggleAll','prLineSend'
             ].forEach(k=>delete window[k]);
         };
     }
