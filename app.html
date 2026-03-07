@@ -6304,9 +6304,7 @@ PAGES['payslip-admin'] = {
                     if (row) row.classList.add('hidden');
                     const inp = document.getElementById('img-url-input'); if (inp) inp.value='';
                     const prev = document.getElementById('img-url-preview'); if (prev) { prev.src=''; prev.classList.add('hidden'); }
-                    document.getElementById('ann-upload-list').innerHTML = '';
-                    const prev = document.getElementById('img-url-preview');
-                    if (prev) { prev.src=''; prev.classList.add('hidden'); }
+                    const uploadList = document.getElementById('ann-upload-list'); if (uploadList) uploadList.innerHTML = '';
                 };
         
                 // แทรก <img> เข้า editor ณ cursor position
