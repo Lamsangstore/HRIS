@@ -4104,18 +4104,32 @@ PAGES['payroll'] = {
         let _lineActivePid = null;
         let _lineRecords   = [];
 
-        window.prLineOpen = (pid) => {
+        window.prLineOpen = async (pid) => {
             _lineActivePid = pid;
             const p = periods.find(x => x.id === pid);
             if (!p) return;
-            const recs = records.filter(r => r.periodId === pid);
-            _lineRecords = recs;
+
+            // เปิด modal ก่อน แล้วค่อยโหลด
+            document.getElementById('pr-line-modal')?.classList.remove('hidden');
+            const list = document.getElementById('pr-line-list');
+            if (list) list.innerHTML = '<div class="py-10 text-center text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm font-bold mt-2">กำลังโหลด...</p></div>';
 
             const sub = document.getElementById('pr-line-period-sub');
             if (sub) sub.textContent = `งวดที่ ${p.periodNo}/${p.year}  ·  ${fmtD(p.startDate)} – ${fmtD(p.endDate)}`;
 
+            // โหลด records จาก Firestore โดยตรง ไม่พึ่ง memory cache
+            try {
+                const snap = await getDocs(query(
+                    collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
+                    where('periodId','==',pid)
+                ));
+                _lineRecords = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+            } catch(e) {
+                _lineRecords = records.filter(r => r.periodId === pid); // fallback
+            }
+
             // count no-lineId
-            const noId = recs.filter(r => !r.lineId).length;
+            const noId = _lineRecords.filter(r => !r.lineId).length;
             const warnEl = document.getElementById('pr-line-no-id-warn');
             const cntEl  = document.getElementById('pr-line-no-id-cnt');
             if (warnEl && cntEl) {
@@ -4130,7 +4144,6 @@ PAGES['payroll'] = {
             if (searchEl) searchEl.value = '';
 
             prLineFilter();
-            document.getElementById('pr-line-modal')?.classList.remove('hidden');
         };
 
         window.prLineClose = () => {
