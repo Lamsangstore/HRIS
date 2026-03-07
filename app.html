@@ -21,6 +21,7 @@
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: width;
         }
+        #app-sidebar { transition: width 0.2s ease; }
         #app-sidebar.collapsed { width: 4rem; }
         #app-sidebar.collapsed .sidebar-text,
         #app-sidebar.collapsed .admin-panel-text,
@@ -28,8 +29,8 @@
         #app-sidebar.collapsed .collapsed-footer-text { display: block; }
         #app-sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
         #app-sidebar.collapsed .nav-item i { margin: 0 !important; font-size: 1.25rem; }
-        #app-sidebar.collapsed .logo-container { padding: 1rem 0; }
-        #app-sidebar.collapsed .logo-container img { margin-right: 0; width: 2rem; height: 2rem; min-width: 2rem; }
+        /* toggle button ใน sidebar — collapsed: จัดกลาง icon เท่านั้น */
+        #app-sidebar.collapsed .sidebar-toggle-inner { justify-content: center; padding-left: 0; padding-right: 0; }
 
         /* ========= PAGE TRANSITIONS ========= */
         #page-content {
@@ -61,10 +62,11 @@
     <!-- ===================== SIDEBAR (อยู่ตลอด ไม่โหลดใหม่) ===================== -->
     <aside id="app-sidebar" class="bg-zinc-900 text-zinc-300 flex flex-col shadow-xl z-20 h-full overflow-hidden shrink-0">
         <!-- Sidebar Toggle Button -->
-        <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
-            <button onclick="toggleSidebar()" class="flex items-center gap-3 w-full group hover:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all">
-                <i class="fa-solid fa-bars text-xl text-zinc-400 group-hover:text-yellow-400 transition-colors shrink-0"></i>
-                <span class="sidebar-text text-sm font-black text-zinc-400 group-hover:text-yellow-400 uppercase tracking-widest transition-colors whitespace-nowrap">ปิดเมนู</span>
+        <div class="border-b border-zinc-800 p-3">
+            <button onclick="toggleSidebar()" title="ย่อ/ขยายเมนู"
+                class="sidebar-toggle-inner flex items-center gap-3 w-full hover:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all group">
+                <i class="fa-solid fa-bars text-lg text-zinc-400 group-hover:text-yellow-400 transition-colors shrink-0 mx-auto"></i>
+                <span class="sidebar-text text-xs font-black text-zinc-500 group-hover:text-yellow-400 uppercase tracking-widest whitespace-nowrap">ย่อเมนู</span>
             </button>
         </div>
 
@@ -326,8 +328,11 @@
                     <div class="flex flex-col items-center justify-center h-64 text-zinc-400">
                         <i class="fa-solid fa-triangle-exclamation text-5xl mb-4 text-yellow-500"></i>
                         <p class="font-bold">ไม่สามารถโหลดหน้านี้ได้</p>
-                        <p class="text-xs mt-1">${err.message}</p>
+                        <p class="text-xs mt-1 text-red-400">${err.message}</p>
+                        <button onclick="navigateTo('home')" class="mt-4 text-xs bg-zinc-900 text-yellow-400 px-4 py-2 rounded-xl font-black">กลับหน้าหลัก</button>
                     </div>`;
+            } finally {
+                hideLoader(); // ป้องกัน loading ค้างในทุกกรณี
             }
         }
 
