@@ -641,10 +641,16 @@
                 }
         
                 // ── วันลาคงเหลือ
-                // แก้: ลบ getDocs ที่ซ้ำซ้อน ใช้แค่ getDoc อย่างเดียว
+                // แก้: โหลด balance + schedule พร้อมกัน เพื่อใช้ hpd จริงแทน hardcode 8
                 const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const balDoc = await getDoc(doc(db,'artifacts',APP_ID,'public','data','leave_balances',user.uid));
-                const bal = balDoc.exists() ? balDoc.data() : {};
+                const [balDoc, schedDoc] = await Promise.all([
+                    getDoc(doc(db,'artifacts',APP_ID,'public','data','leave_balances',  user.uid)),
+                    getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules',  user.uid)),
+                ]);
+                const bal       = balDoc.exists()   ? balDoc.data()   : {};
+                const homeSched = schedDoc.exists() ? schedDoc.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                const hpd = getDayWorkHours(homeSched); // ชม./วัน จริงของพนักงานคนนี้
+        
                 const leaveSummaryEl = document.getElementById('leave-summary');
                 if (leaveSummaryEl) {
                     const types = [
@@ -654,11 +660,13 @@
                     ];
                     leaveSummaryEl.innerHTML = types.map(t => {
                         const b    = bal[t.id] || {};
-                        const max  = b.totalHours || (t.maxDays * 8);
+                        // แก้: ใช้ hpd จริงแทน hardcode 8
+                        const max  = b.totalHours != null ? b.totalHours : (t.maxDays * hpd);
                         const used = b.usedHours  || 0;
                         const rem  = Math.max(0, max - used);
                         const pct  = max > 0 ? Math.min(100, Math.round(used/max*100)) : 0;
-                        const remD = Math.round(rem/8*10)/10;
+                        // แก้: หารด้วย hpd จริงแทน 8
+                        const remD = Math.round(rem / hpd * 10) / 10;
                         const colorMap = {red:'bg-red-400',blue:'bg-blue-400',green:'bg-green-400'};
                         return `<div>
                           <div class="flex justify-between items-center mb-1">
