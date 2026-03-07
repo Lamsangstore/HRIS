@@ -5999,13 +5999,13 @@ PAGES['payslip-admin'] = {
               <div id="ot-table-wrap" class="hidden">
 
                 <!-- คำแนะนำ -->
-                <div class="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-3 mb-5 text-xs text-blue-700 font-medium flex items-start gap-3">
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-3 mb-4 text-xs text-blue-700 font-medium flex items-start gap-3">
                   <i class="fa-solid fa-circle-info text-blue-400 mt-0.5 shrink-0"></i>
-                  <div>
-                    <b>วิธีใช้:</b> คลิกเลือกวันที่ต้องการเบิก OT ✓ — วันหยุด/ชดเชยระบบคำนวณให้อัตโนมัติ (1.5×hpd) 
-                    ส่วนวันปกติให้กรอกชั่วโมง OT เองและระบุเหตุผล
-                  </div>
+                  <div><b>วิธีใช้:</b> คลิกเลือกวัน ✓ ที่ต้องการเบิก OT — วันหยุด/ชดเชย ระบบคำนวณอัตโนมัติ (1.5×hpd)
+                  วันปกติกรอกชั่วโมงเองและระบุเหตุผล · วันที่ไม่มีบันทึกเวลา <span class="text-red-500 font-black">ต้องชี้แจงก่อน</span></div>
                 </div>
+                <!-- Missing days warning -->
+                <div id="ot-missing-warn" class="hidden bg-orange-50 border border-orange-200 rounded-2xl px-5 py-3 mb-4 text-xs text-orange-800 font-medium flex items-start gap-3"></div>
 
                 <!-- grid วันทำงาน -->
                 <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden mb-5">
@@ -6130,31 +6130,41 @@ PAGES['payslip-admin'] = {
                         o.textContent = `งวด ${p.periodNo}/${p.year}  (${p.startDate} – ${p.endDate})`;
                         sel.appendChild(o);
                     });
+                    // auto-load งวดแรก (ล่าสุด)
+                    if (sel.options.length > 1) {
+                        sel.selectedIndex = 1;
+                        // จะถูกเรียกหลัง window.otLoadPeriod ถูก define
+                    }
 
-                    // ประวัติ realtime
-                    unsubHistory = onSnapshot(
-                        query(collection(db,'artifacts',APP_ID,'public','data','ot_requests'),
-                              where('uid','==',user.uid), orderBy('createdAt','desc'), limit(20)),
-                        snap => {
-                            const list = document.getElementById('ot-history-list');
-                            if (!list) return;
-                            if (snap.empty) { list.innerHTML = '<div class="text-center py-8 text-zinc-300 text-sm">ยังไม่มีประวัติ</div>'; return; }
+                    // ประวัติ — ใช้ getDocs แทน onSnapshot เพื่อหลีกเลี่ยง composite index error
+                    async function loadHistory() {
+                        const list = document.getElementById('ot-history-list');
+                        if (!list) return;
+                        try {
+                            const hSnap = await getDocs(query(
+                                collection(db,'artifacts',APP_ID,'public','data','ot_requests'),
+                                where('uid','==',user.uid)
+                            ));
+                            if (hSnap.empty) { list.innerHTML = '<div class="text-center py-8 text-zinc-300 text-sm">ยังไม่มีประวัติ</div>'; return; }
                             const stMap = { draft:'Draft', pending:'รอนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
                             const stCls = { draft:'ot-status-draft', pending:'ot-status-pending', approved:'ot-status-approved', rejected:'ot-status-rejected' };
-                            list.innerHTML = snap.docs.map(d => {
-                                const r = { id: d.id, ...d.data() };
-                                return `<div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center gap-3">
+                            const sorted = hSnap.docs.map(d => ({id:d.id,...d.data()}))
+                                .sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+                            list.innerHTML = sorted.map(r => `
+                                <div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center gap-3">
                                     <div class="flex-1 min-w-0">
                                         <p class="font-black text-zinc-800 text-sm">${r.periodLabel||r.periodId}</p>
-                                        <p class="text-xs text-zinc-500 mt-0.5">OT換算: <b>${(r.otConverted||0).toFixed(2)} ชม.</b>  ·  Commission: <b>฿${(r.commTotal||0).toLocaleString()}</b></p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">OT換算: <b>${(r.otConverted||0).toFixed(2)} ชม.</b> · Commission: <b>฿${(r.commTotal||0).toLocaleString()}</b></p>
                                         ${r.managerNote ? `<p class="text-xs text-red-500 mt-1 italic">"${r.managerNote}"</p>` : ''}
                                     </div>
                                     <span class="text-[10px] font-black px-3 py-1.5 rounded-xl ${stCls[r.status]||'ot-status-draft'}">${stMap[r.status]||r.status}</span>
                                     <p class="text-[10px] text-zinc-400 whitespace-nowrap">${(r.createdAt||'').slice(0,10)}</p>
-                                </div>`;
-                            }).join('');
+                                </div>`).join('');
+                        } catch(e) {
+                            if (list) list.innerHTML = '<div class="text-center py-6 text-zinc-400 text-xs">ไม่สามารถโหลดประวัติได้</div>';
                         }
-                    );
+                    }
+                    loadHistory();
 
                     // ─── Load period data ──────────────────────────────────
                     window.otLoadPeriod = async () => {
@@ -6163,6 +6173,10 @@ PAGES['payslip-admin'] = {
                         document.getElementById('ot-table-wrap').classList.add('hidden');
                         document.getElementById('ot-claim-status-bar').classList.add('hidden');
                         selectedDays = {};
+                        // แสดง loading indicator ในพื้นที่ grid
+                        const gridEl = document.getElementById('ot-day-grid');
+                        if (gridEl) gridEl.innerHTML = '<div class="col-span-full text-center py-8 text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+                        try {
 
                         const pSnap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid));
                         if (!pSnap.exists()) return;
@@ -6176,10 +6190,10 @@ PAGES['payslip-admin'] = {
                         otRequest = exSnap.empty ? null : { id: exSnap.docs[0].id, ...exSnap.docs[0].data() };
                         isLocked = otRequest?.status === 'approved' || otRequest?.status === 'pending';
 
-                        // โหลด time_logs
+                        // โหลด time_logs — ไม่ใช้ orderBy เพื่อหลีกเลี่ยง composite index
                         const tSnap = await getDocs(query(
                             collection(db,'artifacts',APP_ID,'public','data','time_logs'),
-                            where('uid','==',user.uid), orderBy('timestamp','asc')
+                            where('uid','==',user.uid)
                         ));
                         const dayMap = {};
                         tSnap.forEach(d => {
@@ -6208,21 +6222,22 @@ PAGES['payslip-admin'] = {
                             }
                         });
 
-                        // สร้าง allDays — ทุกวันในช่วง period ที่ทำงาน (มี clock_in) หรือวันหยุด/ชดเชย
+                        // สร้าง allDays — ทุกวันทำงาน (workDay) + วันหยุด + ชดเชย ในงวด
+                        // แสดงทุกวัน รวมวันที่ไม่มีบันทึก เพื่อให้พนักงานชี้แจง
                         allDays = [];
                         let cur = new Date(currentPeriod.startDate+'T00:00:00');
                         const endD = new Date(currentPeriod.endDate+'T00:00:00');
+                        const todayStr = new Date().toISOString().slice(0,10);
                         while (cur <= endD) {
                             const ds = cur.toISOString().slice(0,10);
+                            if (ds > todayStr) { cur.setDate(cur.getDate()+1); continue; }
                             const dow = cur.getDay();
                             const isHol  = holSet.has(ds);
                             const isComp = compDays.has(ds);
-                            const isWork = workDaySet.has(dow) && !isHol;
-                            const rec = dayMap[ds];
-                            const hasClock = !!rec?.in;
-
-                            // แสดงเฉพาะวันที่: (มี clock) หรือ (วันหยุด/ชดเชยที่มี clock)
-                            if (hasClock || (isHol && hasClock) || (isComp && hasClock)) {
+                            const isWorkDay = workDaySet.has(dow) && !isHol;
+                            if (isWorkDay || isHol || isComp) {
+                                const rec = dayMap[ds];
+                                const hasClock = !!rec?.in;
                                 let type = 'normal';
                                 if (isHol)  type = 'holiday';
                                 else if (isComp) type = 'comp';
@@ -6230,6 +6245,7 @@ PAGES['payslip-admin'] = {
                                     day: ds, dow,
                                     inTime:  rec?.in  ? rec.in.slice(11,16)  : null,
                                     outTime: rec?.out ? rec.out.slice(11,16) : null,
+                                    hasClock,
                                     type, holName: holName[ds]||'',
                                 });
                             }
@@ -6259,6 +6275,12 @@ PAGES['payslip-admin'] = {
                         } else sb.classList.add('hidden');
 
                         document.getElementById('ot-table-wrap').classList.remove('hidden');
+                        } catch(err) {
+                            console.error('otLoadPeriod error:', err);
+                            const gEl = document.getElementById('ot-day-grid');
+                            if (gEl) gEl.innerHTML = `<div class="col-span-full text-center py-8 text-red-400 text-sm font-medium"><i class="fa-solid fa-circle-exclamation mr-2"></i>โหลดข้อมูลไม่ได้: ${err.message}</div>`;
+                            document.getElementById('ot-table-wrap').classList.remove('hidden');
+                        }
                     };
 
                     // ─── Day grid ──────────────────────────────────────────
@@ -6266,31 +6288,54 @@ PAGES['payslip-admin'] = {
                         const grid = document.getElementById('ot-day-grid');
                         if (!grid) return;
                         if (!allDays.length) {
-                            grid.innerHTML = '<div class="col-span-full text-center py-8 text-zinc-400 text-sm">ไม่พบบันทึกเวลาในงวดนี้</div>';
+                            grid.innerHTML = '<div class="col-span-full text-center py-8 text-zinc-400 text-sm">ไม่พบวันทำงานในงวดนี้</div>';
                             return;
                         }
+                        // นับวันที่ไม่มีบันทึก (เฉพาะวันทำงานปกติ)
+                        const missingDays = allDays.filter(d => d.type==='normal' && !d.hasClock);
+
                         grid.innerHTML = allDays.map((d,i) => {
                             const sel = !!selectedDays[d.day];
+                            const noRecord = d.type==='normal' && !d.hasClock;
+                            const canSelect = !isLocked && (d.hasClock || d.type==='holiday' || d.type==='comp');
                             const typeClass = d.type==='holiday' ? 'hol-card' : d.type==='comp' ? 'comp-card' : '';
                             const typeBadge = d.type==='holiday'
                                 ? `<span class="text-[9px] font-black text-red-500 truncate block">${d.holName||'วันหยุด'}</span>`
                                 : d.type==='comp'
                                 ? `<span class="text-[9px] font-black text-yellow-700">วันชดเชย</span>`
                                 : '';
-                            return `<div class="ot-day-card ${typeClass} ${sel?'selected':''} rounded-2xl border border-zinc-200 p-3"
-                                onclick="${isLocked ? '' : `otToggleDay(${i})`}">
+                            const timeRow = noRecord
+                                ? `<p class="text-[10px] text-red-400 font-bold flex items-center gap-1 mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i>ไม่มีบันทึก</p>`
+                                : `<p class="text-xs text-zinc-500">${d.inTime||'-'} – ${d.outTime||'-'}</p>`;
+                            return `<div class="ot-day-card ${typeClass} ${sel?'selected':''} ${noRecord?'opacity-60 cursor-not-allowed':'cursor-pointer'} rounded-2xl border ${noRecord?'border-red-200 bg-red-50':'border-zinc-200'} p-3"
+                                onclick="${canSelect ? `otToggleDay(${i})` : ''}">
                                 <div class="flex items-start justify-between">
-                                    <div>
+                                    <div class="flex-1 min-w-0">
                                         <p class="font-black text-zinc-800 text-sm">${d.day.slice(5)} <span class="text-zinc-400 font-normal text-xs">${THday[d.dow]}</span></p>
-                                        <p class="text-xs text-zinc-500">${d.inTime||'?'} – ${d.outTime||'?'}</p>
+                                        ${timeRow}
                                         ${typeBadge}
                                     </div>
-                                    <div class="w-5 h-5 rounded-full border-2 ${sel ? 'bg-yellow-500 border-yellow-500' : 'border-zinc-300'} flex items-center justify-center shrink-0 ml-1 mt-0.5">
-                                        ${sel ? '<i class="fa-solid fa-check text-white" style="font-size:8px"></i>' : ''}
-                                    </div>
+                                    ${canSelect ? `<div class="w-5 h-5 rounded-full border-2 shrink-0 ml-1 mt-0.5 ${sel?'bg-yellow-500 border-yellow-500':'border-zinc-300'} flex items-center justify-center">
+                                        ${sel?'<i class="fa-solid fa-check text-white" style="font-size:8px"></i>':''}
+                                    </div>` : `<i class="fa-solid fa-lock text-zinc-300 text-xs mt-0.5 ml-1 shrink-0"></i>`}
                                 </div>
                             </div>`;
                         }).join('');
+
+                        // แสดง warning ถ้ามีวันที่ไม่มีบันทึก
+                        const warn = document.getElementById('ot-missing-warn');
+                        if (warn) {
+                            if (missingDays.length > 0) {
+                                warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-orange-400 shrink-0 mt-0.5"></i>
+                                    <div><b>มี ${missingDays.length} วันที่ไม่มีบันทึกเวลา:</b>
+                                    ${missingDays.map(d=>d.day.slice(5)).join(', ')}
+                                    — กรุณาติดต่อ HR หรือยื่น "ชี้แจง/แก้ไขเวลา" ก่อนเบิก OT ในวันดังกล่าว</div>`;
+                                warn.classList.remove('hidden');
+                            } else {
+                                warn.classList.add('hidden');
+                            }
+                        }
+
                         updateCountBadge();
                         renderSelectedTable();
                     }
@@ -6432,6 +6477,11 @@ PAGES['payslip-admin'] = {
                         };
                     }
 
+                    // auto-load งวดที่เลือกไว้
+                    if (document.getElementById('ot-period-sel')?.value) {
+                        otLoadPeriod();
+                    }
+
                     window.otSaveDraft = async () => {
                         if (!currentPeriod) { showToast('กรุณาเลือกงวดก่อน','error'); return; }
                         try {
@@ -6447,6 +6497,7 @@ PAGES['payslip-admin'] = {
                             }
                             showToast('✅ บันทึก Draft แล้ว','success');
                             otLoadPeriod();
+                            loadHistory();
                         } catch(e) { showToast('❌ '+e.message,'error'); }
                     };
 
@@ -6471,6 +6522,7 @@ PAGES['payslip-admin'] = {
                                 otRequest = { id:ref.id, ...payload };
                             }
                             showToast('✅ ยื่นขออนุมัติแล้ว','success');
+                            loadHistory();
                             // แจ้ง LINE manager
                             try {
                                 const mgrSnap = await getDocs(query(
