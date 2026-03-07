@@ -1885,6 +1885,7 @@
                         myRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                         renderMyRequests();
                         renderCalendar();
+                        renderQuota();
                     },
                     async err => {
                         // index ยังไม่มี → fallback getDocs + sort ฝั่ง client
@@ -1899,6 +1900,7 @@
                                 .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
                             renderMyRequests();
                             renderCalendar();
+                            renderQuota();
                         } catch(e2) {
                             console.error('leave_requests getDocs fallback failed:', e2);
                         }
@@ -1915,13 +1917,24 @@
         // ================================================================
         function renderQuota() {
             const types = ['sick','personal','vacation'];
+            // คำนวณ usedHours จาก myRequests ที่ approved เป็น source of truth
+            // เพื่อให้แสดงถูกต้องแม้ Firestore balance ยังไม่ได้อัปเดต
+            const usedFromReqs = {};
+            (myRequests || []).forEach(r => {
+                if (r.status === 'approved' && r.type && r.totalHours > 0) {
+                    usedFromReqs[r.type] = Math.round(((usedFromReqs[r.type] || 0) + r.totalHours) * 100) / 100;
+                }
+            });
             let html = '';
             types.forEach(tid => {
                 const t   = getLeaveTypeInfo(tid);
                 const bal = myBalance[tid] || {};
                 const hpd = getDayWorkHours(mySchedule);          // ชม./วัน ของพนักงานคนนี้
                 const max  = bal.totalHours ?? (t.maxDays * hpd); // ถ้า admin ยังไม่ตั้ง ใช้ค่า default × hpd
-                const used = bal.usedHours  || 0;
+                // ใช้ค่าที่มากกว่าระหว่าง Firestore balance กับที่คำนวณจาก requests
+                const usedFirestore = bal.usedHours || 0;
+                const usedCalc      = usedFromReqs[tid] || 0;
+                const used = Math.max(usedFirestore, usedCalc);
                 const rem  = Math.max(0, max - used);
                 const pct  = max > 0 ? Math.min(100, Math.round(used / max * 100)) : 0;
                 const cv   = colorVariants(t.color);
