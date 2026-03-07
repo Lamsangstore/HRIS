@@ -491,6 +491,153 @@
             if (days > 0)            return `${days} วัน`;
             return `${rem} ชม.`;
         }
+
+        // ================================================================
+        // LINE MESSAGING API — Push Notification Helper
+        // ================================================================
+        const LINE_TOKEN = 'vOFYhnPPGEJ67XWpYOHsKv4gVXeeJYP8z+V2BF83lVd4DjBcCjvfF0MK62FoGXh1KWDXUzPSBwYEes157SbLVqsxju+sD++KMgIBd9AGgpOKd39azdMaqcV7rVvLkr2T7ynFP2+XYv0li89MN8gBrwdB04t89/1O/w1cDnyilFU=';
+        const LINE_PROXY   = 'https://api.line.me/v2/bot/message/push';
+
+        async function sendLineMessage(lineUserId, messages) {
+            if (!lineUserId) return;
+            try {
+                await fetch(LINE_PROXY, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + LINE_TOKEN,
+                    },
+                    body: JSON.stringify({ to: lineUserId, messages }),
+                });
+            } catch(e) { console.warn('LINE send error:', e); }
+        }
+
+        async function notifyManagersNewLeave(req) {
+            try {
+                const { collection, getDocs, query, where }
+                    = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snap = await getDocs(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
+                const managers = snap.docs
+                    .map(d => d.data())
+                    .filter(u => (u.role === 'manager' || u.role === 'admin') && u.lineId);
+                const appUrl = location.origin + location.pathname + '#leave-mgmt';
+                const fmtD = ds => new Date(ds+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
+                const dateRange = req.startDate === req.endDate
+                    ? fmtD(req.startDate)
+                    : `${fmtD(req.startDate)} – ${fmtD(req.endDate)}`;
+                for (const mgr of managers) {
+                    await sendLineMessage(mgr.lineId, [{
+                        type: 'flex',
+                        altText: `📋 ${req.employeeName} ยื่นคำขอ${req.typeName}`,
+                        contents: {
+                            type: 'bubble',
+                            size: 'kilo',
+                            header: {
+                                type: 'box', layout: 'vertical', paddingAll: '16px',
+                                backgroundColor: '#18181b',
+                                contents: [{
+                                    type: 'text', text: '📋 คำขอลาใหม่',
+                                    color: '#eab308', weight: 'bold', size: 'lg'
+                                }]
+                            },
+                            body: {
+                                type: 'box', layout: 'vertical', spacing: 'sm',
+                                paddingAll: '16px',
+                                contents: [
+                                    { type:'text', text: req.employeeName, weight:'bold', size:'lg', color:'#18181b' },
+                                    { type:'text', text: (req.branch||'') + (req.position ? ' · '+req.position : ''), size:'sm', color:'#71717a' },
+                                    { type:'separator', margin:'md' },
+                                    { type:'box', layout:'vertical', spacing:'xs', margin:'md', contents:[
+                                        { type:'box', layout:'horizontal', contents:[
+                                            { type:'text', text:'ประเภท', size:'sm', color:'#a1a1aa', flex:2 },
+                                            { type:'text', text: req.typeName, size:'sm', weight:'bold', color:'#18181b', flex:3, wrap:true }
+                                        ]},
+                                        { type:'box', layout:'horizontal', contents:[
+                                            { type:'text', text:'วันที่', size:'sm', color:'#a1a1aa', flex:2 },
+                                            { type:'text', text: dateRange, size:'sm', weight:'bold', color:'#18181b', flex:3, wrap:true }
+                                        ]},
+                                        { type:'box', layout:'horizontal', contents:[
+                                            { type:'text', text:'เหตุผล', size:'sm', color:'#a1a1aa', flex:2 },
+                                            { type:'text', text: req.reason||'-', size:'sm', color:'#18181b', flex:3, wrap:true }
+                                        ]},
+                                    ]}
+                                ]
+                            },
+                            footer: {
+                                type: 'box', layout: 'vertical', paddingAll: '12px',
+                                contents: [{
+                                    type: 'button',
+                                    action: { type:'uri', label:'🔍 ไปหน้าอนุมัติการลา', uri: appUrl },
+                                    style: 'primary',
+                                    color: '#eab308',
+                                    height: 'sm'
+                                }]
+                            }
+                        }
+                    }]);
+                }
+            } catch(e) { console.warn('notifyManagers:', e); }
+        }
+
+        async function notifyEmployeeLeaveResult(req, action, approverName, note) {
+            if (!req.uid) return;
+            try {
+                const { doc, getDoc }
+                    = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const empSnap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', req.uid));
+                if (!empSnap.exists()) return;
+                const emp = empSnap.data();
+                if (!emp.lineId) return;
+                const isApproved = action === 'approve';
+                const fmtD = ds => new Date(ds+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
+                const dateRange = req.startDate === req.endDate
+                    ? fmtD(req.startDate)
+                    : `${fmtD(req.startDate)} – ${fmtD(req.endDate)}`;
+                const headerColor = isApproved ? '#16a34a' : '#dc2626';
+                const icon        = isApproved ? '✅' : '❌';
+                const statusText  = isApproved ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ';
+                await sendLineMessage(emp.lineId, [{
+                    type: 'flex',
+                    altText: `${icon} ผลการลา${req.typeName}: ${statusText}`,
+                    contents: {
+                        type: 'bubble',
+                        size: 'kilo',
+                        header: {
+                            type: 'box', layout: 'vertical', paddingAll: '16px',
+                            backgroundColor: headerColor,
+                            contents: [{
+                                type: 'text',
+                                text: `${icon} ${statusText}`,
+                                color: '#ffffff', weight: 'bold', size: 'lg'
+                            }]
+                        },
+                        body: {
+                            type: 'box', layout: 'vertical', spacing: 'sm',
+                            paddingAll: '16px',
+                            contents: [
+                                { type:'text', text: `คำขอ${req.typeName}ของคุณ`, size:'md', weight:'bold', color:'#18181b' },
+                                { type:'separator', margin:'md' },
+                                { type:'box', layout:'vertical', spacing:'xs', margin:'md', contents:[
+                                    { type:'box', layout:'horizontal', contents:[
+                                        { type:'text', text:'วันที่', size:'sm', color:'#a1a1aa', flex:2 },
+                                        { type:'text', text: dateRange, size:'sm', weight:'bold', color:'#18181b', flex:3, wrap:true }
+                                    ]},
+                                    { type:'box', layout:'horizontal', contents:[
+                                        { type:'text', text:'ดำเนินการโดย', size:'sm', color:'#a1a1aa', flex:2 },
+                                        { type:'text', text: approverName||'-', size:'sm', weight:'bold', color:'#18181b', flex:3 }
+                                    ]},
+                                    ...(note ? [{ type:'box', layout:'horizontal', contents:[
+                                        { type:'text', text:'หมายเหตุ', size:'sm', color:'#a1a1aa', flex:2 },
+                                        { type:'text', text: note, size:'sm', color:'#18181b', flex:3, wrap:true }
+                                    ]}] : []),
+                                ]}
+                            ]
+                        }
+                    }
+                }]);
+            } catch(e) { console.warn('notifyEmployee:', e); }
+        }
+
         const STATUS_MAP = {
             pending:   { label: 'รอการอนุมัติ', badge: 'bg-yellow-100 text-yellow-800 border border-yellow-200', icon: 'fa-clock'        },
             approved:  { label: 'อนุมัติแล้ว',  badge: 'bg-green-100 text-green-800 border border-green-200',   icon: 'fa-circle-check' },
@@ -1951,6 +2098,13 @@
                     createdAt: new Date().toISOString(),
                 });
                 showToast('✅ ส่งคำขอลาเรียบร้อยแล้ว', 'success');
+                // แจ้ง manager/admin ผ่าน LINE
+                notifyManagersNewLeave({
+                    uid: user.uid, employeeName: profile.name,
+                    branch: profile.branch||'', position: profile.position||'',
+                    typeName: getLeaveTypeInfo(selectedLeaveType).label,
+                    startDate: sd, endDate: ed, reason,
+                }).catch(()=>{});
                 closeLeaveModal();
                 selectedLeaveType = null;
                 document.getElementById('employee-form')?.reset?.();
@@ -2364,6 +2518,8 @@ PAGES['leave-mgmt'] = {
                     await updateDoc(balRef, { [`${tid}.usedHours`]: prev + (r.totalHours || 0) });
                 }
                 showToast(action === 'approve' ? '✅ อนุมัติคำขอลาแล้ว' : '❌ ไม่อนุมัติคำขอลา', action === 'approve' ? 'success' : 'info');
+                // แจ้งพนักงานผ่าน LINE
+                if (r) notifyEmployeeLeaveResult(r, action, profile.name, note).catch(()=>{});
                 closeActionModal();
             } catch (e) { showToast('❌ ' + e.message, 'error'); }
             finally { btn.disabled = false; }
