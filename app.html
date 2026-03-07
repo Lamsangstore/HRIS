@@ -6299,12 +6299,12 @@ PAGES['payslip-admin'] = {
 
                             allDays.push({
                                 day: ds, dow,
-                                inTime:  rec?.in  ? rec.in.slice(11,16)  : null,
-                                outTime: rec?.out ? rec.out.slice(11,16) : null,
+                                inTime:  rec?.in  ? (() => { const _d=new Date(rec.in); return String(_d.getUTCHours()+7).padStart(2,'0')+':'+String(_d.getUTCMinutes()).padStart(2,'0'); })() : null,
+                                outTime: rec?.out ? (() => { const _d=new Date(rec.out); return String(_d.getUTCHours()+7).padStart(2,'0')+':'+String(_d.getUTCMinutes()).padStart(2,'0'); })() : null,
                                 hasClock,
                                 type,
                                 isWeekend,
-                                holName: holName[ds] || (isWeekend ? (dow===0?'วันอาทิตย์':'วันเสาร์') : ''),
+                                holName: holName[ds] || '',
                             });
                             cur.setDate(cur.getDate()+1);
                         }
@@ -6425,7 +6425,7 @@ PAGES['payslip-admin'] = {
                                 : d.type === 'comp'
                                 ? '<span class="text-[10px] font-black bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md">วันชดเชย</span>'
                                 : d.type === 'weekend'
-                                ? `<span class="text-[10px] font-medium text-zinc-400 px-1 py-0.5">${d.holName}</span>`
+                                ? ''  // วันเสาร์/อาทิตย์ไม่ต้องมี badge
                                 : '';
 
                             // เวลา + สถานะ
@@ -6453,7 +6453,11 @@ PAGES['payslip-admin'] = {
                             const isOffDay = d.type === 'holiday' || d.type === 'weekend' || d.type === 'comp';
                             if (isOffDay && !d.hasClock) {
                                 // วันหยุด/เสาร์-อาทิตย์ ไม่มีบันทึก → ไม่ต้องชี้แจง
-                                statusCell = '<span class="text-[10px] text-zinc-300 font-medium">วันหยุด</span>';
+                                statusCell = d.type === 'holiday'
+                                    ? '<span class="text-[10px] font-bold text-red-300">หยุดนักขัตฤกษ์</span>'
+                                    : d.type === 'comp'
+                                    ? '<span class="text-[10px] font-bold text-amber-400">วันชดเชย</span>'
+                                    : '<span class="text-zinc-200 text-xs">–</span>';
                             } else if (noRecord && d.type === 'normal') {
                                 // วันทำงานปกติ ไม่มีบันทึก → ต้องชี้แจง
                                 statusCell = `<button onclick="otOpenExplain('${d.day}')"
@@ -6472,7 +6476,7 @@ PAGES['payslip-admin'] = {
                             return `<tr class="${rowClass} ot-tr-hover border-b border-zinc-100 transition-colors">
                                 <td class="px-3 py-3 text-xs text-zinc-400 font-bold">${i+1}</td>
                                 <td class="px-4 py-3 whitespace-nowrap">
-                                    <p class="font-black text-zinc-800 text-sm">${d.day.slice(5)} <span class="text-zinc-400 font-normal">${THday[d.dow]}</span></p>
+                                    <p class="font-black text-zinc-800 text-sm">${d.day.slice(8)} <span class="font-normal text-zinc-400 text-xs">${THday[d.dow]}</span></p>
                                     ${typeLabel}
                                 </td>
                                 <td class="px-4 py-3 text-center font-mono text-sm ${d.inTime?'text-zinc-700':'text-zinc-300'}">${inCell}</td>
@@ -6646,7 +6650,7 @@ PAGES['payslip-admin'] = {
                         if (selCount === 0 && commTotal === 0) { showToast('⚠️ กรุณาเลือกวัน OT หรือกรอก Commission','error'); return; }
                         // ตรวจหมายเหตุวันปกติ
                         const missingNote = allDays.filter(d => selectedDays[d.day] && d.type==='normal' && !selectedDays[d.day].note.trim());
-                        if (missingNote.length) { showToast(`⚠️ กรุณากรอกเหตุผล OT วันที่ ${missingNote.map(d=>d.day.slice(5)).join(', ')}`, 'error'); return; }
+                        if (missingNote.length) { showToast(`⚠️ กรุณากรอกเหตุผล OT วันที่ ${missingNote.map(d=>d.day.slice(8)).join(', ')}`, 'error'); return; }
                         if (!confirm('ยืนยันการยื่นขออนุมัติ OT & Commission?')) return;
                         try {
                             const { addDoc, updateDoc, doc, collection, query, getDocs, where } =
