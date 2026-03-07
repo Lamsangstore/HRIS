@@ -382,6 +382,91 @@
         };
 
         // ================================================================
+        // GLOBAL PHOTO UTILITIES — Cloudinary upload
+        // ================================================================
+        const _CLOUDINARY_CLOUD  = 'dmxvtpqur';
+        const _CLOUDINARY_PRESET = 'lamsang_hris';
+        const _CLOUDINARY_URL    = `https://api.cloudinary.com/v1_1/${_CLOUDINARY_CLOUD}/image/upload`;
+
+        // แปลง Google Drive share link → URL รูปที่ดูได้โดยตรง
+        window.convertDriveLink = function(url) {
+            if (!url) return '';
+            if (!url.includes('drive.google.com')) return url;
+            const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`;
+            const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`;
+            const m3 = url.match(/open\?id=([a-zA-Z0-9_-]+)/);
+            if (m3) return `https://lh3.googleusercontent.com/d/${m3[1]}`;
+            return url;
+        };
+
+        // อัปโหลดรูปไป Cloudinary พร้อม progress callback
+        window.uploadPhotoToStorage = async function(file, _unusedPath, onProgress) {
+            if (!file) throw new Error('ไม่มีไฟล์');
+            if (file.size > 10 * 1024 * 1024) throw new Error('รูปต้องไม่เกิน 10 MB');
+            const allowed = ['image/jpeg','image/png','image/webp','image/gif'];
+            if (!allowed.includes(file.type)) throw new Error('รองรับเฉพาะ JPG, PNG, WebP, GIF');
+
+            return new Promise((resolve, reject) => {
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('upload_preset', _CLOUDINARY_PRESET);
+                fd.append('folder', 'lamsang_hris');
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', _CLOUDINARY_URL, true);
+
+                xhr.upload.addEventListener('progress', e => {
+                    if (e.lengthComputable && typeof onProgress === 'function')
+                        onProgress(Math.round(e.loaded / e.total * 100));
+                });
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        try {
+                            const res = JSON.parse(xhr.responseText);
+                            resolve(res.secure_url);
+                        } catch(e) { reject(new Error('Parse error')); }
+                    } else {
+                        reject(new Error(`Cloudinary error ${xhr.status}`));
+                    }
+                });
+                xhr.addEventListener('error', () => reject(new Error('Network error')));
+                xhr.send(fd);
+            });
+        };
+
+        // อัปโหลดพร้อม progress toast — return secure_url
+        window.uploadPhotoWithToast = async function(file, _unusedPath) {
+            const toastEl = document.createElement('div');
+            toastEl.className = 'fixed bottom-6 right-6 z-[9999] bg-zinc-900 text-white rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-4 min-w-[260px]';
+            toastEl.innerHTML = `
+                <i class="fa-solid fa-cloud-arrow-up text-yellow-400 text-xl shrink-0"></i>
+                <div class="flex-1">
+                    <p class="text-xs font-black mb-1.5">กำลังอัปโหลดรูป...</p>
+                    <div class="w-full bg-zinc-700 rounded-full h-1.5">
+                        <div id="_upload-bar" class="bg-yellow-400 h-1.5 rounded-full transition-all" style="width:0%"></div>
+                    </div>
+                    <p id="_upload-pct" class="text-[10px] text-zinc-400 mt-1">0%</p>
+                </div>`;
+            document.body.appendChild(toastEl);
+            try {
+                const url = await uploadPhotoToStorage(file, null, pct => {
+                    const bar = document.getElementById('_upload-bar');
+                    const pctEl = document.getElementById('_upload-pct');
+                    if (bar) bar.style.width = pct + '%';
+                    if (pctEl) pctEl.textContent = pct + '%';
+                });
+                toastEl.remove();
+                showToast('✅ อัปโหลดรูปสำเร็จ', 'success');
+                return url;
+            } catch(e) {
+                toastEl.remove();
+                throw e;
+            }
+        };
+
+        // ================================================================
         // NOTIFICATION SYSTEM (global real-time bell)
         // ================================================================
         let _notifUnsubs    = [];
@@ -1574,15 +1659,28 @@
                     return url;
                 }
 
+                // คลิกรูป → เปิด file picker
                 window.changeProfilePicture = () => {
-                    const cur = document.getElementById('edit-photo-url').value;
-                    const url = prompt('วางลิงก์รูปภาพ (Google Drive หรือ URL รูปภาพ):', cur);
-                    if (url !== null) {
-                        document.getElementById('edit-photo-url').value = url;
-                        const nd = convertDriveLink(url);
-                        if (nd) document.getElementById('main-profile-img').src = nd;
-                        document.getElementById('save-btn').classList.add('animate-pulse', 'ring-4', 'ring-yellow-300');
+                    let fi = document.getElementById('_profile-file-input');
+                    if (!fi) {
+                        fi = document.createElement('input');
+                        fi.type = 'file'; fi.id = '_profile-file-input';
+                        fi.accept = 'image/jpeg,image/png,image/webp,image/gif';
+                        fi.style.display = 'none'; document.body.appendChild(fi);
+                        fi.addEventListener('change', async () => {
+                            const file = fi.files[0]; if (!file) return;
+                            fi.value = '';
+                            try {
+                                const ext = file.name.split('.').pop().toLowerCase();
+                                const url = await uploadPhotoWithToast(file, `profile_photos/${user.uid}_${Date.now()}.${ext}`);
+                                document.getElementById('edit-photo-url').value = url;
+                                document.getElementById('main-profile-img').src  = url;
+                                document.getElementById('topbar-avatar').src = url;
+                                document.getElementById('save-btn')?.classList.add('animate-pulse','ring-4','ring-yellow-300');
+                            } catch(e) { showToast('❌ ' + e.message, 'error'); }
+                        });
                     }
+                    fi.click();
                 };
 
                 document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -1607,7 +1705,7 @@
                         }
                     }
                     const photoInput = document.getElementById('edit-photo-url').value.trim();
-                    const photoDisplay = convertDriveLink(photoInput);
+                    const photoDisplay = window.convertDriveLink(photoInput) || photoInput;
                     try {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
                             nickname: document.getElementById('f-nickname').value.trim(),
@@ -1684,7 +1782,22 @@
                                 <div><label class="input-label">รหัสพนักงาน *</label><input type="text" id="f-emp-code" required class="input-field" placeholder="LSG-001"></div>
                                 <div><label class="input-label">สิทธิ์ในระบบ *</label><select id="f-sys-role" class="input-field cursor-pointer"><option value="employee">พนักงาน</option><option value="manager">หัวหน้างาน</option><option value="admin">ผู้ดูแลระบบ</option></select></div>
                                 <div><label class="input-label">สถานะพนักงาน</label><select id="f-status" class="input-field cursor-pointer"><option value="active">ทำงานอยู่</option><option value="probation">ทดลองงาน</option><option value="resigned">ลาออก</option></select></div>
-                                <div class="md:col-span-3"><label class="input-label">ลิงก์รูปโปรไฟล์</label><input type="url" id="f-photo-url" class="input-field" placeholder="https://..."></div>
+                                <div class="md:col-span-3">
+                                  <label class="input-label">รูปโปรไฟล์</label>
+                                  <div class="flex items-center gap-3">
+                                    <div id="f-photo-preview-wrap" class="w-16 h-16 rounded-2xl bg-zinc-100 border-2 border-zinc-200 overflow-hidden shrink-0 flex items-center justify-center">
+                                      <i class="fa-solid fa-user text-zinc-300 text-2xl" id="f-photo-preview-icon"></i>
+                                      <img id="f-photo-preview-img" src="" class="w-full h-full object-cover hidden">
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                      <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black text-xs px-4 py-2.5 rounded-xl transition-all w-fit">
+                                        <i class="fa-solid fa-upload"></i> อัปโหลดรูป
+                                        <input type="file" id="f-photo-file" accept="image/*" class="hidden" onchange="previewEmpPhoto(this)">
+                                      </label>
+                                      <input type="url" id="f-photo-url" class="input-field text-xs py-2" placeholder="หรือวาง URL / Google Drive link...">
+                                    </div>
+                                  </div>
+                                </div>
                             </div>
                             <h4 class="section-title"><i class="fa-solid fa-address-card"></i>2. ข้อมูลส่วนบุคคล</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
@@ -1878,16 +1991,61 @@
                     document.getElementById('content-wrapper').scrollTop = 0;
                 };
 
+                // preview รูปเมื่อเลือกไฟล์ (local preview ก่อน upload)
+                window.previewEmpPhoto = (input) => {
+                    const file = input.files[0]; if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                        const img = document.getElementById('f-photo-preview-img');
+                        const ico = document.getElementById('f-photo-preview-icon');
+                        if (img) { img.src = ev.target.result; img.classList.remove('hidden'); }
+                        if (ico) ico.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                };
+
+                // sync preview เมื่อพิมพ์/วาง URL (รองรับ Google Drive)
+                document.getElementById('f-photo-url')?.addEventListener('input', function() {
+                    const url = window.convertDriveLink(this.value) || this.value;
+                    const img = document.getElementById('f-photo-preview-img');
+                    const ico = document.getElementById('f-photo-preview-icon');
+                    if (url && url.startsWith('http') && img) {
+                        img.src = url; img.classList.remove('hidden');
+                        if (ico) ico.classList.add('hidden');
+                    } else if (img) {
+                        img.classList.add('hidden');
+                        if (ico) ico.classList.remove('hidden');
+                    }
+                });
+
                 document.getElementById('employee-form')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('submit-btn');
                     btn.disabled = true;
                     const orig = document.getElementById('submit-btn-text').textContent;
                     document.getElementById('submit-btn-text').textContent = 'กำลังประมวลผล...';
+
+                    // อัปโหลดรูปถ้ามี file ที่เลือก (ใช้ global uploadPhotoWithToast)
+                    const fileInput = document.getElementById('f-photo-file');
+                    if (fileInput?.files[0]) {
+                        try {
+                            const file = fileInput.files[0];
+                            const ext  = file.name.split('.').pop().toLowerCase();
+                            const uid2 = document.getElementById('emp-uid').value || ('new_' + Date.now());
+                            const dlUrl = await window.uploadPhotoWithToast(file, `profile_photos/${uid2}_${Date.now()}.${ext}`);
+                            document.getElementById('f-photo-url').value = dlUrl;
+                            fileInput.value = '';
+                        } catch(uploadErr) {
+                            showToast('⚠️ อัปโหลดรูปไม่สำเร็จ: ' + uploadErr.message, 'error');
+                        }
+                    }
+
                     const fullName = `${v('f-fname-th')} ${v('f-lname-th')}`.trim();
                     const email = v('f-email');
+                    const rawPhotoUrl = v('f-photo-url');
+                    const photoURL = window.convertDriveLink(rawPhotoUrl) || rawPhotoUrl;
                     const payload = {
-                        employeeCode: v('f-emp-code'), role: v('f-sys-role'), status: v('f-status'), photoURL: v('f-photo-url'),
+                        employeeCode: v('f-emp-code'), role: v('f-sys-role'), status: v('f-status'), photoURL,
                         name: fullName, titleTH: v('f-title'), fnameTH: v('f-fname-th'), lnameTH: v('f-lname-th'),
                         nickname: v('f-nickname'), fnameEN: v('f-fname-en'), lnameEN: v('f-lname-en'),
                         gender: v('f-gender'), dob: v('f-dob'), idCard: v('f-idcard'),
