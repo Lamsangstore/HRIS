@@ -6095,8 +6095,7 @@ PAGES['payslip-admin'] = {
               </div>
             </div>`,
 
-            init(container, user, profile) {
-                const APP_ID = appId;
+            async init(user, profile, db, APP_ID) {
                 let mySchedule = null, currentPeriod = null;
                 let allDays = [];        // ทุกวันทำงานในงวด { day, inTime, outTime, type }
                 let selectedDays = {};  // { 'YYYY-MM-DD': { hours, note } }
@@ -6530,8 +6529,7 @@ PAGES['payslip-admin'] = {
               </div>
             </div>`,
 
-            init(container, user, profile) {
-                const APP_ID = appId;
+            async init(user, profile, db, APP_ID) {
                 let allRequests = [], filterStatus = 'all', unsubOt = null;
                 const stMap = { draft:'Draft', pending:'รออนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
                 const stCls = { draft:'ot-status-draft', pending:'ot-status-pending', approved:'ot-status-approved', rejected:'ot-status-rejected' };
