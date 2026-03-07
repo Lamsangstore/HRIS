@@ -1854,6 +1854,8 @@
                                 <div><label class="input-label">ฐานเงินเดือน (รายเดือน) *</label><input type="number" id="f-salary-month" required class="input-field" value="0"></div>
                                 <div><label class="input-label">ฐานเงินวัน</label><input type="number" id="f-salary-day" class="input-field" value="0"></div>
                                 <div><label class="input-label">ฐานเงินชั่วโมง</label><input type="number" id="f-salary-hour" class="input-field" value="0"></div>
+                                <div><label class="input-label">อัตรา Commission (%)</label><input type="number" id="f-comm-rate" class="input-field" value="0" min="0" max="100" step="0.1" placeholder="เช่น 3.5"></div>
+                                <div><label class="input-label">Commission ขั้นต่ำ (฿)</label><input type="number" id="f-comm-min" class="input-field" value="0" min="0" placeholder="เช่น 500"></div>
                                 <div><label class="input-label">คอมมิชชั่น (%)</label><input type="number" id="f-commission" class="input-field" value="0"></div>
                                 <div><label class="input-label">ช่องทางรับเงิน</label><select id="f-payment-method" class="input-field cursor-pointer"><option value="Bank Transfer">โอนผ่านธนาคาร</option><option value="Cash">เงินสด</option></select></div>
                                 <div><label class="input-label">ธนาคาร</label><select id="f-bank-name" class="input-field cursor-pointer"><option value="">- เลือกธนาคาร -</option><option value="KBANK">กสิกรไทย</option><option value="SCB">ไทยพาณิชย์</option><option value="BBL">กรุงเทพ</option><option value="KTB">กรุงไทย</option><option value="BAY">กรุงศรี</option></select></div>
@@ -1992,6 +1994,8 @@
                     document.getElementById('f-salary-month').value = emp.baseSalary || 0;
                     document.getElementById('f-salary-day').value = emp.dailyWage || 0;
                     document.getElementById('f-salary-hour').value = emp.hourlyWage || 0;
+                    document.getElementById('f-comm-rate').value = emp.commRate || 0;
+                    document.getElementById('f-comm-min').value  = emp.commMin  || 0;
                     document.getElementById('f-commission').value = emp.commission || 0;
                     document.getElementById('f-payment-method').value = emp.paymentMethod || 'Bank Transfer';
                     document.getElementById('f-bank-name').value = emp.bankName || '';
@@ -2073,6 +2077,7 @@
                         province: v('f-province'), district: v('f-district'), subdistrict: v('f-subdistrict'), zipcode: v('f-zipcode'),
                         startDate: v('f-start-date'), branch: v('f-branch'), position: v('f-position'), empType: v('f-emp-type'),
                         baseSalary: Number(v('f-salary-month')||0), dailyWage: Number(v('f-salary-day')||0), hourlyWage: Number(v('f-salary-hour')||0),
+                        commRate: Number(v('f-comm-rate')||0), commMin: Number(v('f-comm-min')||0),
                         commission: Number(v('f-commission')||0), paymentMethod: v('f-payment-method'), bankName: v('f-bank-name'), bankAccount: v('f-bank-acc'),
                         sso: v('f-sso'), taxDeduction: v('f-tax'),
                         emergencyName: v('f-emergency-name'), emergencyPhone: v('f-emergency-phone'),
@@ -6063,8 +6068,9 @@ PAGES['payslip-admin'] = {
                     <button onclick="otAddCommRow()" class="text-xs font-black text-yellow-600 hover:text-yellow-700 flex items-center gap-1.5 transition-colors mt-1">
                       <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
                     </button>
-                    <div class="mt-4 pt-3 border-t border-zinc-100 flex justify-end">
-                      <span class="text-sm">รวม Commission: <b id="ot-comm-total" class="text-zinc-800 text-base">฿0</b></span>
+                    <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between flex-wrap gap-2">
+                      <span id="ot-comm-min-warn" class="hidden text-xs text-orange-600 font-bold"></span>
+                      <span class="text-sm ml-auto">รวม Commission: <b id="ot-comm-total" class="text-zinc-800 text-base">฿0</b></span>
                     </div>
                   </div>
                 </div>
@@ -6198,11 +6204,15 @@ PAGES['payslip-admin'] = {
                         const dayMap = {};
                         tSnap.forEach(d => {
                             const t = d.data();
-                            const day = (t.timestamp||'').slice(0,10);
-                            if (day < currentPeriod.startDate || day > currentPeriod.endDate) return;
+                            // รองรับทั้ง field: timestamp (ISO) และ localDate (YYYY-MM-DD จาก time_requests approved)
+                            const ts  = t.timestamp || '';
+                            const day = t.localDate || ts.slice(0,10);
+                            if (!day || day < currentPeriod.startDate || day > currentPeriod.endDate) return;
                             if (!dayMap[day]) dayMap[day] = { in:null, out:null };
-                            if (t.type==='clock_in'  && (!dayMap[day].in  || t.timestamp < dayMap[day].in))  dayMap[day].in  = t.timestamp;
-                            if (t.type==='clock_out' && (!dayMap[day].out || t.timestamp > dayMap[day].out)) dayMap[day].out = t.timestamp;
+                            // ใช้ timestamp จริงในการเปรียบเทียบ earliest/latest
+                            const tsNorm = ts || (day + 'T00:00:00.000Z');
+                            if (t.type==='clock_in'  && (!dayMap[day].in  || tsNorm < dayMap[day].in))  dayMap[day].in  = tsNorm;
+                            if (t.type==='clock_out' && (!dayMap[day].out || tsNorm > dayMap[day].out)) dayMap[day].out = tsNorm;
                         });
 
                         // วันหยุดและชดเชย
@@ -6424,32 +6434,54 @@ PAGES['payslip-admin'] = {
                     function renderCommUI() {
                         const wrap = document.getElementById('ot-comm-rows');
                         if (!wrap) return;
-                        wrap.innerHTML = commRows.map((r,i) => `
-                            <div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
+                        const defaultPct  = profile.commRate  || 0;  // % จาก user profile
+                        const defaultMin  = profile.commMin   || 0;  // ยอดขั้นต่ำจาก user profile
+                        wrap.innerHTML = commRows.map((r,i) => {
+                            const result = Math.round((r.sales||0)*(r.pct||0)/100);
+                            return `<div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
                                 <input type="text" value="${r.desc||''}" placeholder="รายการ..."
                                     ${isLocked?'disabled':''}
                                     onchange="commRows[${i}].desc=this.value"
                                     class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none">
-                                <input type="number" value="${r.sales||0}" min="0" placeholder="ยอดขาย"
+                                <input type="number" value="${r.sales||''}" min="0" placeholder="ยอดขาย (฿)"
                                     ${isLocked?'disabled':''}
-                                    onchange="commRows[${i}].sales=Number(this.value);otCalcComm()"
+                                    oninput="commRows[${i}].sales=Number(this.value)||0;otCalcComm()"
                                     class="col-span-3 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
-                                <input type="number" value="${r.pct||0}" min="0" max="100" step="0.1" placeholder="%"
+                                <input type="number" value="${r.pct||defaultPct}" min="0" max="100" step="0.1" placeholder="%"
                                     ${isLocked?'disabled':''}
-                                    onchange="commRows[${i}].pct=Number(this.value);otCalcComm()"
+                                    oninput="commRows[${i}].pct=Number(this.value)||0;otCalcComm()"
                                     class="col-span-2 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
-                                <span class="col-span-2 text-xs font-black text-zinc-700 text-right">฿${Math.round((r.sales||0)*(r.pct||0)/100).toLocaleString()}</span>
+                                <span id="comm-result-${i}" class="col-span-2 text-xs font-black text-zinc-700 text-right">฿${result.toLocaleString()}</span>
                                 ${!isLocked?`<button onclick="commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
-                            </div>`).join('');
-                        otCalcComm();
+                            </div>`;
+                        }).join('');
+                        // คำนวณรวมโดยไม่วน loop เรียก renderCommUI
+                        const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
+                        const totEl = document.getElementById('ot-comm-total');
+                        if (totEl) totEl.textContent = '฿' + total.toLocaleString();
+                        // แสดง minimum warning
+                        if (defaultMin > 0) {
+                            const minEl = document.getElementById('ot-comm-min-warn');
+                            if (minEl) {
+                                if (total < defaultMin && total > 0) {
+                                    minEl.textContent = `⚠️ ต่ำกว่าขั้นต่ำ ฿${defaultMin.toLocaleString()}`;
+                                    minEl.classList.remove('hidden');
+                                } else minEl.classList.add('hidden');
+                            }
+                        }
                     }
                     window.renderCommUI_ = renderCommUI;
-                    window.otAddCommRow = () => { commRows.push({ desc:'', sales:0, pct:0 }); renderCommUI(); };
+                    window.otAddCommRow = () => { commRows.push({ desc:'', sales:0, pct: profile.commRate||0 }); renderCommUI(); };
                     window.otCalcComm  = () => {
+                        // คำนวณผลรวมเท่านั้น — ไม่เรียก renderCommUI เพื่อหลีกเลี่ยง infinite loop
                         const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
                         const el = document.getElementById('ot-comm-total');
                         if (el) el.textContent = '฿' + total.toLocaleString();
-                        renderCommUI();
+                        // อัปเดตเฉพาะ cell ผลรวมแต่ละแถว (ไม่ re-render ทั้งหมด)
+                        commRows.forEach((r,i) => {
+                            const cell = document.getElementById('comm-result-'+i);
+                            if (cell) cell.textContent = '฿' + Math.round((r.sales||0)*(r.pct||0)/100).toLocaleString();
+                        });
                     };
 
                     // ─── Save helpers ─────────────────────────────────────
