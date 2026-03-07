@@ -62,11 +62,11 @@
     <!-- ===================== SIDEBAR (อยู่ตลอด ไม่โหลดใหม่) ===================== -->
     <aside id="app-sidebar" class="bg-zinc-900 text-zinc-300 flex flex-col shadow-xl z-20 h-full overflow-hidden shrink-0">
         <!-- Sidebar Toggle Button -->
-        <div class="border-b border-zinc-800 p-3">
+        <div class="border-b border-zinc-800">
             <button onclick="toggleSidebar()" title="ย่อ/ขยายเมนู"
-                class="sidebar-toggle-inner flex items-center gap-3 w-full hover:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all group">
-                <i class="fa-solid fa-bars text-lg text-zinc-400 group-hover:text-yellow-400 transition-colors shrink-0 mx-auto"></i>
-                <span class="sidebar-text text-xs font-black text-zinc-500 group-hover:text-yellow-400 uppercase tracking-widest whitespace-nowrap">ย่อเมนู</span>
+                class="sidebar-toggle-inner flex items-center gap-3 w-full hover:bg-zinc-800 px-4 py-4 transition-all group">
+                <i class="fa-solid fa-bars text-lg text-zinc-400 group-hover:text-yellow-400 transition-colors shrink-0"></i>
+                <span class="sidebar-text text-sm font-black text-white tracking-wider whitespace-nowrap">Lamsang Group</span>
             </button>
         </div>
 
@@ -91,17 +91,15 @@
     <div class="flex-1 flex flex-col h-screen overflow-hidden">
 
         <!-- TOPBAR (อยู่ตลอด ไม่โหลดใหม่) -->
-        <header id="app-topbar" class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200 shrink-0">
-            <!-- Left: page title (mobile) -->
-            <div class="flex items-center min-w-[120px]">
-                <h2 id="topbar-title" class="text-sm font-black text-zinc-500 uppercase tracking-widest sm:hidden truncate max-w-[140px]">Lamsang Group</h2>
-            </div>
-            <!-- Center: Logo + Brand -->
-            <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none select-none">
-                <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
-                     alt="Lamsang Logo"
-                     class="h-8 w-8 object-contain rounded bg-zinc-100 p-1 shrink-0">
-                <span class="text-base font-black tracking-wider text-zinc-800 hidden sm:block whitespace-nowrap">Lamsang Group</span>
+        <header id="app-topbar" class="bg-white shadow-sm h-16 flex items-center justify-between px-4 z-10 border-b border-zinc-200 shrink-0">
+            <!-- Left: Logo โดดเด่น ชิดซ้าย + page title -->
+            <div class="flex items-center gap-4">
+                <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-900 shadow-md shrink-0 overflow-hidden">
+                    <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
+                         alt="Lamsang Logo"
+                         class="w-8 h-8 object-contain p-0.5">
+                </div>
+                <h2 id="topbar-title" class="text-sm font-black text-zinc-700 uppercase tracking-widest truncate max-w-[200px]">Lamsang Group</h2>
             </div>
             <div class="flex items-center space-x-4">
                 <!-- Notification Bell -->
