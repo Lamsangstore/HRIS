@@ -94,11 +94,9 @@
         <header id="app-topbar" class="bg-white shadow-sm h-16 flex items-center justify-between px-4 z-10 border-b border-zinc-200 shrink-0">
             <!-- Left: Logo โดดเด่น ชิดซ้าย + page title -->
             <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-900 shadow-md shrink-0 overflow-hidden">
-                    <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
-                         alt="Lamsang Logo"
-                         class="w-8 h-8 object-contain p-0.5">
-                </div>
+                <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
+                     alt="Lamsang Logo"
+                     class="h-10 w-10 object-contain shrink-0">
                 <h2 id="topbar-title" class="text-sm font-black text-zinc-700 uppercase tracking-widest truncate max-w-[200px]">Lamsang Group</h2>
             </div>
             <div class="flex items-center space-x-4">
@@ -1011,12 +1009,24 @@
         .ann-card:hover { box-shadow:0 6px 24px -6px rgba(0,0,0,.1); }
         </style>
         <div class="p-6 lg:p-10">
-          <div class="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <h2 class="text-3xl font-black text-zinc-800">สวัสดี, คุณ<span id="welcome-name" class="text-yellow-600">...</span> 👋</h2>
-              <p class="text-zinc-400 text-sm mt-1 font-medium italic">Welcome to Lamsang Group Management System</p>
+          <!-- Hero Banner with Logo -->
+          <div class="mb-8 bg-zinc-900 rounded-3xl overflow-hidden relative shadow-xl">
+            <div class="absolute inset-0 opacity-10"
+              style="background:radial-gradient(ellipse at 20% 50%, #eab308 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, #d97706 0%, transparent 50%)">
             </div>
-            <p id="home-date" class="text-xs font-bold text-zinc-400 hidden sm:block"></p>
+            <div class="relative flex items-center justify-between px-8 py-7 gap-6">
+              <div class="flex items-center gap-6">
+                <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
+                     alt="Lamsang Logo"
+                     class="h-20 w-20 object-contain drop-shadow-2xl shrink-0">
+                <div>
+                  <p class="text-yellow-400 text-xs font-black uppercase tracking-[0.2em] mb-1">Lamsang Group</p>
+                  <h2 class="text-2xl lg:text-3xl font-black text-white leading-tight">สวัสดี, คุณ<span id="welcome-name" class="text-yellow-400">...</span> 👋</h2>
+                  <p class="text-zinc-400 text-xs mt-1 font-medium">Human Resource Information System</p>
+                </div>
+              </div>
+              <p id="home-date" class="text-xs font-bold text-zinc-500 hidden sm:block text-right whitespace-nowrap shrink-0"></p>
+            </div>
           </div>
         
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
