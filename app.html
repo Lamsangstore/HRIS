@@ -6165,7 +6165,11 @@ PAGES['payslip-admin'] = {
                             <div class="sep"></div>
                             <!-- Link + Image -->
                             <button onclick="annInsertLink()"  title="แทรกลิงก์"><i class="fa-solid fa-link"></i></button>
-                            <button onclick="annInsertImage()" title="แทรกรูปภาพ (URL)"><i class="fa-solid fa-image"></i></button>
+                            <button onclick="annInsertImage()" title="แทรกรูปภาพ (URL)"><i class="fa-solid fa-link"></i></button>
+                            <label title="อัปโหลดรูปจากเครื่อง (หลายรูปได้)" class="toolbar-btn cursor-pointer">
+                              <i class="fa-solid fa-image"></i>
+                              <input type="file" id="ann-img-upload" accept="image/*" multiple class="hidden" onchange="annUploadImages(this)">
+                            </label>
                             <div class="sep"></div>
                             <!-- Clear -->
                             <button onclick="annCmd('removeFormat')" title="ล้างรูปแบบ" class="text-red-400"><i class="fa-solid fa-text-slash"></i></button>
@@ -6177,16 +6181,31 @@ PAGES['payslip-admin'] = {
                           </div>
                         </div>
         
-                        <!-- Image URL insert -->
-                        <div id="img-url-row" class="hidden">
-                          <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">URL รูปภาพ</label>
-                          <div class="flex gap-2">
-                            <input id="img-url-input" type="url" placeholder="https://..." oninput="annPreviewImg()"
-                              class="flex-1 border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
-                            <button onclick="annConfirmImg()" class="bg-zinc-900 text-yellow-400 font-black px-4 py-2.5 rounded-xl text-xs uppercase hover:bg-yellow-500 hover:text-zinc-900 transition-all">แทรก</button>
-                            <button onclick="annCancelImg()"  class="bg-zinc-100 text-zinc-600 font-black px-4 py-2.5 rounded-xl text-xs hover:bg-zinc-200 transition-all">ยกเลิก</button>
+                        <!-- Image insert panel (URL + upload) -->
+                        <div id="img-url-row" class="hidden bg-zinc-50 border border-zinc-200 rounded-2xl p-4 space-y-3">
+                          <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">แทรกรูปภาพ</p>
+                          <!-- URL tab -->
+                          <div class="flex gap-2 items-center">
+                            <input id="img-url-input" type="url" placeholder="วาง URL หรือ Google Drive link..."
+                              oninput="annPreviewImg()"
+                              class="flex-1 border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none bg-white">
+                            <button onclick="annConfirmImg()" class="bg-zinc-900 text-yellow-400 font-black px-4 py-2.5 rounded-xl text-xs uppercase hover:bg-yellow-500 hover:text-zinc-900 transition-all whitespace-nowrap">แทรก URL</button>
+                            <button onclick="annCancelImg()"  class="bg-zinc-100 text-zinc-600 font-black px-3 py-2.5 rounded-xl text-xs hover:bg-zinc-200 transition-all">✕</button>
                           </div>
-                          <img id="img-url-preview" src="" class="hidden mt-2 max-h-40 rounded-xl border border-zinc-200 object-contain">
+                          <img id="img-url-preview" src="" class="hidden max-h-32 rounded-xl border border-zinc-200 object-contain">
+                          <!-- Upload zone -->
+                          <label id="ann-drop-zone"
+                            class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-zinc-300 hover:border-yellow-400 rounded-2xl py-6 cursor-pointer transition-all bg-white hover:bg-yellow-50 group"
+                            ondragover="event.preventDefault();this.classList.add('border-yellow-500','bg-yellow-50')"
+                            ondragleave="this.classList.remove('border-yellow-500','bg-yellow-50')"
+                            ondrop="event.preventDefault();this.classList.remove('border-yellow-500','bg-yellow-50');annUploadImages({files:event.dataTransfer.files})">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-zinc-300 group-hover:text-yellow-500 transition-colors"></i>
+                            <span class="text-xs font-bold text-zinc-400 group-hover:text-yellow-600">คลิกหรือลากรูปมาวาง (หลายรูปได้)</span>
+                            <span class="text-[10px] text-zinc-300">JPG, PNG, WebP, GIF · สูงสุด 10MB/รูป</span>
+                            <input type="file" accept="image/*" multiple class="hidden" onchange="annUploadImages(this)">
+                          </label>
+                          <!-- Upload progress list -->
+                          <div id="ann-upload-list" class="space-y-2 empty:hidden"></div>
                         </div>
         
                         <!-- Footer -->
@@ -6246,32 +6265,98 @@ PAGES['payslip-admin'] = {
                     });
                 };
         
+                // ── Image insert (URL) ──────────────────────────────
                 window.annInsertImage = () => {
                     const row = document.getElementById('img-url-row');
-                    if (row) { row.classList.remove('hidden'); document.getElementById('img-url-input')?.focus(); }
+                    if (row) {
+                        row.classList.toggle('hidden');
+                        if (!row.classList.contains('hidden'))
+                            document.getElementById('img-url-input')?.focus();
+                    }
                 };
                 window.annPreviewImg = () => {
-                    const src = document.getElementById('img-url-input')?.value;
+                    const raw  = document.getElementById('img-url-input')?.value || '';
+                    const src  = window.convertDriveLink(raw) || raw;
                     const prev = document.getElementById('img-url-preview');
                     if (!prev) return;
-                    if (src) { prev.src=src; prev.classList.remove('hidden'); }
+                    if (src) { prev.src = src; prev.classList.remove('hidden'); }
                     else prev.classList.add('hidden');
                 };
                 window.annConfirmImg = () => {
-                    const src = document.getElementById('img-url-input')?.value.trim();
-                    if (!src) return;
-                    document.getElementById('ann-body-editor')?.focus();
-                    document.execCommand('insertHTML',false,`<img src="${src}" alt="รูปประกอบ">`);
+                    const raw = document.getElementById('img-url-input')?.value.trim();
+                    if (!raw) return;
+                    const src = window.convertDriveLink(raw) || raw;
+                    annInsertImgTag(src);
                     annCancelImg();
                 };
                 window.annCancelImg = () => {
                     const row = document.getElementById('img-url-row');
                     if (row) row.classList.add('hidden');
                     const inp = document.getElementById('img-url-input'); if (inp) inp.value='';
+                    const prev = document.getElementById('img-url-preview'); if (prev) { prev.src=''; prev.classList.add('hidden'); }
+                    document.getElementById('ann-upload-list').innerHTML = '';
                     const prev = document.getElementById('img-url-preview');
                     if (prev) { prev.src=''; prev.classList.add('hidden'); }
                 };
         
+                // แทรก <img> เข้า editor ณ cursor position
+                function annInsertImgTag(src, width) {
+                    const editor = document.getElementById('ann-body-editor');
+                    if (!editor) return;
+                    editor.focus();
+                    const styleAttr = width ? ` style="max-width:100%;width:${width}px"` : ' style="max-width:100%"';
+                    document.execCommand('insertHTML', false,
+                        `<img src="${src}" alt="รูปประกอบ"${styleAttr}><br>`);
+                }
+
+                // อัปโหลดหลายรูปผ่าน Cloudinary + แทรกทีละรูปหลัง upload เสร็จ
+                window.annUploadImages = async (input) => {
+                    const files = Array.from(input.files || []);
+                    if (!files.length) return;
+                    const listEl = document.getElementById('ann-upload-list');
+                    if (!listEl) return;
+
+                    for (const file of files) {
+                        const itemId = '_upl_' + Date.now() + Math.random().toString(36).slice(2);
+                        const item = document.createElement('div');
+                        item.id = itemId;
+                        item.className = 'flex items-center gap-3 bg-white border border-zinc-200 rounded-xl px-3 py-2';
+                        item.innerHTML = `
+                            <i class="fa-solid fa-image text-zinc-300 shrink-0"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-zinc-700 truncate">${file.name}</p>
+                                <div class="w-full bg-zinc-100 rounded-full h-1 mt-1">
+                                    <div id="${itemId}-bar" class="bg-yellow-400 h-1 rounded-full transition-all" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <span id="${itemId}-pct" class="text-[10px] font-black text-zinc-400 shrink-0">0%</span>`;
+                        listEl.appendChild(item);
+
+                        try {
+                            const url = await window.uploadPhotoToStorage(file, null, pct => {
+                                const bar = document.getElementById(itemId + '-bar');
+                                const pctEl = document.getElementById(itemId + '-pct');
+                                if (bar) bar.style.width = pct + '%';
+                                if (pctEl) pctEl.textContent = pct + '%';
+                            });
+                            // แทรกรูปเข้า editor ทันที
+                            annInsertImgTag(url);
+                            // อัปเดต item → success
+                            item.innerHTML = `
+                                <i class="fa-solid fa-circle-check text-green-500 shrink-0"></i>
+                                <p class="flex-1 text-xs font-bold text-zinc-600 truncate">${file.name}</p>
+                                <span class="text-[10px] font-black text-green-500">✓ แทรกแล้ว</span>`;
+                        } catch(e) {
+                            item.innerHTML = `
+                                <i class="fa-solid fa-circle-xmark text-red-400 shrink-0"></i>
+                                <p class="flex-1 text-xs font-bold text-red-500 truncate">${file.name}</p>
+                                <span class="text-[10px] text-red-400">${e.message}</span>`;
+                        }
+                    }
+                    // reset file input
+                    if (input.value !== undefined) input.value = '';
+                };
+
                 window.annInsertLink = () => {
                     const url = prompt('กรอก URL ลิงก์:');
                     if (url) { document.getElementById('ann-body-editor')?.focus(); document.execCommand('createLink',false,url); }
@@ -6320,7 +6405,7 @@ PAGES['payslip-admin'] = {
                 return () => {
                     unsub();
                     ['annFilter','annSelect','annNew','annCmd','annBlock','annKeyDown','annUpdateToolbar',
-                     'annInsertImage','annPreviewImg','annConfirmImg','annCancelImg','annInsertLink',
+                     'annInsertImage','annPreviewImg','annConfirmImg','annCancelImg','annInsertLink','annUploadImages',
                      'annSave','annDelete'].forEach(k => delete window[k]);
                 };
             }
