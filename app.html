@@ -787,19 +787,15 @@
                     }
                 }
         
-                // ── วันลาคงเหลือ
-                // แก้: โหลด balance + schedule พร้อมกัน เพื่อใช้ hpd จริงแทน hardcode 8
-                const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const [balDoc, schedDoc] = await Promise.all([
-                    getDoc(doc(db,'artifacts',APP_ID,'public','data','leave_balances',  user.uid)),
-                    getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules',  user.uid)),
-                ]);
-                const bal       = balDoc.exists()   ? balDoc.data()   : {};
+                // ── วันลาคงเหลือ (real-time)
+                const { doc, getDoc, onSnapshot: onSnapHome } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const schedDoc = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', user.uid));
                 const homeSched = schedDoc.exists() ? schedDoc.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
-                const hpd = getDayWorkHours(homeSched); // ชม./วัน จริงของพนักงานคนนี้
-        
-                const leaveSummaryEl = document.getElementById('leave-summary');
-                if (leaveSummaryEl) {
+                const hpd = getDayWorkHours(homeSched);
+
+                function renderHomeLeaveSummary(bal) {
+                    const leaveSummaryEl = document.getElementById('leave-summary');
+                    if (!leaveSummaryEl) return;
                     const types = [
                         {id:'sick',    label:'ลาป่วย',    icon:'fa-kit-medical',   color:'red',   maxDays:30},
                         {id:'personal',label:'ลากิจ',     icon:'fa-briefcase',     color:'blue',  maxDays:6},
@@ -807,13 +803,12 @@
                     ];
                     leaveSummaryEl.innerHTML = types.map(t => {
                         const b    = bal[t.id] || {};
-                        // แก้: ใช้ hpd จริงแทน hardcode 8
                         const max  = b.totalHours != null ? b.totalHours : (t.maxDays * hpd);
                         const used = b.usedHours  || 0;
                         const rem  = Math.max(0, max - used);
                         const pct  = max > 0 ? Math.min(100, Math.round(used/max*100)) : 0;
-                        // แก้: หารด้วย hpd จริงแทน 8
                         const remD = Math.round(rem / hpd * 10) / 10;
+                        const usedD = Math.round(used / hpd * 10) / 10;
                         const colorMap = {red:'bg-red-400',blue:'bg-blue-400',green:'bg-green-400'};
                         return `<div>
                           <div class="flex justify-between items-center mb-1">
@@ -825,9 +820,17 @@
                           <div class="w-full bg-zinc-100 rounded-full h-1.5">
                             <div class="h-1.5 rounded-full ${colorMap[t.color]} transition-all" style="width:${pct}%"></div>
                           </div>
+                          <p class="text-[10px] text-zinc-400 mt-0.5">ใช้ไป ${usedD} วัน</p>
                         </div>`;
                     }).join('');
                 }
+
+                // onSnapshot เพื่อ real-time update
+                const unsubHomeBal = onSnapHome(
+                    doc(db,'artifacts',APP_ID,'public','data','leave_balances', user.uid),
+                    snap => renderHomeLeaveSummary(snap.exists() ? snap.data() : {}),
+                    err => console.warn('home balance listener:', err.message)
+                );
         
                 // ── วันหยุดที่กำลังจะมาถึง
                 const upEl = document.getElementById('upcoming-holidays');
@@ -918,7 +921,7 @@
                     }
                 );
         
-                return () => { unsub(); };
+                return () => { unsub(); if (typeof unsubHomeBal === 'function') unsubHomeBal(); };
             }
         };
 
@@ -2996,6 +2999,12 @@ PAGES['leave-admin'] = {
                 : { workStart: '08:00', workEnd: '17:00', breakMinutes: 60 };
             const hpd = getDayWorkHours(empSched);
         
+            // อ่าน usedHours เดิมก่อน เพื่อไม่ให้ถูกรีเซ็ต
+            const curBalSnap = await getDoc(
+                doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid)
+            );
+            const curBal = curBalSnap.exists() ? curBalSnap.data() : {};
+
             const payload = {};
             LEAVE_TYPES.filter(t => t.maxDays > 0).forEach(t => {
                 const el = document.getElementById(`quota-${t.id}`);
@@ -3003,12 +3012,11 @@ PAGES['leave-admin'] = {
                 const inputDays = parseFloat(el.value) || 0;
                 payload[t.id] = {
                     totalHours: Math.round(inputDays * hpd * 100) / 100,
-                    usedHours: 0,
+                    usedHours: curBal[t.id]?.usedHours || 0,   // คงค่าเดิม
                 };
             });
         
             try {
-                // แก้: ใช้ setDoc และ doc จาก scope ของ init โดยตรง
                 await setDoc(
                     doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid),
                     payload,
