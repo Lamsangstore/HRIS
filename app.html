@@ -23,9 +23,25 @@
         }
         #app-sidebar.collapsed { width: 4rem; }
 
+        /* nav item padding */
+        #app-sidebar .nav-item {
+            padding-left: 1rem;
+            padding-right: 1rem;
+            transition: padding 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease;
+        }
+        #app-sidebar.collapsed .nav-item {
+            padding-left: 0;
+            padding-right: 0;
+            justify-content: center;
+        }
+
+        /* admin panel px-4 label */
+        #app-sidebar .admin-panel-text {
+            transition: opacity 0.2s ease 0.1s, transform 0.25s cubic-bezier(0.4,0,0.2,1) 0.05s;
+        }
+
         /* ข้อความ fade+slide แทน display:none */
         #app-sidebar .sidebar-text,
-        #app-sidebar .admin-panel-text,
         #app-sidebar .footer-text {
             opacity: 1;
             transform: translateX(0);
@@ -56,34 +72,32 @@
             pointer-events: auto;
         }
 
-        /* nav items: padding transition */
-        #app-sidebar .nav-item {
-            transition: justify-content 0.35s ease, padding 0.35s cubic-bezier(0.4,0,0.2,1), background-color 0.15s ease;
-        }
-        #app-sidebar.collapsed .nav-item {
-            justify-content: center;
-            padding-left: 0;
-            padding-right: 0;
-        }
-        #app-sidebar.collapsed .nav-item i {
-            margin: 0 !important;
-        }
-        /* icon: slight scale bounce เมื่อ collapse */
+        /* icon margin + scale bounce */
         #app-sidebar .nav-item i {
-            transition: margin 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            transition: margin 0.35s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            flex-shrink: 0;
+        }
+        #app-sidebar .nav-item .sidebar-text {
+            margin-left: 0.75rem;
+            transition: opacity 0.2s ease 0.1s, transform 0.25s cubic-bezier(0.4,0,0.2,1) 0.05s, margin 0.35s cubic-bezier(0.4,0,0.2,1);
         }
         #app-sidebar.collapsed .nav-item i {
-            transform: scale(1.15);
+            transform: scale(1.1);
+        }
+        #app-sidebar.collapsed .nav-item .sidebar-text {
+            margin-left: 0;
         }
 
         /* toggle button */
         #app-sidebar .sidebar-toggle-inner {
-            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1), justify-content 0.35s ease;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1);
         }
         #app-sidebar.collapsed .sidebar-toggle-inner {
-            justify-content: center;
             padding-left: 0;
             padding-right: 0;
+            justify-content: center;
         }
 
         /* ========= PAGE TRANSITIONS ========= */
@@ -275,13 +289,13 @@
                 // Divider = เปิด admin section
                 if (item.divider) {
                     html += `<div class="mt-6 pt-6 border-t border-zinc-800">
-                        <p class="px-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">${item.label}</p>`;
+                        <p class="pl-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">${item.label}</p>`;
                     inAdminDiv = true;
                     return;
                 }
         
                 const isActive = item.id === activeId;
-                const baseClass = 'nav-item flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer';
+                const baseClass = 'nav-item flex items-center py-3 rounded-lg transition-colors cursor-pointer';
                 const activeClass = isActive
                     ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm'
                     : (item.adminStyle
@@ -6823,18 +6837,6 @@ PAGES['payslip-admin'] = {
                             }
                             showToast('✅ ยื่นขออนุมัติแล้ว','success');
                             loadHistory();
-                            // แจ้ง LINE manager
-                            try {
-                                const mgrSnap = await getDocs(query(
-                                    collection(db,'artifacts',APP_ID,'public','data','users'),
-                                    where('role','in',['manager','admin'])
-                                ));
-                                for (const mgr of mgrSnap.docs) {
-                                    const m = mgr.data();
-                                    if (m.lineId) sendLineMessage(m.lineId,[{type:'text',
-                                        text:`📋 แจ้งเตือน OT\n${profile.name} ยื่นขอเบิก OT\nงวด: ${currentPeriod.periodNo}/${currentPeriod.year}\nOT คิดเป็น: ${payload.otConverted.toFixed(2)} ชม.\nCommission: ฿${payload.commTotal.toLocaleString()}\n\nกรุณาตรวจสอบในระบบ HRIS`}]).catch(()=>{});
-                                }
-                            } catch(le) { console.warn('LINE:',le); }
                             otLoadPeriod();
                         } catch(e) { showToast('❌ '+e.message,'error'); }
                     };
