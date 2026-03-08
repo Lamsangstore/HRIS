@@ -6570,8 +6570,10 @@ PAGES['payslip-admin'] = {
                     function renderCommUI() {
                         const wrap = document.getElementById('ot-comm-rows');
                         if (!wrap) return;
-                        const defaultPct  = profile.commRate  || 0;  // % จาก user profile
+                        const defaultPct  = profile.commRate || profile.commission || 0;  // % จาก user profile
                         const defaultMin  = profile.commMin   || 0;  // ยอดขั้นต่ำจาก user profile
+                        // sync pct ที่ยังไม่ได้ตั้งค่า
+                        commRows.forEach(r => { if (!r.pct && defaultPct) r.pct = defaultPct; });
                         wrap.innerHTML = commRows.map((r,i) => {
                             const result = Math.round((r.sales||0)*(r.pct||0)/100);
                             return `<div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
@@ -6607,7 +6609,7 @@ PAGES['payslip-admin'] = {
                         }
                     }
                     window.renderCommUI_ = renderCommUI;
-                    window.otAddCommRow = () => { commRows.push({ desc:'', sales:0, pct: profile.commRate||0 }); renderCommUI(); };
+                    window.otAddCommRow = () => { commRows.push({ desc:'', sales:0, pct: profile.commRate||profile.commission||0 }); renderCommUI(); };
                     window.otCalcComm  = () => {
                         // คำนวณผลรวมเท่านั้น — ไม่เรียก renderCommUI เพื่อหลีกเลี่ยง infinite loop
                         const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
