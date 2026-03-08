@@ -18,19 +18,73 @@
         /* ========= SIDEBAR ========= */
         #app-sidebar {
             width: 16rem;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: width;
         }
-        #app-sidebar { transition: width 0.2s ease; }
         #app-sidebar.collapsed { width: 4rem; }
+
+        /* ข้อความ fade+slide แทน display:none */
+        #app-sidebar .sidebar-text,
+        #app-sidebar .admin-panel-text,
+        #app-sidebar .footer-text {
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity 0.2s ease 0.1s, transform 0.25s cubic-bezier(0.4,0,0.2,1) 0.05s;
+            white-space: nowrap;
+            overflow: hidden;
+            pointer-events: auto;
+        }
         #app-sidebar.collapsed .sidebar-text,
         #app-sidebar.collapsed .admin-panel-text,
-        #app-sidebar.collapsed .footer-text { display: none; }
-        #app-sidebar.collapsed .collapsed-footer-text { display: block; }
-        #app-sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
-        #app-sidebar.collapsed .nav-item i { margin: 0 !important; font-size: 1.25rem; }
-        /* toggle button ใน sidebar — collapsed: จัดกลาง icon เท่านั้น */
-        #app-sidebar.collapsed .sidebar-toggle-inner { justify-content: center; padding-left: 0; padding-right: 0; }
+        #app-sidebar.collapsed .footer-text {
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            pointer-events: none;
+        }
+
+        /* collapsed footer badge */
+        #app-sidebar .collapsed-footer-text {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.2s ease 0.15s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1) 0.15s;
+            pointer-events: none;
+        }
+        #app-sidebar.collapsed .collapsed-footer-text {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        /* nav items: padding transition */
+        #app-sidebar .nav-item {
+            transition: justify-content 0.35s ease, padding 0.35s cubic-bezier(0.4,0,0.2,1), background-color 0.15s ease;
+        }
+        #app-sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+        #app-sidebar.collapsed .nav-item i {
+            margin: 0 !important;
+        }
+        /* icon: slight scale bounce เมื่อ collapse */
+        #app-sidebar .nav-item i {
+            transition: margin 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #app-sidebar.collapsed .nav-item i {
+            transform: scale(1.15);
+        }
+
+        /* toggle button */
+        #app-sidebar .sidebar-toggle-inner {
+            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1), justify-content 0.35s ease;
+        }
+        #app-sidebar.collapsed .sidebar-toggle-inner {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
 
         /* ========= PAGE TRANSITIONS ========= */
         #page-content {
@@ -80,11 +134,12 @@
             </div>
         </nav>
 
-        <!-- Footer -->
-        <div class="p-4 border-t border-zinc-800 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-medium footer-text whitespace-nowrap">
-            &copy; 2026 Lamsang Group
+        <div class="relative border-t border-zinc-800 shrink-0">
+            <div class="p-4 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-medium footer-text whitespace-nowrap">
+                &copy; 2026 Lamsang Group
+            </div>
+            <div class="p-4 text-[10px] text-zinc-600 text-center font-black collapsed-footer-text absolute inset-0 flex items-center justify-center">LSG</div>
         </div>
-        <div class="p-4 border-t border-zinc-800 text-[10px] text-zinc-600 text-center font-black hidden collapsed-footer-text">LSG</div>
     </aside>
 
     <!-- ===================== MAIN AREA ===================== -->
