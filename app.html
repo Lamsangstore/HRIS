@@ -3998,9 +3998,11 @@ PAGES['payroll'] = {
                 // รวม OT และ Commission ต่อพนักงาน (อาจมีหลาย request ต่องวด)
                 otSnap.docs.forEach(d=>{
                     const o=d.data();
-                    if(!otbu[o.uid]) otbu[o.uid]={otHours:0,commTotal:0};
-                    otbu[o.uid].otHours  += o.otConverted||0;
-                    otbu[o.uid].commTotal+= o.commTotal||0;
+                    if(!otbu[o.uid]) otbu[o.uid]={otHours:0,commTotal:0,salesTotal:0};
+                    otbu[o.uid].otHours   += o.otConverted||0;
+                    otbu[o.uid].commTotal += o.commTotal||0;
+                    // รวมยอดขายจาก commItems
+                    (o.commItems||[]).forEach(c=>{ otbu[o.uid].salesTotal += c.sales||0; });
                 });
                 const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
                 if(ex.docs.length){const b1=writeBatch(db);ex.docs.forEach(d=>b1.delete(d.ref));await b1.commit();}
@@ -4015,10 +4017,11 @@ PAGES['payroll'] = {
                     const dSSO=emp.sso==='Yes'?Math.min(Math.round(base*0.05),750):0;
                     const dTax=calcTax(base,taxMode), eD=daily*wd;
                     // OT & Commission จาก ot_requests ที่อนุมัติแล้ว
-                    const otData=otbu[emp.uid]||{otHours:0,commTotal:0};
+                    const otData=otbu[emp.uid]||{otHours:0,commTotal:0,salesTotal:0};
                     const wh=Math.round(otData.otHours*100)/100;
                     const eH=Math.round(hourly*wh*100)/100;
                     const eC=Math.round(otData.commTotal*100)/100;
+                    const salesTotal=Math.round(otData.salesTotal*100)/100;
                     const tEar=base+eD+eH+eC, tDed=dSSO+dTax, net=tEar-tDed;
                     const ref=doc(collection(db,'artifacts',APP_ID,'public','data','payroll_records'));
                     b2.set(ref,{
@@ -4027,7 +4030,7 @@ PAGES['payroll'] = {
                         nickname:emp.nickname||'',lineId:emp.lineId||'',photoURL:emp.photoURL||'',
                         branch:emp.branch||'',position:emp.position||'',
                         baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,commissionMin:emp.commMin||emp.commissionMin||0,
-                        workDays:wd,workHours:wh,commissionUnits:otData.commTotal,
+                        workDays:wd,workHours:wh,commissionUnits:salesTotal,
                         earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:0,
                         sickLeaveHours:lh.sick,personalLeaveHours:lh.personal,
                         vacationLeaveHours:lh.vacation,otherLeaveHours:lh.other,lateHours:0,
