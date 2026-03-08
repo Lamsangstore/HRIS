@@ -6156,7 +6156,8 @@ PAGES['payslip-admin'] = {
                 let mySchedule = null, currentPeriod = null;
                 let allDays = [];        // ทุกวันทำงานในงวด { day, inTime, outTime, type }
                 let selectedDays = {};  // { 'YYYY-MM-DD': { hours, note } }
-                let commRows = [];
+                window._commRows = [];
+                let commRows = window._commRows;
                 let otRequest = null;
                 let unsubHistory = null;
                 let isLocked = false;
@@ -6335,7 +6336,10 @@ PAGES['payslip-admin'] = {
                                 selectedDays[r.date] = { hours: r.rawHours, note: r.note||'' };
                             });
                         }
-                        commRows = otRequest?.commItems ? otRequest.commItems.map(c=>({...c})) : [];
+                        const loaded = otRequest?.commItems ? otRequest.commItems.map(c=>({...c})) : [];
+                        window._commRows.length = 0;
+                        loaded.forEach(r => window._commRows.push(r));
+                        commRows = window._commRows;
 
                         renderDayGrid();
                         renderCommUI();
@@ -6579,18 +6583,18 @@ PAGES['payslip-admin'] = {
                             return `<div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
                                 <input type="text" value="${r.desc||''}" placeholder="รายการ..."
                                     ${isLocked?'disabled':''}
-                                    onchange="commRows[${i}].desc=this.value"
+                                    onchange="_commRows[${i}].desc=this.value"
                                     class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none">
                                 <input type="number" value="${r.sales||''}" min="0" placeholder="ยอดขาย (฿)"
                                     ${isLocked?'disabled':''}
-                                    oninput="commRows[${i}].sales=Number(this.value)||0;otCalcComm()"
+                                    oninput="_commRows[${i}].sales=Number(this.value)||0;otCalcComm()"
                                     class="col-span-3 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
                                 <input type="number" value="${r.pct||defaultPct}" min="0" max="100" step="0.1" placeholder="%"
                                     ${isLocked?'disabled':''}
-                                    oninput="commRows[${i}].pct=Number(this.value)||0;otCalcComm()"
+                                    oninput="_commRows[${i}].pct=Number(this.value)||0;otCalcComm()"
                                     class="col-span-2 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
                                 <span id="comm-result-${i}" class="col-span-2 text-xs font-black text-zinc-700 text-right">฿${result.toLocaleString()}</span>
-                                ${!isLocked?`<button onclick="commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
+                                ${!isLocked?`<button onclick="_commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
                             </div>`;
                         }).join('');
                         // คำนวณรวมโดยไม่วน loop เรียก renderCommUI
@@ -6609,7 +6613,7 @@ PAGES['payslip-admin'] = {
                         }
                     }
                     window.renderCommUI_ = renderCommUI;
-                    window.otAddCommRow = () => { commRows.push({ desc:'', sales:0, pct: profile.commRate||profile.commission||0 }); renderCommUI(); };
+                    window.otAddCommRow = () => { window._commRows.push({ desc:'', sales:0, pct: profile.commRate||profile.commission||0 }); renderCommUI(); };
                     window.otCalcComm  = () => {
                         // คำนวณผลรวมเท่านั้น — ไม่เรียก renderCommUI เพื่อหลีกเลี่ยง infinite loop
                         const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
