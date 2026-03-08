@@ -1410,13 +1410,17 @@
                 .cal-cell.empty { background-color: transparent; cursor: default; }
                 .cal-cell.today { background-color: #27272a; color: #ffffff; }
                 .cal-cell.selected { border-color: #eab308; background-color: #eab308; color: #18181b; font-weight: 800; box-shadow: 0 4px 6px -1px rgba(234,179,8,0.3); }
-                .has-record-dot { width: 6px; height: 6px; background-color: #22c55e; border-radius: 50%; position: absolute; bottom: 6px; }
+                .has-record-dot { width: 6px; height: 6px; background-color: #22c55e; border-radius: 50%; position: absolute; bottom: 4px; }
                 .cal-cell.today .has-record-dot { background-color: #eab308; }
                 .cal-cell.selected .has-record-dot { background-color: #18181b; }
                 .cal-cell.holiday-cell { background-color:#fef2f2; color:#dc2626; }
                 .cal-cell.holiday-cell.today { background-color:#27272a; color:#fff; }
                 .cal-cell.holiday-cell.selected { background-color:#eab308; color:#18181b; }
-                .hol-dot { width:5px; height:5px; background:#ef4444; border-radius:50%; position:absolute; bottom:5px; right:5px; }
+                .cal-cell.leave-cell { background-color:#eff6ff; color:#1d4ed8; }
+                .cal-cell.leave-cell.today { background-color:#27272a; color:#fff; }
+                .cal-cell.leave-cell.selected { background-color:#eab308; color:#18181b; }
+                .cal-cell.leave-pending { background-color:#fff7ed; color:#c2410c; }
+                .cal-label { font-size: 0.45rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1; margin-top: 1px; max-width: 100%; text-align: center; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             </style>
             <div class="p-6 lg:p-8">
                 <div class="max-w-6xl mx-auto mb-6">
@@ -1468,28 +1472,51 @@
                                 <div class="cal-day-header">พ</div><div class="cal-day-header">พฤ</div><div class="cal-day-header">ศ</div><div class="cal-day-header">ส</div>
                             </div>
                             <div id="calendar-body" class="cal-grid"></div>
-                            <div class="mt-8 pt-6 border-t border-zinc-100 flex items-center justify-center space-x-6 text-xs font-bold text-zinc-500">
-                                <div class="flex items-center"><div class="w-3 h-3 bg-zinc-900 rounded-full mr-2"></div> วันนี้</div>
-                                <div class="flex items-center"><div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div> มีประวัติลงเวลา</div>
-                                <div class="flex items-center"><div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div> วันที่เลือก</div>
-                                <div class="flex items-center"><div class="w-3 h-3 bg-red-400 rounded-full mr-2"></div> วันหยุดนักขัตฤกษ์</div>
+                            <div class="mt-6 pt-5 border-t border-zinc-100 flex flex-wrap gap-x-4 gap-y-2 justify-center text-xs font-bold text-zinc-500">
+                                <div class="flex items-center"><div class="w-3 h-3 bg-zinc-900 rounded-full mr-1.5"></div> วันนี้</div>
+                                <div class="flex items-center"><div class="w-3 h-3 bg-green-500 rounded-full mr-1.5"></div> ลงเวลาแล้ว</div>
+                                <div class="flex items-center"><div class="w-3 h-3 bg-yellow-400 rounded-full mr-1.5"></div> วันที่เลือก</div>
+                                <div class="flex items-center"><div class="w-3 h-3 bg-red-200 rounded-full mr-1.5"></div> วันหยุดนักขัตฤกษ์</div>
+                                <div class="flex items-center"><div class="w-3 h-3 bg-blue-100 rounded-full mr-1.5"></div> วันลา</div>
+                                <div class="flex items-center"><div class="w-3 h-3 bg-orange-100 rounded-full mr-1.5"></div> รอพิจารณา</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>`,
             init: async (user, profile, db, appId) => {
-                const { collection, addDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const { collection, addDoc, onSnapshot, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
                 const currentDate = new Date();
                 let displayMonth = currentDate.getMonth();
                 let displayYear = currentDate.getFullYear();
                 let selectedDateStr = getLocalISO(currentDate);
                 let myLogs = [];
+                let myLeaves = []; // leave requests ที่อนุมัติแล้ว
                 let clockInterval;
 
                 function getLocalISO(d) {
                     return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                }
+
+                // โหลด leave requests ของตัวเอง
+                const lvSnap = await getDocs(query(
+                    collection(db,'artifacts',appId,'public','data','leave_requests'),
+                    where('uid','==',user.uid)
+                ));
+                myLeaves = lvSnap.docs.map(d=>d.data()).filter(l=>l.status==='approved'||l.status==='pending');
+
+                // สร้าง map วันลา: date → {type, status}
+                function buildLeaveMap() {
+                    const map = {};
+                    myLeaves.forEach(l => {
+                        const start = new Date(l.startDate), end = new Date(l.endDate);
+                        for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+                            const ds = getLocalISO(new Date(d));
+                            map[ds] = { type: l.type, status: l.status };
+                        }
+                    });
+                    return map;
                 }
 
                 document.getElementById('location-status').textContent = profile.branch || 'Lamsang Group';
@@ -1515,19 +1542,29 @@
                     if (el) el.textContent = `${months[displayMonth]} ${displayYear + 543}`;
                     const logsMap = {};
                     myLogs.forEach(l => { logsMap[l.localDate] = true; });
+                    const leaveMap = buildLeaveMap();
+                    const leaveTypeLabel = { sick:'ลาป่วย', personal:'ลากิจ', vacation:'ลาพักร้อน', other:'ลา' };
                     let html = '';
                     for (let i = 0; i < firstDay; i++) html += `<div class="cal-cell empty"></div>`;
                     for (let d = 1; d <= daysInMonth; d++) {
                         const ds = getLocalISO(new Date(displayYear, displayMonth, d));
                         let cls = 'cal-cell';
+                        let label = '';
                         const isHol = isPublicHoliday(ds);
-                        if (isHol) cls += ' holiday-cell';
+                        const lv = leaveMap[ds];
+                        if (isHol) {
+                            cls += ' holiday-cell';
+                            const holName = getHolidayName(ds) || 'หยุดนักขัตฤกษ์';
+                            label = `<span class="cal-label" style="color:inherit;opacity:0.8">${holName.length > 6 ? holName.slice(0,6)+'…' : holName}</span>`;
+                        } else if (lv) {
+                            cls += lv.status === 'pending' ? ' leave-pending' : ' leave-cell';
+                            const lvText = (leaveTypeLabel[lv.type] || 'ลา') + (lv.status === 'pending' ? '?' : '');
+                            label = `<span class="cal-label" style="color:inherit;opacity:0.8">${lvText}</span>`;
+                        }
                         if (ds === todayStr) cls += ' today';
                         if (ds === selectedDateStr) cls += ' selected';
                         const dot = logsMap[ds] ? '<div class="has-record-dot"></div>' : '';
-                        const holDot = (isHol && ds !== todayStr && ds !== selectedDateStr) ? `<div class="hol-dot" title="${getHolidayName(ds)||'วันหยุดนักขัตฤกษ์'}"></div>` : '';
-                        const ttip = isHol ? (getHolidayName(ds)||'วันหยุดนักขัตฤกษ์') : '';
-                        html += `<div class="${cls}" onclick="selectCalDate('${ds}')" title="${ttip}">${d}${dot}${holDot}</div>`;
+                        html += `<div class="${cls}" onclick="selectCalDate('${ds}')">${d}${label}${dot}</div>`;
                     }
                     const body = document.getElementById('calendar-body');
                     if (body) body.innerHTML = html;
