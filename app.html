@@ -289,6 +289,7 @@
                 <div class="h-8 w-px bg-zinc-200"></div>
                 <button id="topbar-profile-btn" onclick="navigateTo('profile')" class="flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
                     <img id="topbar-avatar" src="https://ui-avatars.com/api/?name=LSG&background=f4f4f5&color=a1a1aa"
+                         onerror="handleImgError(this)"
                          class="w-8 h-8 rounded-full object-cover border-2 border-zinc-200 group-hover:border-yellow-500 transition-all">
                     <div class="text-sm leading-tight hidden md:block">
                         <p id="topbar-username" class="font-bold text-zinc-800 group-hover:text-yellow-600 transition-colors">กำลังโหลด...</p>
@@ -414,7 +415,9 @@
         // ── Topbar update ───────────────────────────────────────────────
         function updateTopbar(profile, pageTitle) {
             const avatar = profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=27272a&color=eab308&size=128`;
-            document.getElementById('topbar-avatar').src = avatar;
+            const topbarAv = document.getElementById('topbar-avatar');
+            topbarAv.dataset.name = profile.name || '?';
+            topbarAv.src = avatar;
             document.getElementById('topbar-username').textContent = profile.name;
             document.getElementById('topbar-role').textContent = profile.role;
             if (pageTitle) document.getElementById('topbar-title').textContent = pageTitle;
@@ -546,6 +549,33 @@
             const m3 = url.match(/open\?id=([a-zA-Z0-9_-]+)/);
             if (m3) return `https://lh3.googleusercontent.com/d/${m3[1]}`;
             return url;
+        };
+
+        // helper: แปลง URL รูปพร้อม fallback chain สำหรับ Safari/iOS
+        window.imgSrcWithFallback = function(url, name) {
+            const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(name||'?')}&background=27272a&color=eab308&bold=true&size=128`;
+            if (!url) return fallback;
+            // lh3.googleusercontent.com/d/ → เพิ่ม uc?export=view fallback
+            const driveId = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+            if (driveId) {
+                return url; // primary — ถ้า fail จะใช้ onerror
+            }
+            return url;
+        };
+
+        // Global onerror handler สำหรับรูปที่โหลดไม่ได้ (Safari, CORS, expired)
+        window.handleImgError = function(img) {
+            const name = img.dataset.name || img.alt || '?';
+            // ลอง uc?export=view ก่อน ถ้า src เป็น lh3
+            const driveId = (img.src||'').match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+            if (driveId && !img.dataset.triedUc) {
+                img.dataset.triedUc = '1';
+                img.src = `https://drive.google.com/uc?export=view&id=${driveId[1]}`;
+                return;
+            }
+            // fallback สุดท้าย: ui-avatars
+            img.onerror = null;
+            img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=27272a&color=eab308&bold=true&size=128`;
         };
 
         // อัปโหลดรูปไป Cloudinary พร้อม progress callback
@@ -1762,7 +1792,7 @@
                         <div class="bg-white rounded-[2rem] shadow-sm border border-zinc-200 p-8 text-center relative overflow-hidden">
                             <div class="absolute top-0 left-0 w-full h-24 bg-zinc-900"></div>
                             <div class="relative w-32 h-32 mx-auto mt-8 mb-4 avatar-container cursor-pointer rounded-full border-4 border-white shadow-md group" onclick="changeProfilePicture()">
-                                <img src="" id="main-profile-img" class="w-full h-full rounded-full object-cover">
+                                <img src="" id="main-profile-img" class="w-full h-full rounded-full object-cover" onerror="handleImgError(this)">
                                 <div class="avatar-overlay absolute inset-0 bg-black bg-opacity-50 rounded-full flex flex-col items-center justify-center opacity-0 transition-opacity duration-300">
                                     <i class="fa-solid fa-camera text-white text-xl mb-1"></i>
                                     <span class="text-[10px] text-white font-bold">เปลี่ยนรูป</span>
@@ -1860,7 +1890,9 @@
 
                 // Fill profile card
                 const avatarUrl = profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=27272a&color=eab308&size=128`;
-                document.getElementById('main-profile-img').src = avatarUrl;
+                const mainImg = document.getElementById('main-profile-img');
+                mainImg.dataset.name = profile.name || '?';
+                mainImg.src = avatarUrl;
                 document.getElementById('display-name').textContent = profile.name;
                 document.getElementById('display-role').textContent = profile.position || profile.role.toUpperCase();
                 document.getElementById('display-branch').textContent = profile.branch || 'สำนักงานใหญ่';
@@ -2043,7 +2075,7 @@
                                   <div class="flex items-center gap-3">
                                     <div id="f-photo-preview-wrap" class="w-16 h-16 rounded-2xl bg-zinc-100 border-2 border-zinc-200 overflow-hidden shrink-0 flex items-center justify-center">
                                       <i class="fa-solid fa-user text-zinc-300 text-2xl" id="f-photo-preview-icon"></i>
-                                      <img id="f-photo-preview-img" src="" class="w-full h-full object-cover hidden">
+                                      <img id="f-photo-preview-img" src="" onerror="handleImgError(this)" class="w-full h-full object-cover hidden">
                                     </div>
                                     <div class="flex-1 space-y-2">
                                       <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black text-xs px-4 py-2.5 rounded-xl transition-all w-fit">
@@ -2175,7 +2207,7 @@
                         if (emp.status === 'resigned') badge = '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold">Resigned</span>';
                         else if (emp.status === 'probation') badge = '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold">Probation</span>';
                         html += `<tr class="hover:bg-zinc-50 transition-all border-b border-zinc-100">
-                            <td class="px-6 py-4"><div class="flex items-center"><img src="${avatar}" class="w-10 h-10 rounded-full border border-zinc-200 mr-3 object-cover"><div><p class="font-bold text-zinc-800 text-sm">${emp.name}</p><p class="text-[10px] text-zinc-400 font-bold">${emp.email}</p></div></div></td>
+                            <td class="px-6 py-4"><div class="flex items-center"><img src="${avatar}" onerror="handleImgError(this)" data-name="${emp.name}" class="w-10 h-10 rounded-full border border-zinc-200 mr-3 object-cover"><div><p class="font-bold text-zinc-800 text-sm">${emp.name}</p><p class="text-[10px] text-zinc-400 font-bold">${emp.email}</p></div></div></td>
                             <td class="px-4 py-4"><p class="text-xs font-black text-zinc-600">${emp.employeeCode||'-'}</p><p class="text-[10px] text-zinc-400">${emp.position||emp.role}</p></td>
                             <td class="px-4 py-4 text-xs font-medium text-zinc-600">${emp.branch||'-'}</td>
                             <td class="px-4 py-4">${badge}</td>
@@ -3167,7 +3199,7 @@ PAGES['leave-mgmt'] = {
                 <div class="req-card bg-white rounded-2xl border border-zinc-200 p-5 lg:p-6">
                   <div class="flex flex-col lg:flex-row gap-4">
                     <div class="flex items-center gap-4 lg:w-56 shrink-0">
-                      <img src="${avatarUrl(r)}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
+                      <img src="${avatarUrl(r)}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
                       <div class="min-w-0">
                         <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName}</p>
                         <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode || ''}</p>
@@ -3467,7 +3499,7 @@ PAGES['leave-admin'] = {
                 const isActive = e.uid === selectedEmpUid;
                 return `
                 <button onclick="selectAdminEmp('${e.uid}')" class="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all hover:bg-zinc-50 ${isActive ? 'bg-yellow-50 border-l-4 border-yellow-500' : ''}">
-                  <img src="${av}" class="w-10 h-10 rounded-xl object-cover border border-zinc-200 shrink-0">
+                  <img src="${av}" onerror="handleImgError(this)" class="w-10 h-10 rounded-xl object-cover border border-zinc-200 shrink-0">
                   <div class="min-w-0">
                     <p class="font-bold text-zinc-800 text-sm truncate">${e.name}</p>
                     <p class="text-[10px] text-zinc-400 font-bold uppercase">${e.employeeCode || e.role}</p>
@@ -3547,7 +3579,7 @@ PAGES['leave-admin'] = {
             panel.innerHTML = `
             <!-- Employee card -->
             <div class="bg-zinc-900 text-white rounded-2xl p-5 flex items-center gap-4 mb-5">
-              <img src="${av}" class="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-700">
+              <img src="${av}" onerror="handleImgError(this)" class="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-700">
               <div>
                 <p class="font-black text-lg">${emp.name}</p>
                 <p class="text-yellow-400 text-xs font-bold uppercase">${emp.employeeCode || ''} · ${emp.position || emp.role}</p>
@@ -3987,7 +4019,7 @@ PAGES['payroll'] = {
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[96vh] flex flex-col overflow-hidden">
     <div class="bg-zinc-900 px-4 sm:px-7 py-4 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-3 min-w-0">
-        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700 shrink-0">
+        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700 shrink-0" onerror="handleImgError(this)">
         <div class="min-w-0">
           <p id="pr-rec-name" class="font-black text-white text-sm truncate">-</p>
           <p id="pr-rec-code" class="text-yellow-400 text-[10px] font-bold uppercase tracking-wide truncate">-</p>
@@ -4141,7 +4173,7 @@ PAGES['payroll'] = {
                     <tbody>${records.length ? records.map(r=>{
                         const av=r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
                         return `<tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-all">
-                          <td class="px-4 py-3"><div class="flex items-center gap-3"><img src="${av}" class="w-9 h-9 rounded-xl object-cover border border-zinc-200 shrink-0"><div class="min-w-0"><p class="font-black text-zinc-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
+                          <td class="px-4 py-3"><div class="flex items-center gap-3"><img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-xl object-cover border border-zinc-200 shrink-0"><div class="min-w-0"><p class="font-black text-zinc-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
                           <td class="px-3 py-3 text-right num text-sm font-bold text-zinc-700">\u0e3f${fmt(r.totalEarning)}</td>
                           <td class="px-3 py-3 text-right num text-sm font-bold text-red-500">\u0e3f${fmt(r.totalDeduct)}</td>
                           <td class="px-3 py-3 text-right num font-black text-green-600">\u0e3f${fmt(r.netPay)}</td>
@@ -4629,7 +4661,7 @@ PAGES['payroll'] = {
                 const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=06C755&color=fff&bold=true`;
                 return `<label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zinc-100 hover:border-[#06C755] cursor-pointer transition-all group ${hasLine ? '' : 'opacity-50 cursor-not-allowed'}" ${!hasLine ? 'title="ไม่มี LINE User ID"' : ''}>
                     <input type="checkbox" class="pr-line-cb w-4 h-4 accent-[#06C755] cursor-pointer shrink-0" data-rid="${r.id}" ${!hasLine ? 'disabled' : ''}>
-                    <img src="${av}" class="w-9 h-9 rounded-full object-cover border-2 border-zinc-200 group-hover:border-[#06C755] transition-all shrink-0">
+                    <img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-full object-cover border-2 border-zinc-200 group-hover:border-[#06C755] transition-all shrink-0">
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-bold text-zinc-800 truncate">${r.name}${r.nickname ? ` <span class="text-zinc-400 font-normal">(${r.nickname})</span>` : ''}</p>
                         <p class="text-[10px] text-zinc-400 font-medium truncate">${r.branch||''} · ${r.position||''}</p>
@@ -5163,7 +5195,7 @@ PAGES['time-approve'] = {
                 return `<div class="tr-card bg-white rounded-2xl border border-zinc-200 p-5">
                   <div class="flex flex-col lg:flex-row gap-4">
                     <div class="flex items-center gap-3 lg:w-48 shrink-0">
-                      <img src="${av(r)}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
+                      <img src="${av(r)}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
                       <div class="min-w-0">
                         <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName}</p>
                         <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p>
@@ -5881,7 +5913,7 @@ PAGES['payslip'] = {
 
             el.innerHTML = `
             <div class="bg-white rounded-3xl border-2 border-zinc-100 p-8 flex flex-col items-center text-center gap-5">
-              <img src="${av}" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg">
+              <img src="${av}" onerror="handleImgError(this)" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg">
               <div>
                 <p class="font-black text-zinc-800 text-xl">${profile.name}</p>
                 <p class="text-sm text-zinc-400 font-medium mt-0.5">${profile.position || profile.role} · ${profile.branch || ''}</p>
@@ -6120,7 +6152,7 @@ PAGES['payslip-admin'] = {
                 const code = s.employeeCode || emp?.employeeCode || '';
                 const av   = emp?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f4f4f5&color=27272a&bold=true`;
                 return `<div class="bg-white rounded-2xl border border-zinc-100 hover:border-yellow-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4 transition-all group">
-                  <img src="${av}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200 shrink-0">
+                  <img src="${av}" onerror="handleImgError(this)" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200 shrink-0">
                   <div class="flex-1 min-w-0">
                     <div class="flex flex-wrap items-center gap-2 mb-0.5">
                       <span class="font-black text-zinc-800 text-sm">${name}</span>
