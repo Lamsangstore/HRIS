@@ -6106,6 +6106,10 @@ PAGES['payslip-admin'] = {
                       <h3 class="text-sm font-black text-white">Commission</h3>
                       <p class="text-[10px] text-zinc-400 mt-0.5">กรอกยอดขาย × % คอมมิชชั่น</p>
                     </div>
+                    <div id="comm-min-badge" class="hidden text-right">
+                      <p class="text-[10px] text-zinc-400">ยอดขายขั้นต่ำ</p>
+                      <p id="comm-min-value" class="text-sm font-black text-yellow-400">฿0</p>
+                    </div>
                   </div>
                   <div class="p-5">
                     <div class="grid grid-cols-12 gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">
@@ -6574,12 +6578,28 @@ PAGES['payslip-admin'] = {
                     function renderCommUI() {
                         const wrap = document.getElementById('ot-comm-rows');
                         if (!wrap) return;
-                        const defaultPct  = profile.commRate || profile.commission || 0;  // % จาก user profile
-                        const defaultMin  = profile.commMin   || 0;  // ยอดขั้นต่ำจาก user profile
+                        const defaultPct = profile.commRate || profile.commission || 0;
+                        const defaultMin = profile.commMin || 0;
                         // sync pct ที่ยังไม่ได้ตั้งค่า
                         commRows.forEach(r => { if (!r.pct && defaultPct) r.pct = defaultPct; });
+
+                        // แสดง badge ยอดขายขั้นต่ำ
+                        const badge = document.getElementById('comm-min-badge');
+                        const badgeVal = document.getElementById('comm-min-value');
+                        if (badge && badgeVal) {
+                            if (defaultMin > 0) {
+                                badgeVal.textContent = '฿' + defaultMin.toLocaleString();
+                                badge.classList.remove('hidden');
+                            } else badge.classList.add('hidden');
+                        }
+
+                        // คำนวณยอดขายรวมทุกรายการ
+                        const totalSales = commRows.reduce((s,r) => s + (r.sales||0), 0);
+                        const belowMin = defaultMin > 0 && totalSales > 0 && totalSales < defaultMin;
+
                         wrap.innerHTML = commRows.map((r,i) => {
-                            const result = Math.round((r.sales||0)*(r.pct||0)/100);
+                            // ถ้ายอดขายรวมไม่ถึงขั้นต่ำ → ได้รับ ฿0
+                            const result = belowMin ? 0 : Math.round((r.sales||0)*(r.pct||0)/100);
                             return `<div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
                                 <input type="text" value="${r.desc||''}" placeholder="รายการ..."
                                     ${isLocked?'disabled':''}
@@ -6593,37 +6613,49 @@ PAGES['payslip-admin'] = {
                                     ${isLocked?'disabled':''}
                                     oninput="_commRows[${i}].pct=Number(this.value)||0;otCalcComm()"
                                     class="col-span-2 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
-                                <span id="comm-result-${i}" class="col-span-2 text-xs font-black text-zinc-700 text-right">฿${result.toLocaleString()}</span>
+                                <span id="comm-result-${i}" class="col-span-2 text-xs font-black ${belowMin?'text-red-400 line-through':'text-zinc-700'} text-right">฿${result.toLocaleString()}</span>
                                 ${!isLocked?`<button onclick="_commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
                             </div>`;
                         }).join('');
-                        // คำนวณรวมโดยไม่วน loop เรียก renderCommUI
-                        const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
+
+                        const total = belowMin ? 0 : commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
                         const totEl = document.getElementById('ot-comm-total');
                         if (totEl) totEl.textContent = '฿' + total.toLocaleString();
-                        // แสดง minimum warning
-                        if (defaultMin > 0) {
-                            const minEl = document.getElementById('ot-comm-min-warn');
-                            if (minEl) {
-                                if (total < defaultMin && total > 0) {
-                                    minEl.textContent = `⚠️ ต่ำกว่าขั้นต่ำ ฿${defaultMin.toLocaleString()}`;
-                                    minEl.classList.remove('hidden');
-                                } else minEl.classList.add('hidden');
-                            }
+
+                        const minEl = document.getElementById('ot-comm-min-warn');
+                        if (minEl) {
+                            if (belowMin) {
+                                const short = defaultMin - totalSales;
+                                minEl.innerHTML = `⚠️ ยอดขายรวม ฿${totalSales.toLocaleString()} ยังขาดอีก ฿${short.toLocaleString()} จึงจะถึงขั้นต่ำ — ไม่ได้รับคอมมิชชั่น`;
+                                minEl.classList.remove('hidden');
+                            } else minEl.classList.add('hidden');
                         }
                     }
                     window.renderCommUI_ = renderCommUI;
                     window.otAddCommRow = () => { window._commRows.push({ desc:'', sales:0, pct: profile.commRate||profile.commission||0 }); renderCommUI(); };
                     window.otCalcComm  = () => {
-                        // คำนวณผลรวมเท่านั้น — ไม่เรียก renderCommUI เพื่อหลีกเลี่ยง infinite loop
-                        const total = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
+                        const defaultMin = profile.commMin || 0;
+                        const totalSales = commRows.reduce((s,r) => s + (r.sales||0), 0);
+                        const belowMin = defaultMin > 0 && totalSales > 0 && totalSales < defaultMin;
+                        const total = belowMin ? 0 : commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
                         const el = document.getElementById('ot-comm-total');
                         if (el) el.textContent = '฿' + total.toLocaleString();
-                        // อัปเดตเฉพาะ cell ผลรวมแต่ละแถว (ไม่ re-render ทั้งหมด)
                         commRows.forEach((r,i) => {
                             const cell = document.getElementById('comm-result-'+i);
-                            if (cell) cell.textContent = '฿' + Math.round((r.sales||0)*(r.pct||0)/100).toLocaleString();
+                            if (cell) {
+                                const v = belowMin ? 0 : Math.round((r.sales||0)*(r.pct||0)/100);
+                                cell.textContent = '฿' + v.toLocaleString();
+                                cell.className = `col-span-2 text-xs font-black ${belowMin?'text-red-400 line-through':'text-zinc-700'} text-right`;
+                            }
                         });
+                        const minEl = document.getElementById('ot-comm-min-warn');
+                        if (minEl) {
+                            if (belowMin) {
+                                const short = defaultMin - totalSales;
+                                minEl.innerHTML = `⚠️ ยอดขายรวม ฿${totalSales.toLocaleString()} ยังขาดอีก ฿${short.toLocaleString()} จึงจะถึงขั้นต่ำ — ไม่ได้รับคอมมิชชั่น`;
+                                minEl.classList.remove('hidden');
+                            } else minEl.classList.add('hidden');
+                        }
                     };
 
                     // ─── Save helpers ─────────────────────────────────────
@@ -6642,7 +6674,10 @@ PAGES['payslip-admin'] = {
                                      type:d.type, mult, note:e.note||'' };
                         });
                         const otConverted = rows.reduce((s,r) => s + r.otConv, 0);
-                        const commTotal   = commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
+                        const defaultMin  = profile.commMin || 0;
+                        const totalSales  = commRows.reduce((s,r) => s + (r.sales||0), 0);
+                        const belowMin    = defaultMin > 0 && totalSales > 0 && totalSales < defaultMin;
+                        const commTotal   = belowMin ? 0 : commRows.reduce((s,r) => s + Math.round((r.sales||0)*(r.pct||0)/100), 0);
                         return {
                             uid:user.uid, name:profile.name, branch:profile.branch||'',
                             periodId:currentPeriod.id,
