@@ -1878,7 +1878,6 @@
                                 <div><label class="input-label">ฐานเงินชั่วโมง</label><input type="number" id="f-salary-hour" class="input-field" value="0"></div>
                                 <div><label class="input-label">อัตรา Commission (%)</label><input type="number" id="f-comm-rate" class="input-field" value="0" min="0" max="100" step="0.1" placeholder="เช่น 3.5"></div>
                                 <div><label class="input-label">Commission ขั้นต่ำ (฿)</label><input type="number" id="f-comm-min" class="input-field" value="0" min="0" placeholder="เช่น 500"></div>
-                                <div><label class="input-label">คอมมิชชั่น (%)</label><input type="number" id="f-commission" class="input-field" value="0"></div>
                                 <div><label class="input-label">ช่องทางรับเงิน</label><select id="f-payment-method" class="input-field cursor-pointer"><option value="Bank Transfer">โอนผ่านธนาคาร</option><option value="Cash">เงินสด</option></select></div>
                                 <div><label class="input-label">ธนาคาร</label><select id="f-bank-name" class="input-field cursor-pointer"><option value="">- เลือกธนาคาร -</option><option value="KBANK">กสิกรไทย</option><option value="SCB">ไทยพาณิชย์</option><option value="BBL">กรุงเทพ</option><option value="KTB">กรุงไทย</option><option value="BAY">กรุงศรี</option></select></div>
                                 <div><label class="input-label">เลขที่บัญชี</label><input type="text" id="f-bank-acc" class="input-field"></div>
@@ -2016,9 +2015,8 @@
                     document.getElementById('f-salary-month').value = emp.baseSalary || 0;
                     document.getElementById('f-salary-day').value = emp.dailyWage || 0;
                     document.getElementById('f-salary-hour').value = emp.hourlyWage || 0;
-                    document.getElementById('f-comm-rate').value = emp.commRate || 0;
+                    document.getElementById('f-comm-rate').value = emp.commRate || emp.commission || 0;
                     document.getElementById('f-comm-min').value  = emp.commMin  || 0;
-                    document.getElementById('f-commission').value = emp.commission || 0;
                     document.getElementById('f-payment-method').value = emp.paymentMethod || 'Bank Transfer';
                     document.getElementById('f-bank-name').value = emp.bankName || '';
                     document.getElementById('f-bank-acc').value = emp.bankAccount || '';
@@ -2100,7 +2098,7 @@
                         startDate: v('f-start-date'), branch: v('f-branch'), position: v('f-position'), empType: v('f-emp-type'),
                         baseSalary: Number(v('f-salary-month')||0), dailyWage: Number(v('f-salary-day')||0), hourlyWage: Number(v('f-salary-hour')||0),
                         commRate: Number(v('f-comm-rate')||0), commMin: Number(v('f-comm-min')||0),
-                        commission: Number(v('f-commission')||0), paymentMethod: v('f-payment-method'), bankName: v('f-bank-name'), bankAccount: v('f-bank-acc'),
+                        commission: Number(v('f-comm-rate')||0), paymentMethod: v('f-payment-method'), bankName: v('f-bank-name'), bankAccount: v('f-bank-acc'),
                         sso: v('f-sso'), taxDeduction: v('f-tax'),
                         emergencyName: v('f-emergency-name'), emergencyPhone: v('f-emergency-phone'),
                         updatedAt: new Date().toISOString()
