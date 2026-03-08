@@ -6114,8 +6114,8 @@ PAGES['payslip-admin'] = {
                   <div class="p-5">
                     <div class="grid grid-cols-12 gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">
                       <div class="col-span-4">รายการ</div>
-                      <div class="col-span-3 text-right">ยอดขาย (฿)</div>
-                      <div class="col-span-2 text-right">% คอม</div>
+                      <div class="col-span-4 text-right">ยอดขาย (฿)</div>
+                      <div class="col-span-1 text-right">% คอม</div>
                       <div class="col-span-2 text-right">ได้รับ (฿)</div>
                       <div class="col-span-1"></div>
                     </div>
@@ -6342,6 +6342,11 @@ PAGES['payslip-admin'] = {
                         }
                         const loaded = otRequest?.commItems ? otRequest.commItems.map(c=>({...c})) : [];
                         window._commRows.length = 0;
+                        // ถ้าไม่มีข้อมูลเดิม ใส่ preset Page 365 ให้เลย
+                        if (loaded.length === 0) {
+                            const defPct = profile.commRate || profile.commission || 0;
+                            loaded.push({ desc: 'Page 365', sales: 0, pct: defPct });
+                        }
                         loaded.forEach(r => window._commRows.push(r));
                         commRows = window._commRows;
 
@@ -6600,6 +6605,7 @@ PAGES['payslip-admin'] = {
                         wrap.innerHTML = commRows.map((r,i) => {
                             // ถ้ายอดขายรวมไม่ถึงขั้นต่ำ → ได้รับ ฿0
                             const result = belowMin ? 0 : (Math.round((r.sales||0)*(r.pct||0))/100);
+                            const fmtResult = Number.isInteger(result) ? result.toLocaleString() : result.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
                             return `<div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
                                 <input type="text" value="${r.desc||''}" placeholder="รายการ..."
                                     ${isLocked?'disabled':''}
@@ -6608,12 +6614,9 @@ PAGES['payslip-admin'] = {
                                 <input type="number" value="${r.sales||''}" min="0" placeholder="ยอดขาย (฿)"
                                     ${isLocked?'disabled':''}
                                     oninput="_commRows[${i}].sales=Number(this.value)||0;otCalcComm()"
-                                    class="col-span-3 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
-                                <input type="number" value="${r.pct||defaultPct}" min="0" max="100" step="0.1" placeholder="%"
-                                    ${isLocked?'disabled':''}
-                                    oninput="_commRows[${i}].pct=Number(this.value)||0;otCalcComm()"
-                                    class="col-span-2 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
-                                <span id="comm-result-${i}" class="col-span-2 text-xs font-black ${belowMin?'text-red-400 line-through':'text-zinc-700'} text-right">฿${Number.isInteger(result) ? result.toLocaleString() : result.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                                    class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
+                                <span class="col-span-1 text-xs font-black text-zinc-500 text-center bg-zinc-200 rounded-lg py-1.5">${r.pct||defaultPct}%</span>
+                                <span id="comm-result-${i}" class="col-span-2 text-xs font-black ${belowMin?'text-red-400 line-through':'text-zinc-700'} text-right">฿${fmtResult}</span>
                                 ${!isLocked?`<button onclick="_commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
                             </div>`;
                         }).join('');
@@ -6632,7 +6635,7 @@ PAGES['payslip-admin'] = {
                         }
                     }
                     window.renderCommUI_ = renderCommUI;
-                    window.otAddCommRow = () => { window._commRows.push({ desc:'', sales:0, pct: profile.commRate||profile.commission||0 }); renderCommUI(); };
+                    window.otAddCommRow = () => { window._commRows.push({ desc:'Page 365', sales:0, pct: profile.commRate||profile.commission||0 }); renderCommUI(); };
                     window.otCalcComm  = () => {
                         const defaultMin = profile.commMin || 0;
                         const totalSales = commRows.reduce((s,r) => s + (r.sales||0), 0);
