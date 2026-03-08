@@ -35,19 +35,35 @@
         #app-sidebar.collapsed { width: 4rem; }
 
         /* toggle button */
-        #app-sidebar .sidebar-toggle-inner {
-            padding: 0.85rem 0.75rem;
+        #app-sidebar #sidebar-toggle-wrap {
+            display: flex;
             justify-content: flex-start;
-            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1);
+            transition: justify-content 0s;
+        }
+        #app-sidebar.collapsed #sidebar-toggle-wrap {
+            justify-content: center;
+        }
+        #app-sidebar .sidebar-toggle-inner {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 0.65rem;
+            border-radius: 0.625rem;
+            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1), background-color 0.15s ease;
+        }
+        #app-sidebar:not(.collapsed) .sidebar-toggle-inner {
+            width: 100%;
         }
         #app-sidebar.collapsed .sidebar-toggle-inner {
-            padding: 0.85rem 0;
+            width: 2.75rem;
+            padding: 0.7rem;
             justify-content: center;
         }
         #app-sidebar .sidebar-toggle-inner i {
             width: 1.25rem;
             text-align: center;
             flex-shrink: 0;
+            font-size: 1rem;
         }
 
         /* nav wrapper */
@@ -142,10 +158,10 @@
     <!-- ===================== SIDEBAR (อยู่ตลอด ไม่โหลดใหม่) ===================== -->
     <aside id="app-sidebar" class="bg-zinc-900 text-zinc-300 flex flex-col shadow-xl z-20 h-full overflow-hidden shrink-0">
         <!-- Sidebar Toggle Button -->
-        <div class="border-b border-zinc-800" id="sidebar-toggle-wrap">
+        <div class="border-b border-zinc-800 px-2 py-2" id="sidebar-toggle-wrap">
             <button onclick="toggleSidebar()" title="ย่อ/ขยายเมนู"
-                class="sidebar-toggle-inner flex items-center gap-3 w-full hover:bg-zinc-800 transition-all group">
-                <i class="fa-solid fa-bars text-base text-zinc-400 group-hover:text-yellow-400 transition-colors shrink-0"></i>
+                class="sidebar-toggle-inner hover:bg-zinc-800 group">
+                <i class="fa-solid fa-bars text-zinc-400 group-hover:text-yellow-400 transition-colors"></i>
                 <span class="sidebar-text text-sm font-black text-white tracking-wider whitespace-nowrap">Lamsang Group</span>
             </button>
         </div>
