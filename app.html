@@ -1440,10 +1440,10 @@
                             </div>
                             <div class="flex flex-col space-y-3">
                                 <button id="btn-clock-in" onclick="clockIn()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-500 font-black py-4 rounded-2xl transition-all shadow-lg flex justify-center items-center text-lg uppercase tracking-wider">
-                                    <i class="fa-solid fa-right-to-bracket mr-3"></i> เข้างาน (Clock In)
+                                    <i class="fa-solid fa-right-to-bracket mr-3"></i> เข้างาน
                                 </button>
                                 <button id="btn-clock-out" onclick="clockOut()" class="w-full bg-white hover:bg-red-50 text-red-500 border-2 border-red-200 hover:border-red-500 font-black py-4 rounded-2xl transition-all flex justify-center items-center text-lg uppercase tracking-wider">
-                                    <i class="fa-solid fa-right-from-bracket mr-3"></i> ออกงาน (Clock Out)
+                                    <i class="fa-solid fa-right-from-bracket mr-3"></i> ออกงาน
                                 </button>
                             </div>
                         </div>
@@ -1571,14 +1571,20 @@
                 }
 
                 function renderLogs() {
-                    const logs = myLogs.filter(l => l.localDate === selectedDateStr).sort((a,b) => new Date(a.timestamp)-new Date(b.timestamp));
+                    const allLogs = myLogs.filter(l => l.localDate === selectedDateStr).sort((a,b) => new Date(a.timestamp)-new Date(b.timestamp));
                     let html = '';
-                    if (!logs.length) {
+                    if (!allLogs.length) {
                         html = `<div class="text-center py-8 text-zinc-400"><i class="fa-regular fa-calendar-xmark text-3xl mb-3 opacity-50"></i><p class="text-sm font-medium">ไม่มีประวัติลงเวลา</p></div>`;
                     } else {
-                        logs.forEach(log => {
-                            const time = new Date(log.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                            const isIn = log.type === 'clock_in';
+                        // เอา clock_in แรกสุด และ clock_out หลังสุด
+                        const ins  = allLogs.filter(l => l.type === 'clock_in');
+                        const outs = allLogs.filter(l => l.type === 'clock_out');
+                        const firstIn  = ins[0];
+                        const lastOut  = outs[outs.length - 1];
+                        const toShow   = [firstIn, lastOut].filter(Boolean);
+                        toShow.forEach(log => {
+                            const time  = new Date(log.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                            const isIn  = log.type === 'clock_in';
                             html += `<div class="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm hover:border-yellow-300 transition-all">
                                 <div class="flex items-center">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3 ${isIn ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}">
@@ -1592,9 +1598,41 @@
                                 <div class="text-lg font-black ${isIn ? 'text-green-600' : 'text-red-500'} font-mono">${time}</div>
                             </div>`;
                         });
+                        // แสดงจำนวน record ทั้งหมดถ้ามากกว่า 2
+                        if (allLogs.length > 2) {
+                            html += `<p class="text-center text-[10px] text-zinc-400 font-bold pt-1">มีบันทึกทั้งหมด ${allLogs.length} รายการ (แสดงเข้าแรก-ออกหลัง)</p>`;
+                        }
                     }
+
+                    // รายละเอียดวันที่เลือก (วันหยุด / วันลา)
+                    const leaveMap = buildLeaveMap();
+                    const isHol   = isPublicHoliday(selectedDateStr);
+                    const holName = getHolidayName(selectedDateStr);
+                    const lv      = leaveMap[selectedDateStr];
+                    const leaveTypeLabel = { sick:'ลาป่วย', personal:'ลากิจ', vacation:'ลาพักร้อน', other:'ลาอื่นๆ' };
+                    let detailHtml = '';
+                    if (isHol) {
+                        detailHtml = `<div class="mt-3 flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl p-3.5">
+                            <i class="fa-solid fa-umbrella-beach text-red-400 mt-0.5 shrink-0"></i>
+                            <div>
+                                <p class="text-xs font-black text-red-600">วันหยุดนักขัตฤกษ์</p>
+                                <p class="text-sm font-bold text-red-700 mt-0.5">${holName || 'วันหยุดราชการ'}</p>
+                            </div>
+                        </div>`;
+                    }
+                    if (lv) {
+                        const isPending = lv.status === 'pending';
+                        detailHtml += `<div class="mt-3 flex items-start gap-2.5 ${isPending ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'} border rounded-xl p-3.5">
+                            <i class="fa-solid fa-calendar-minus ${isPending ? 'text-orange-400' : 'text-blue-400'} mt-0.5 shrink-0"></i>
+                            <div>
+                                <p class="text-xs font-black ${isPending ? 'text-orange-600' : 'text-blue-600'}">${isPending ? 'รออนุมัติการลา' : 'วันลา'}</p>
+                                <p class="text-sm font-bold ${isPending ? 'text-orange-700' : 'text-blue-700'} mt-0.5">${leaveTypeLabel[lv.type] || 'ลา'}</p>
+                            </div>
+                        </div>`;
+                    }
+
                     const el = document.getElementById('daily-logs');
-                    if (el) el.innerHTML = html;
+                    if (el) el.innerHTML = html + detailHtml;
                 }
 
                 window.selectCalDate = (ds) => {
