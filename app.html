@@ -1874,8 +1874,8 @@
                             <h4 class="section-title"><i class="fa-solid fa-coins"></i>5. เงินเดือนและบัญชี</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                                 <div><label class="input-label">ฐานเงินเดือน (รายเดือน) *</label><input type="number" id="f-salary-month" required class="input-field" value="0"></div>
-                                <div><label class="input-label">ฐานเงินวัน</label><input type="number" id="f-salary-day" class="input-field" value="0"></div>
-                                <div><label class="input-label">ฐานเงินชั่วโมง</label><input type="number" id="f-salary-hour" class="input-field" value="0"></div>
+                                <div><label class="input-label">ฐานเงินวัน</label><input type="number" id="f-salary-day" class="input-field" value="0" step="0.01"></div>
+                                <div><label class="input-label">ฐานเงินชั่วโมง</label><input type="number" id="f-salary-hour" class="input-field" value="0" step="0.01"></div>
                                 <div><label class="input-label">อัตรา Commission (%)</label><input type="number" id="f-comm-rate" class="input-field" value="0" min="0" max="100" step="0.1" placeholder="เช่น 3.5"></div>
                                 <div><label class="input-label">Commission ขั้นต่ำ (฿)</label><input type="number" id="f-comm-min" class="input-field" value="0" min="0" placeholder="เช่น 500"></div>
                                 <div><label class="input-label">ช่องทางรับเงิน</label><select id="f-payment-method" class="input-field cursor-pointer"><option value="Bank Transfer">โอนผ่านธนาคาร</option><option value="Cash">เงินสด</option></select></div>
