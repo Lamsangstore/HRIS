@@ -3982,18 +3982,26 @@ PAGES['payroll'] = {
 
         window.prGenAll = async pid => {
             const active=employees.filter(e=>e.status!=='resigned');
-            if(!confirm(`\u0e04\u0e33\u0e19\u0e27\u0e13\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e43\u0e2b\u0e49 ${active.length} \u0e04\u0e19?\n\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e40\u0e14\u0e34\u0e21\u0e08\u0e30\u0e16\u0e39\u0e01\u0e41\u0e17\u0e19\u0e17\u0e35\u0e48`))return;
+            if(!confirm(`คำนวณเงินเดือนให้ ${active.length} คน?\nข้อมูลเดิมจะถูกแทนที่`))return;
             const period=periods.find(p=>p.id===pid); if(!period)return;
             const btn=document.querySelector(`[onclick="prGenAll('${pid}')"]`);
-            if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> \u0e01\u0e33\u0e25\u0e31\u0e07\u0e04\u0e33\u0e19\u0e27\u0e13...';}
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังคำนวณ...';}
             try {
-                const [ls,ss]=await Promise.all([
+                const [ls,ss,otSnap]=await Promise.all([
                     getDocs(query(collection(db,'artifacts',APP_ID,'public','data','leave_requests'),where('status','==','approved'))),
                     getDocs(collection(db,'artifacts',APP_ID,'public','data','work_schedules')),
+                    getDocs(query(collection(db,'artifacts',APP_ID,'public','data','ot_requests'),where('status','==','approved'),where('periodId','==',pid))),
                 ]);
-                const lbu={},sbu={};
+                const lbu={},sbu={},otbu={};
                 ls.docs.forEach(d=>{const l=d.data();if(l.startDate<=period.endDate&&l.endDate>=period.startDate){if(!lbu[l.uid])lbu[l.uid]=[];lbu[l.uid].push(l);}});
                 ss.docs.forEach(d=>{sbu[d.id]=d.data();});
+                // รวม OT และ Commission ต่อพนักงาน (อาจมีหลาย request ต่องวด)
+                otSnap.docs.forEach(d=>{
+                    const o=d.data();
+                    if(!otbu[o.uid]) otbu[o.uid]={otHours:0,commTotal:0};
+                    otbu[o.uid].otHours  += o.otConverted||0;
+                    otbu[o.uid].commTotal+= o.commTotal||0;
+                });
                 const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
                 if(ex.docs.length){const b1=writeBatch(db);ex.docs.forEach(d=>b1.delete(d.ref));await b1.commit();}
                 const b2=writeBatch(db);
@@ -4006,7 +4014,12 @@ PAGES['payroll'] = {
                     const taxMode=emp.taxDeduction||'No';
                     const dSSO=emp.sso==='Yes'?Math.min(Math.round(base*0.05),750):0;
                     const dTax=calcTax(base,taxMode), eD=daily*wd;
-                    const tEar=base+eD, tDed=dSSO+dTax, net=tEar-tDed;
+                    // OT & Commission จาก ot_requests ที่อนุมัติแล้ว
+                    const otData=otbu[emp.uid]||{otHours:0,commTotal:0};
+                    const wh=Math.round(otData.otHours*100)/100;
+                    const eH=Math.round(hourly*wh*100)/100;
+                    const eC=Math.round(otData.commTotal*100)/100;
+                    const tEar=base+eD+eH+eC, tDed=dSSO+dTax, net=tEar-tDed;
                     const ref=doc(collection(db,'artifacts',APP_ID,'public','data','payroll_records'));
                     b2.set(ref,{
                         periodId:pid,periodNo:period.periodNo,year:period.year,
@@ -4014,8 +4027,8 @@ PAGES['payroll'] = {
                         nickname:emp.nickname||'',lineId:emp.lineId||'',photoURL:emp.photoURL||'',
                         branch:emp.branch||'',position:emp.position||'',
                         baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,commissionMin:emp.commissionMin||0,
-                        workDays:wd,workHours:0,commissionUnits:0,
-                        earningDaily:eD,earningHourly:0,earningCommission:0,otherEarning:0,
+                        workDays:wd,workHours:wh,commissionUnits:otData.commTotal,
+                        earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:0,
                         sickLeaveHours:lh.sick,personalLeaveHours:lh.personal,
                         vacationLeaveHours:lh.vacation,otherLeaveHours:lh.other,lateHours:0,
                         deductLeave:0,deductSSO:dSSO,deductTax:dTax,otherDeduct:0,taxMode,
@@ -4024,9 +4037,9 @@ PAGES['payroll'] = {
                     });
                 });
                 await b2.commit();
-                showToast(`\u2705 \u0e2a\u0e23\u0e49\u0e32\u0e07 ${active.length} \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08`,'success');
-            } catch(err){showToast('\u274c '+err.message,'error');console.error(err);}
-            finally{if(btn){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-bolt mr-2"></i> \u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34';}}
+                showToast(`✅ สร้าง ${active.length} รายการสำเร็จ`,'success');
+            } catch(err){showToast('❌ '+err.message,'error');console.error(err);}
+            finally{if(btn){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-bolt mr-2"></i> คำนวณอัตโนมัติ';}}
         };
 
         window.prOpenRec = rid => {
