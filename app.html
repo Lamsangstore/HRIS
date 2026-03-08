@@ -204,23 +204,15 @@
 
         /* ========= PAGE TRANSITIONS ========= */
         #page-content {
-            animation: pageFadeIn 0.18s ease forwards;
+            will-change: opacity;
         }
         @keyframes pageFadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
 
-        /* ========= LOADING OVERLAY ========= */
-        #page-loader {
-            position: absolute; inset: 0;
-            background: #fafafa;
-            z-index: 50;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            transition: opacity 0.2s ease;
-        }
-        #page-loader.hidden-fade { opacity: 0; pointer-events: none; }
+        /* ========= LOADING OVERLAY (unused, kept for init) ========= */
+        #page-loader { display: none !important; }
 
         /* ========= SCROLLBAR ========= */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -313,10 +305,7 @@
         <!-- CONTENT AREA — เปลี่ยนเฉพาะตรงนี้ -->
         <div class="flex-1 overflow-y-auto relative bg-zinc-50" id="content-wrapper">
             <!-- Loading overlay -->
-            <div id="page-loader">
-                <i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i>
-                <p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Loading Workspace...</p>
-            </div>
+            <div id="page-loader" style="display:none"></div>
 
             <!-- เนื้อหาแต่ละหน้าถูก inject ที่นี่ -->
             <div id="page-content" class="min-h-full"></div>
@@ -432,16 +421,8 @@
         }
 
         // ── Page Loader ─────────────────────────────────────────────────
-        function showLoader() {
-            const loader = document.getElementById('page-loader');
-            loader.classList.remove('hidden-fade');
-            loader.style.opacity = '1';
-        }
-        function hideLoader() {
-            const loader = document.getElementById('page-loader');
-            loader.style.opacity = '0';
-            setTimeout(() => loader.classList.add('hidden-fade'), 200);
-        }
+        function showLoader() {}
+        function hideLoader() {}
 
         // ── Navigate ────────────────────────────────────────────────────
         window.navigateTo = async function(pageId) {
@@ -451,61 +432,46 @@
                 return;
             }
 
-            // Cleanup หน้าเก่า (unsubscribe Firebase listeners ฯลฯ)
-            if (typeof pageCleanup === 'function') {
-                pageCleanup();
-                pageCleanup = null;
-            }
-
+            if (typeof pageCleanup === 'function') { pageCleanup(); pageCleanup = null; }
             currentPageId = pageId;
-            showLoader();
-
-            // อัปเดต active state บน sidebar
             if (userProfile) renderNav(userProfile, pageId);
 
-            // โหลด page module
+            const contentEl = document.getElementById('page-content');
+
             try {
                 const page = await loadPage(pageId);
-                if (!page) { hideLoader(); return; }
+                if (!page) return;
 
-                // Set content
-                const contentEl = document.getElementById('page-content');
-                contentEl.innerHTML = page.html;
+                // swap content แล้ว fade in ทันที ไม่มี flash
                 contentEl.style.animation = 'none';
+                contentEl.style.opacity = '0';
+                contentEl.innerHTML = page.html;
                 contentEl.offsetHeight; // force reflow
-                contentEl.style.animation = '';
+                contentEl.style.animation = 'pageFadeIn 0.2s ease forwards';
 
-                // อัปเดต title
                 document.getElementById('topbar-title').textContent = page.title || 'Lamsang Group';
                 document.title = `${page.title || 'หน้าหลัก'} - Lamsang Group`;
-
-                // scroll กลับบนสุดเสมอ
                 document.getElementById('content-wrapper').scrollTop = 0;
 
-                // init page logic
                 if (typeof page.init === 'function') {
                     pageCleanup = await page.init(currentUser, userProfile, db, APP_ID) || null;
                 }
 
-                hideLoader();
-
-                // อัปเดต URL hash (ไม่ reload)
                 history.pushState({ page: pageId }, '', `#${pageId}`);
 
             } catch (err) {
                 console.error('Page load error:', err);
-                hideLoader();
-                document.getElementById('page-content').innerHTML = `
+                contentEl.style.opacity = '1';
+                contentEl.style.animation = '';
+                contentEl.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-64 text-zinc-400">
-                        <i class="fa-solid fa-triangle-exclamation text-5xl mb-4 text-yellow-500"></i>
+                        <i class="fa-solid fa-triangle-exclamation text-4xl mb-4 text-yellow-500"></i>
                         <p class="font-bold">ไม่สามารถโหลดหน้านี้ได้</p>
                         <p class="text-xs mt-1 text-red-400">${err.message}</p>
                         <button onclick="navigateTo('home')" class="mt-4 text-xs bg-zinc-900 text-yellow-400 px-4 py-2 rounded-xl font-black">กลับหน้าหลัก</button>
                     </div>`;
-            } finally {
-                hideLoader(); // ป้องกัน loading ค้างในทุกกรณี
             }
-        }
+        };
 
         // ── Page Loader: โหลด HTML + script จากไฟล์ .html ─────────────
         // แต่ละหน้าถูก inline ไว้ใน PAGES registry ด้านล่าง
