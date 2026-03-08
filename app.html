@@ -128,6 +128,80 @@
         /* admin divider — ซ่อนแค่ label+border ตอน collapsed ไม่ซ่อน items */
         #app-sidebar.collapsed .admin-divider-border { display: none; }
 
+        /* ========= MOBILE RESPONSIVE TYPOGRAPHY ========= */
+        @media (max-width: 640px) {
+            /* ลด heading ใหญ่ */
+            .text-5xl { font-size: 2rem !important; }
+            .text-4xl { font-size: 1.75rem !important; }
+            .text-3xl { font-size: 1.375rem !important; }
+            .text-2xl { font-size: 1.15rem !important; }
+            .text-xl  { font-size: 1rem !important; }
+
+            /* page header titles */
+            h1, h2 { word-break: break-word; }
+
+            /* ป้องกันข้อความล้น container */
+            * { min-width: 0; }
+
+            /* ตาราง scroll แนวนอนได้ */
+            .overflow-x-auto { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+            table { min-width: max-content; }
+
+            /* card padding ลดลงบน mobile */
+            .rounded-\[2rem\] { padding: 1.25rem !important; }
+
+            /* notification panel เต็มจอบน mobile */
+            #notif-panel {
+                position: fixed !important;
+                top: 4rem !important;
+                left: 0.75rem !important;
+                right: 0.75rem !important;
+                width: auto !important;
+                max-height: 70vh;
+                overflow-y: auto;
+            }
+
+            /* modal เต็มจอ */
+            .fixed.inset-0 > .bg-white,
+            .fixed.inset-0 > div > .bg-white,
+            .fixed.inset-0 > div > .bg-zinc-900 {
+                margin: 0.5rem;
+                max-height: calc(100vh - 1rem);
+                overflow-y: auto;
+            }
+
+            /* pr-modal ลดขนาด */
+            #pr-modal-rec .overflow-y-auto,
+            #pr-modal-create .overflow-y-auto {
+                max-height: calc(100vh - 8rem);
+            }
+
+            /* payslip และ card ที่มี padding ใหญ่ */
+            .p-8  { padding: 1rem !important; }
+            .p-10 { padding: 1.25rem !important; }
+            .p-12 { padding: 1.5rem !important; }
+            .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+            .py-8 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+
+            /* grid cols ลด */
+            .grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            .sm\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+            /* ตัวเลขนาฬิกา clock page */
+            #current-time-display { font-size: 3rem !important; }
+
+            /* tracking ที่ทำให้ล้น */
+            .tracking-widest { letter-spacing: 0.05em !important; }
+            .tracking-wider  { letter-spacing: 0.03em !important; }
+            .uppercase { word-break: break-word; }
+
+            /* truncate ป้องกัน overflow */
+            .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+            /* executive dashboard cards */
+            .ex-kpi-val { font-size: 1.35rem !important; }
+        }
+
         /* ========= PAGE TRANSITIONS ========= */
         #page-content {
             animation: pageFadeIn 0.18s ease forwards;
@@ -194,7 +268,7 @@
                 <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27"
                      alt="Lamsang Logo"
                      class="h-10 w-10 object-contain shrink-0">
-                <h2 id="topbar-title" class="text-sm font-black text-zinc-700 uppercase tracking-widest truncate max-w-[200px]">Lamsang Group</h2>
+                <h2 id="topbar-title" class="text-sm font-black text-zinc-700 uppercase tracking-wide truncate max-w-[120px] sm:max-w-[200px]">Lamsang Group</h2>
             </div>
             <div class="flex items-center space-x-4">
                 <!-- Notification Bell -->
@@ -1426,7 +1500,7 @@
             </style>
             <div class="p-6 lg:p-8">
                 <div class="max-w-6xl mx-auto mb-6">
-                    <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">Time & Attendance</h2>
+                    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">Time & Attendance</h2>
                     <p class="text-sm text-zinc-500 font-medium">ระบบลงเวลาปฏิบัติงานและประวัติย้อนหลัง</p>
                 </div>
                 <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1965,7 +2039,7 @@
             <div class="p-6 lg:p-8">
                 <div class="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">Employee Management</h2>
+                        <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">Employee Management</h2>
                         <p class="text-sm text-zinc-500 font-medium">จัดการข้อมูลและประวัติพนักงาน Lamsang Group</p>
                     </div>
                     <div class="flex p-1 bg-zinc-200 rounded-xl w-full md:w-auto shadow-inner">
@@ -2345,7 +2419,7 @@
   <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">การลา & วันหยุด</h2>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">การลา & วันหยุด</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">ยื่นคำขอลา ติดตามสถานะ และดูโควต้าวันลา</p>
     </div>
     <button onclick="openLeaveModal()" class="inline-flex items-center bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black px-6 py-3 rounded-xl shadow-md transition-all gap-2 text-sm uppercase tracking-widest">
@@ -2984,7 +3058,7 @@ PAGES['leave-mgmt'] = {
 <div class="p-6 lg:p-8 max-w-7xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติการลา</h2>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติการลา</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบและอนุมัติคำขอลาของพนักงาน</p>
     </div>
     <div class="flex gap-2">
@@ -3001,7 +3075,7 @@ PAGES['leave-mgmt'] = {
       </select>
     </div>
   </div>
-  <div class="grid grid-cols-3 gap-4 mb-8">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
     <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
       <p class="text-3xl font-black text-yellow-600" id="stat-pending">-</p>
       <p class="text-xs text-zinc-400 font-bold uppercase mt-1">รอการอนุมัติ</p>
@@ -3368,7 +3442,7 @@ PAGES['leave-admin'] = {
 
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">ตั้งค่าการลา</h2>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ตั้งค่าการลา</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">จัดการตารางงาน โควต้าวันลา และวันหยุดของพนักงานแต่ละคน</p>
     </div>
     <!-- Search -->
@@ -3525,7 +3599,7 @@ PAGES['leave-admin'] = {
                   <p class="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-widest">วันทำงาน</p>
                   <div class="flex gap-2 flex-wrap">${daysHtml}</div>
                 </div>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div>
                     <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาเข้างาน</label>
                     <input type="time" id="sched-start" value="${sched.workStart || '08:00'}"
@@ -3812,7 +3886,7 @@ PAGES['payroll'] = {
         <div class="w-10 h-10 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-md">
           <i class="fa-solid fa-file-invoice-dollar text-yellow-400"></i>
         </div>
-        <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">Payroll Management</h2>
+        <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">Payroll Management</h2>
       </div>
       <p class="text-sm text-zinc-400 font-medium">\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e25\u0e30\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19 Lamsang Group</p>
     </div>
@@ -3942,30 +4016,30 @@ PAGES['payroll'] = {
 </div>
 
 <!-- Modal: Edit Record -->
-<div id="pr-modal-rec" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+<div id="pr-modal-rec" class="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseRec()"></div>
-  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[93vh] flex flex-col overflow-hidden">
-    <div class="bg-zinc-900 px-7 py-4 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-3">
-        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700">
-        <div>
-          <p id="pr-rec-name" class="font-black text-white text-sm">-</p>
-          <p id="pr-rec-code" class="text-yellow-400 text-[10px] font-bold uppercase tracking-widest">-</p>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[96vh] flex flex-col overflow-hidden">
+    <div class="bg-zinc-900 px-4 sm:px-7 py-4 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3 min-w-0">
+        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700 shrink-0">
+        <div class="min-w-0">
+          <p id="pr-rec-name" class="font-black text-white text-sm truncate">-</p>
+          <p id="pr-rec-code" class="text-yellow-400 text-[10px] font-bold uppercase tracking-wide truncate">-</p>
         </div>
       </div>
-      <button onclick="prCloseRec()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="prCloseRec()" class="text-zinc-400 hover:text-white shrink-0 ml-2"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
-    <div class="overflow-y-auto flex-1 p-7 space-y-5" id="pr-rec-body"></div>
-    <div class="shrink-0 px-7 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
-      <div>
-        <p class="text-[10px] text-zinc-400 font-bold uppercase">\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a (\u0e2a\u0e38\u0e17\u0e18\u0e34)</p>
-        <p class="text-2xl font-black text-green-600 num" id="pr-net-prev">\u0e3f -</p>
+    <div class="overflow-y-auto flex-1 p-4 sm:p-7 space-y-5" id="pr-rec-body"></div>
+    <div class="shrink-0 px-4 sm:px-7 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <p class="text-[10px] text-zinc-400 font-bold uppercase">รวมรับ (สุทธิ)</p>
+        <p class="text-xl sm:text-2xl font-black text-green-600 num" id="pr-net-prev">฿ -</p>
       </div>
-      <div class="flex gap-3">
-        <button onclick="prCloseRec()" class="px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl transition-all text-sm">\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01</button>
+      <div class="flex gap-2 sm:gap-3 shrink-0">
+        <button onclick="prCloseRec()" class="px-4 sm:px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl transition-all text-sm">ยกเลิก</button>
         <button onclick="prSaveRec()" id="pr-save-btn"
-          class="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl transition-all text-sm uppercase tracking-widest shadow-md flex items-center gap-2">
-          <i class="fa-solid fa-save"></i> \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01
+          class="px-5 sm:px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl transition-all text-sm uppercase tracking-wide shadow-md flex items-center gap-2">
+          <i class="fa-solid fa-save"></i> บันทึก
         </button>
       </div>
     </div>
@@ -4817,7 +4891,7 @@ PAGES['time-request'] = {
 <div class="p-6 lg:p-8 max-w-4xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">ชี้แจง / แก้ไขเวลา</h2>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ชี้แจง / แก้ไขเวลา</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">ยื่นคำขอกรณีลืมลงเวลา หรือต้องการแก้ไขเวลาที่ผิดพลาด</p>
     </div>
     <button onclick="trOpenModal(null)"
@@ -5028,7 +5102,7 @@ PAGES['time-approve'] = {
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติคำขอเวลา</h2>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติคำขอเวลา</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบคำขอชี้แจงและแก้ไขเวลาของพนักงาน</p>
     </div>
     <select id="ta-filter" onchange="taFilter()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
@@ -5038,7 +5112,7 @@ PAGES['time-approve'] = {
       <option value="all">ทั้งหมด</option>
     </select>
   </div>
-  <div class="grid grid-cols-3 gap-4 mb-8">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
     <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
       <p class="text-3xl font-black text-yellow-600" id="ta-stat-p">-</p>
       <p class="text-xs text-zinc-400 font-bold uppercase mt-1">รออนุมัติ</p>
@@ -5224,7 +5298,7 @@ PAGES['time-import'] = {
     html: `
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="mb-8">
-    <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">นำเข้าเวลางาน</h2>
+    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">นำเข้าเวลางาน</h2>
     <p class="text-sm text-zinc-400 font-medium mt-0.5">Import ข้อมูลเวลาเข้า-ออกงานจากระบบเก่าหรือเครื่องสแกนลายนิ้วมือ</p>
   </div>
 
@@ -5494,7 +5568,7 @@ PAGES['holidays'] = {
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">วันหยุดตามประเพณี</h2>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">วันหยุดตามประเพณี</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">จัดการวันหยุดนักขัตฤกษ์ที่แสดงบนปฏิทินของพนักงานทุกคน</p>
     </div>
     <div class="flex gap-2">
@@ -7583,7 +7657,7 @@ PAGES['payslip-admin'] = {
         <div class="p-6 lg:p-8 max-w-7xl mx-auto">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">จัดการประกาศองค์กร</h2>
+              <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">จัดการประกาศองค์กร</h2>
               <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้าง แก้ไข และจัดการประกาศที่แสดงบนหน้าหลัก</p>
             </div>
             <button onclick="annNew()"
