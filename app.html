@@ -45,30 +45,39 @@
             justify-content: center;
         }
 
-        /* nav wrapper — ไม่มี px เพราะ nav-item จัดการเอง */
+        /* nav wrapper */
         #sidebar-nav { padding-left: 0.5rem; padding-right: 0.5rem; }
 
-        /* nav item */
+        /* nav item — expanded */
         #app-sidebar .nav-item {
-            padding-left: 0.65rem; padding-right: 0.65rem;
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            border-radius: 0.625rem;
             justify-content: flex-start;
-            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1), background-color 0.15s ease;
+            transition: padding 0.35s cubic-bezier(0.4,0,0.2,1),
+                        border-radius 0.35s cubic-bezier(0.4,0,0.2,1),
+                        background-color 0.15s ease;
         }
+
+        /* nav item — collapsed: กลายเป็น square pill กึ่งกลาง */
+        #app-sidebar.collapsed #sidebar-nav { padding-left: 0; padding-right: 0; display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
         #app-sidebar.collapsed .nav-item {
-            padding-left: 0; padding-right: 0;
+            width: 2.75rem;
+            padding: 0.7rem;
+            border-radius: 0.75rem;
             justify-content: center;
         }
 
-        /* icon — fixed width เพื่อให้ center แม่นยำ */
+        /* icon */
         #app-sidebar .nav-item i,
         #app-sidebar .sidebar-toggle-inner > i {
-            width: 1.5rem; text-align: center; flex-shrink: 0;
+            width: 1.25rem; text-align: center; flex-shrink: 0; font-size: 1rem;
             transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
-        #app-sidebar.collapsed .nav-item i { transform: scale(1.1); }
+        #app-sidebar.collapsed .nav-item i { transform: scale(1.05); }
 
-        /* label margin */
-        #app-sidebar .nav-item .sidebar-text { margin-left: 0.6rem; }
+        /* label */
+        #app-sidebar .nav-item .sidebar-text { margin-left: 0.65rem; }
         #app-sidebar.collapsed .nav-item .sidebar-text { margin-left: 0; }
 
         /* fade/slide text */
@@ -83,7 +92,7 @@
         #app-sidebar.collapsed .admin-panel-text,
         #app-sidebar.collapsed .footer-text {
             opacity: 0; transform: translateX(-6px); pointer-events: none;
-            transition: opacity 0.12s ease, transform 0.12s ease;
+            transition: opacity 0.1s ease, transform 0.1s ease;
         }
 
         /* collapsed footer badge */
@@ -94,6 +103,9 @@
         #app-sidebar.collapsed .collapsed-footer-text {
             opacity: 1; transform: scale(1); pointer-events: auto;
         }
+
+        /* admin divider — ซ่อนตอน collapsed */
+        #app-sidebar.collapsed .admin-divider { display: none; }
 
         /* ========= PAGE TRANSITIONS ========= */
         #page-content {
@@ -283,8 +295,8 @@
         
                 // Divider = เปิด admin section
                 if (item.divider) {
-                    html += `<div class="mt-6 pt-6 border-t border-zinc-800">
-                        <p class="pl-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">${item.label}</p>`;
+                    html += `<div class="admin-divider mt-4 pt-4 border-t border-zinc-800">
+                        <p class="pl-3 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">${item.label}</p>`;
                     inAdminDiv = true;
                     return;
                 }
@@ -298,8 +310,8 @@
                         : 'hover:bg-zinc-800 hover:text-yellow-400');
         
                 html += `<button data-page="${item.id}" class="${baseClass} ${activeClass} w-full text-left" title="${item.label}">
-                    <i class="fa-solid ${item.icon} w-6 text-center shrink-0"></i>
-                    <span class="ml-3 font-medium sidebar-text whitespace-nowrap">${item.label}</span>
+                    <i class="fa-solid ${item.icon} shrink-0"></i>
+                    <span class="sidebar-text font-medium whitespace-nowrap">${item.label}</span>
                 </button>`;
             });
         
