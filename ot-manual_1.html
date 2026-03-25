@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือเบิก OT & Commission - Lamsang Group HRIS</title>
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body{font-family:'Prompt',sans-serif;scroll-behavior:smooth}
+        .ot-row-normal td{background:#fff}.ot-row-weekend td{background:#f8fafc;color:#94a3b8}.ot-row-missing td{background:#fef2f2}.ot-row-holiday td{background:#fff7f7}.ot-row-comp td{background:#fffbeb}.ot-row-sel td{background:#fefce8}.ot-tr-hover:hover td{filter:brightness(.97)}
+        .anno-tag{background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+        .step-num{width:3.5rem;height:3.5rem;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.25rem;flex-shrink:0}
+        .info-card{transition:transform .25s,box-shadow .25s}.info-card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.12)}
+        #progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#eab308,#ca8a04);z-index:100;transition:width .08s}
+        details summary{list-style:none}details summary::-webkit-details-marker{display:none}
+        .toc-link{border-left:3px solid transparent;transition:all .2s}.toc-link:hover{border-left-color:#eab308;background:rgba(234,179,8,.06)}
+        .btt{position:fixed;bottom:1.5rem;right:1.5rem;opacity:0;pointer-events:none;transition:all .3s;z-index:50}.btt.show{opacity:1;pointer-events:all}
+        .mockup{background:#111;border-radius:14px;overflow:hidden;box-shadow:0 10px 50px rgba(0,0,0,.35)}.mockup-bar{background:#222;padding:9px 14px;display:flex;align-items:center;gap:7px}.dot{width:11px;height:11px;border-radius:50%}
+        @media print{.no-print{display:none!important}body{background:#fff!important;color:#000!important}}
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-800">
+<div id="progress" style="width:0%"></div>
+
+<header class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur border-b border-zinc-200 z-50 no-print">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Logo" class="h-9 w-auto">
+            <div><h1 class="text-sm font-bold text-zinc-800 leading-tight">Lamsang Group</h1><p class="text-[11px] text-zinc-400">คู่มือเบิก OT & Commission</p></div>
+        </div>
+        <a href="app.html#ot-claim" class="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-bold text-sm px-4 py-2 rounded-xl transition-all shadow hover:shadow-lg"><i class="fa-solid fa-arrow-left"></i> กลับหน้าเบิก OT</a>
+    </div>
+</header>
+
+<section class="pt-28 pb-14 px-4 bg-zinc-900 relative overflow-hidden">
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-500 rounded-full filter blur-[128px] opacity-20"></div>
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+        <span class="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold px-4 py-1.5 rounded-full mb-5"><i class="fa-solid fa-book-open"></i> คู่มือ v2.0</span>
+        <h1 class="text-4xl md:text-5xl font-black text-white mb-3">คู่มือเบิก <span class="text-yellow-500">OT & Commission</span></h1>
+        <p class="text-zinc-400 text-lg max-w-2xl mx-auto">ขั้นตอนทั้งหมดตรงตามหน้าจอระบบ HRIS จริง พร้อมภาพจำลองทุกขั้นตอน</p>
+    </div>
+</section>
+
+<section class="px-4 -mt-8 relative z-20 pb-6">
+    <div class="max-w-3xl mx-auto bg-white border border-zinc-200 rounded-2xl shadow-lg p-6">
+        <h2 class="text-base font-black text-zinc-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-list text-yellow-500"></i> สารบัญ</h2>
+        <nav class="space-y-0.5 text-sm">
+            <a href="#step1" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">01</span> เข้าสู่ระบบ HRIS</a>
+            <a href="#step2" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">02</span> เลือกเมนู "เบิก OT & Commission"</a>
+            <a href="#step3" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">03</span> เลือกงวดเงินเดือน</a>
+            <a href="#step4" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">04</span> เลือกวันเบิก OT & กรอกเหตุผล</a>
+            <a href="#step5" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">05</span> กรอก Commission</a>
+            <a href="#step6" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">06</span> ยื่นขออนุมัติ & ดูประวัติ</a>
+            <a href="#tips" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">💡</span> ข้อควรระวัง</a>
+            <a href="#faq" class="toc-link block py-2 px-4 rounded-lg text-zinc-600 hover:text-yellow-600"><span class="text-yellow-500 font-black mr-2">❓</span> FAQ</a>
+        </nav>
+    </div>
+</section>
+
+<main class="px-4 pb-20"><div class="max-w-5xl mx-auto space-y-16">
+
+<section id="step1" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-yellow-500 text-zinc-900">01</div><div><h2 class="text-xl font-black text-zinc-800">เข้าสู่ระบบ HRIS</h2><p class="text-zinc-400 text-sm">Login ด้วยอีเมลและรหัสผ่านบริษัท</p></div></div>
+    <div class="mockup mb-5">
+        <div class="mockup-bar"><div class="dot bg-[#ff5f57]"></div><div class="dot bg-[#febc2e]"></div><div class="dot bg-[#28c840]"></div><div class="flex-1 bg-zinc-700 rounded ml-4 px-3 py-1 text-[11px] text-zinc-400 font-mono">lamsangstore.github.io/HRIS/index.html</div></div>
+        <div class="bg-zinc-900 flex justify-center py-10 px-4 relative">
+            <div class="absolute top-[-5%] left-[-5%] w-64 h-64 bg-yellow-500 rounded-full filter blur-[100px] opacity-20"></div>
+            <div class="bg-white rounded-2xl p-8 w-full max-w-sm border-t-4 border-yellow-500 relative z-10 shadow-2xl">
+                <div class="text-center mb-6">
+                    <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" class="h-28 w-auto mx-auto mb-4 object-contain drop-shadow-sm">
+                    <div class="text-3xl font-bold text-zinc-800 tracking-wide">Lamsang Group</div>
+                    <div class="text-sm text-zinc-500 mt-2">ระบบจัดการทรัพยากรบุคคล (HRIS)</div>
+                </div>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium text-zinc-700 mb-1">อีเมล (Email)</label><div class="relative"><div class="absolute inset-y-0 left-0 pl-3 flex items-center"><i class="fa-solid fa-envelope text-zinc-400"></i></div><div class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-800">somchai@lamsang.com</div></div><div class="mt-1 flex items-center gap-1"><i class="fa-solid fa-caret-up text-red-500 text-xs"></i><span class="text-red-500 text-[11px] font-bold">❶ กรอกอีเมลบริษัท</span></div></div>
+                    <div><label class="block text-sm font-medium text-zinc-700 mb-1">รหัสผ่าน (Password)</label><div class="relative"><div class="absolute inset-y-0 left-0 pl-3 flex items-center"><i class="fa-solid fa-lock text-zinc-400"></i></div><div class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-800">••••••••</div></div><div class="mt-1 flex items-center gap-1"><i class="fa-solid fa-caret-up text-red-500 text-xs"></i><span class="text-red-500 text-[11px] font-bold">❷ กรอกรหัสผ่าน</span></div></div>
+                    <div><div class="w-full bg-yellow-500 text-zinc-900 font-bold py-3 rounded-xl text-center shadow-md text-sm"><i class="fa-solid fa-right-to-bracket mr-2"></i>เข้าสู่ระบบ</div><div class="mt-1 flex items-center gap-1"><i class="fa-solid fa-caret-up text-red-500 text-xs"></i><span class="text-red-500 text-[11px] font-bold">❸ กดปุ่มนี้ หรือกด Enter</span></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-red-50 border border-red-200 rounded-2xl px-5 py-3 text-sm text-red-700 flex items-start gap-2"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><span>หากลืมรหัสผ่าน กรุณาติดต่อฝ่าย HR เพื่อรีเซ็ตรหัสผ่าน</span></div>
+</section>
+
+<section id="step2" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-yellow-500 text-zinc-900">02</div><div><h2 class="text-xl font-black text-zinc-800">เลือกเมนู "เบิก OT & Commission"</h2><p class="text-zinc-400 text-sm">คลิกเมนูด้านซ้ายมือ (Sidebar)</p></div></div>
+    <div class="mockup mb-5">
+        <div class="mockup-bar"><div class="dot bg-[#ff5f57]"></div><div class="dot bg-[#febc2e]"></div><div class="dot bg-[#28c840]"></div><div class="flex-1 bg-zinc-700 rounded ml-4 px-3 py-1 text-[11px] text-zinc-400 font-mono">lamsangstore.github.io/HRIS/app.html</div></div>
+        <div class="flex min-h-[400px]">
+            <div class="bg-zinc-900 w-[220px] flex-shrink-0 py-4 px-2 space-y-0.5 text-[13px] relative">
+                <div class="px-3 py-2 flex items-center gap-2 mb-3"><img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" class="h-7 w-auto"><span class="text-white font-bold text-sm">Lamsang Group</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-house w-5 text-center"></i><span>หน้าหลัก</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-clock w-5 text-center"></i><span>เวลาทำงาน & กะ</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-pen-to-square w-5 text-center"></i><span>ชี้แจง/แก้ไขเวลา</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-calendar-check w-5 text-center"></i><span>การลา & วันหยุด</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-id-badge w-5 text-center"></i><span>โปรไฟล์ของฉัน</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-file-invoice w-5 text-center"></i><span>สลิปเงินเดือน</span></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-yellow-500 text-zinc-900 font-semibold shadow-sm"><i class="fa-solid fa-business-time w-5 text-center"></i><span>เบิก OT & Commission</span></div>
+                <div class="absolute" style="left:228px;top:310px;"><div class="flex items-center gap-1.5"><div class="w-6 border-t-2 border-dashed border-red-500"></div><span class="anno-tag"><i class="fa-solid fa-arrow-left text-[8px]"></i> กดเมนูนี้!</span></div></div>
+                <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-zinc-800"><i class="fa-solid fa-clipboard-check w-5 text-center"></i><span>อนุมัติ OT</span></div>
+            </div>
+            <div class="flex-1 bg-zinc-100 flex items-center justify-center"><div class="text-center text-zinc-300"><i class="fa-solid fa-hand-pointer text-5xl mb-3"></i><p class="text-sm font-bold">เลือกเมนูด้านซ้ายเพื่อเริ่มต้น</p></div></div>
+        </div>
+    </div>
+    <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5 text-sm text-zinc-600">เมนูที่เลือกจะ <strong class="text-zinc-800">ไฮไลท์เป็นสีเหลือง</strong> พร้อมตัวอักษรสีดำ แสดงว่าอยู่ในหน้านี้แล้ว</div>
+</section>
+
+<section id="step3" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-yellow-500 text-zinc-900">03</div><div><h2 class="text-xl font-black text-zinc-800">เลือกงวดเงินเดือน</h2><p class="text-zinc-400 text-sm">เลือกช่วงเวลาที่ต้องการเบิก OT</p></div></div>
+    <div class="mockup mb-5">
+        <div class="mockup-bar"><div class="dot bg-[#ff5f57]"></div><div class="dot bg-[#febc2e]"></div><div class="dot bg-[#28c840]"></div><div class="flex-1 bg-zinc-700 rounded ml-4 px-3 py-1 text-[11px] text-zinc-400 font-mono">app.html#ot-claim</div></div>
+        <div class="bg-zinc-100 p-6">
+            <h2 class="text-xl font-black text-zinc-800 mb-1">เบิก OT & Commission</h2>
+            <p class="text-xs text-zinc-500 mb-5">ตรวจสอบเวลาทำงาน เลือกวันเบิก OT และกรอก Commission แล้วส่งให้หัวหน้าอนุมัติ</p>
+            <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm p-5">
+                <div class="flex flex-wrap items-end gap-4">
+                    <div class="flex-1 min-w-[220px]">
+                        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">งวดเงินเดือน</label>
+                        <div class="border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-zinc-800 flex items-center justify-between bg-white"><span>งวด 3/2026 (2026-03-01 – 2026-03-31)</span><i class="fa-solid fa-chevron-down text-zinc-400 text-xs"></i></div>
+                        <div class="mt-1 flex items-center gap-1"><i class="fa-solid fa-caret-up text-red-500 text-xs"></i><span class="text-red-500 text-[11px] font-bold">❶ เลือกงวดเงินเดือน</span></div>
+                    </div>
+                    <div class="flex flex-wrap gap-3 text-[10px] font-black pb-1">
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-50 border border-red-300 inline-block"></span>วันหยุด ×1.5</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-yellow-50 border border-yellow-300 inline-block"></span>ชดเชย ×1.5</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-zinc-100 border border-zinc-300 inline-block"></span>ปกติ</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-fuchsia-50 border border-fuchsia-300 inline-block"></span>ไม่มีบันทึก</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="step4" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-yellow-500 text-zinc-900">04</div><div><h2 class="text-xl font-black text-zinc-800">เลือกวันเบิก OT & กรอกเหตุผล</h2><p class="text-zinc-400 text-sm">ดูตาราง "เวลาทำงานรายวัน" แล้วติ๊กเลือกวันที่ต้องการเบิก</p></div></div>
+    <div class="mockup mb-5">
+        <div class="mockup-bar"><div class="dot bg-[#ff5f57]"></div><div class="dot bg-[#febc2e]"></div><div class="dot bg-[#28c840]"></div><div class="flex-1 bg-zinc-700 rounded ml-4 px-3 py-1 text-[11px] text-zinc-400 font-mono">app.html#ot-claim</div></div>
+        <div class="bg-zinc-100 p-4">
+            <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                <div class="bg-zinc-900 px-5 py-3.5 flex items-center justify-between"><h3 class="text-sm font-black text-white">เวลาทำงานรายวัน</h3><span class="text-xs font-black text-zinc-400">เลือก OT: 2 วัน</span></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-zinc-50 border-b border-zinc-100"><tr class="text-[10px] font-black text-zinc-500 uppercase tracking-widest"><th class="text-left px-3 py-3 w-8">#</th><th class="text-left px-4 py-3">วันที่</th><th class="text-center px-4 py-3">เข้างาน</th><th class="text-center px-4 py-3">ออกงาน</th><th class="text-center px-4 py-3">ชม. OT</th><th class="text-center px-4 py-3">คิดเป็น</th><th class="text-center px-4 py-3 min-w-[120px]">เหตุผล OT</th><th class="text-center px-4 py-3">เบิก OT</th><th class="text-center px-4 py-3">สถานะ</th></tr></thead>
+                        <tbody>
+                            <tr class="ot-row-weekend ot-tr-hover border-b border-zinc-100"><td class="px-3 py-3 text-xs text-zinc-400 font-bold">1</td><td class="px-4 py-3"><p class="font-black text-sm">01 <span class="font-normal text-zinc-400 text-xs">อา</span></p></td><td class="px-4 py-3 text-center text-zinc-300">–</td><td class="px-4 py-3 text-center text-zinc-300">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3"></td><td class="px-4 py-3 text-center text-zinc-200"><i class="fa-solid fa-lock text-xs"></i></td><td class="px-4 py-3 text-center text-zinc-200 text-xs">–</td></tr>
+                            <tr class="ot-row-missing ot-tr-hover border-b border-zinc-100"><td class="px-3 py-3 text-xs text-zinc-400 font-bold">2</td><td class="px-4 py-3"><p class="font-black text-sm">02 <span class="font-normal text-zinc-400 text-xs">จ</span></p></td><td class="px-4 py-3 text-center text-zinc-300">–</td><td class="px-4 py-3 text-center text-zinc-300">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3"></td><td class="px-4 py-3 text-center text-zinc-200"><i class="fa-solid fa-lock text-xs"></i></td><td class="px-4 py-3 text-center"><span class="text-[11px] font-black bg-fuchsia-500 text-white px-3 py-1.5 rounded-xl inline-flex items-center gap-1"><i class="fa-solid fa-pen-to-square text-[9px]"></i>ชี้แจง</span></td></tr>
+                            <tr class="ot-row-sel ot-tr-hover border-b border-zinc-100"><td class="px-3 py-3 text-xs text-zinc-400 font-bold">3</td><td class="px-4 py-3"><p class="font-black text-sm">03 <span class="font-normal text-zinc-400 text-xs">อ</span></p><span class="text-[10px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md">วันหยุดนักขัตฤกษ์</span></td><td class="px-4 py-3 text-center font-mono text-zinc-700">08:00</td><td class="px-4 py-3 text-center font-mono text-zinc-700">22:27</td><td class="px-4 py-3 text-center font-black text-zinc-700">8<span class="text-[10px] text-zinc-400 ml-1">ชม.</span></td><td class="px-4 py-3 text-center font-black text-yellow-700">12.00</td><td class="px-4 py-3"><input type="text" value="มาช่วยงานผลิต" disabled class="w-full text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-yellow-50"></td><td class="px-4 py-3 text-center"><input type="checkbox" checked disabled class="w-4 h-4 accent-yellow-500"></td><td class="px-4 py-3 text-center"><span class="text-[10px] font-black bg-green-50 text-green-600 px-2 py-1 rounded-lg"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span></td></tr>
+                            <tr class="ot-row-missing ot-tr-hover border-b border-zinc-100"><td class="px-3 py-3 text-xs text-zinc-400 font-bold">4</td><td class="px-4 py-3"><p class="font-black text-sm">04 <span class="font-normal text-zinc-400 text-xs">พ</span></p></td><td class="px-4 py-3 text-center text-zinc-300">–</td><td class="px-4 py-3 text-center text-zinc-300">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3"></td><td class="px-4 py-3 text-center text-zinc-200"><i class="fa-solid fa-lock text-xs"></i></td><td class="px-4 py-3 text-center"><span class="text-[11px] font-black bg-fuchsia-500 text-white px-3 py-1.5 rounded-xl"><i class="fa-solid fa-pen-to-square text-[9px] mr-1"></i>ชี้แจง</span></td></tr>
+                            <tr class="ot-row-sel ot-tr-hover border-b border-zinc-100"><td class="px-3 py-3 text-xs text-zinc-400 font-bold">5</td><td class="px-4 py-3"><p class="font-black text-sm">05 <span class="font-normal text-zinc-400 text-xs">พฤ</span></p></td><td class="px-4 py-3 text-center font-mono text-zinc-700">09:25</td><td class="px-4 py-3 text-center font-mono text-zinc-700">20:30</td><td class="px-4 py-3 text-center"><input type="number" value="3" disabled class="w-16 text-center text-sm border border-zinc-200 rounded-lg px-1.5 py-1 bg-yellow-50"></td><td class="px-4 py-3 text-center font-black text-yellow-700">3.00</td><td class="px-4 py-3"><input type="text" value="งานเร่ง PO-0381" disabled class="w-full text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-yellow-50"></td><td class="px-4 py-3 text-center"><input type="checkbox" checked disabled class="w-4 h-4 accent-yellow-500"></td><td class="px-4 py-3 text-center"><span class="text-[10px] font-black bg-green-50 text-green-600 px-2 py-1 rounded-lg"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span></td></tr>
+                            <tr class="ot-row-normal ot-tr-hover border-b border-zinc-100"><td class="px-3 py-3 text-xs text-zinc-400 font-bold">6</td><td class="px-4 py-3"><p class="font-black text-sm">06 <span class="font-normal text-zinc-400 text-xs">ศ</span></p></td><td class="px-4 py-3 text-center font-mono text-zinc-700">08:10</td><td class="px-4 py-3 text-center font-mono text-zinc-700">17:05</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3 text-center text-zinc-300 text-xs">–</td><td class="px-4 py-3"></td><td class="px-4 py-3 text-center"><input type="checkbox" disabled class="w-4 h-4 accent-yellow-500"></td><td class="px-4 py-3 text-center"><span class="text-[10px] font-black bg-green-50 text-green-600 px-2 py-1 rounded-lg"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-5 py-3 bg-zinc-50 border-t border-zinc-100 text-sm"><span>รวม OT (คิดเป็น): <b class="text-yellow-700 font-black">15.00 ชม.</b></span></div>
+            </div>
+        </div>
+    </div>
+    <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5 mb-4">
+        <h3 class="font-black text-zinc-800 text-sm mb-3"><i class="fa-solid fa-shoe-prints mr-2 text-yellow-500"></i>วิธีทำ</h3>
+        <div class="space-y-3 text-sm text-zinc-600">
+            <div class="flex gap-3"><span class="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">1</span><p>ดูตาราง <strong class="text-zinc-800">"เวลาทำงานรายวัน"</strong> — ระบบดึงเวลาเข้า-ออกงานจากการสแกนมาให้</p></div>
+            <div class="flex gap-3"><span class="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">2</span><p>วันที่มี ☑ checkbox ในคอลัมน์ "เบิก OT" → <strong class="text-yellow-600">ติ๊กเลือก</strong>เพื่อเบิก OT</p></div>
+            <div class="flex gap-3"><span class="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">3</span><p>วันปกติ: พิมพ์ <strong class="text-zinc-800">จำนวนชั่วโมง OT</strong> และ <strong class="text-zinc-800">เหตุผล OT</strong> (บังคับกรอก *)</p></div>
+            <div class="flex gap-3"><span class="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">4</span><p>วันหยุด/ชดเชย: ระบบ <strong class="text-green-600">คำนวณชั่วโมง OT อัตโนมัติ</strong> (×1.5)</p></div>
+            <div class="flex gap-3"><span class="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">5</span><p>วันที่มี <i class="fa-solid fa-lock text-zinc-400 text-xs"></i> = ไม่มีบันทึก → กดปุ่ม <span class="inline-flex items-center bg-fuchsia-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg"><i class="fa-solid fa-pen-to-square mr-1 text-[8px]"></i>ชี้แจง</span> เพื่อชี้แจงเวลา</p></div>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="info-card bg-white border border-zinc-200 rounded-xl p-3 text-center text-xs"><div class="w-full h-3 rounded bg-[#fefce8] border border-yellow-200 mb-2"></div><strong>สีเหลืองอ่อน</strong><br>เลือกเบิก OT</div>
+        <div class="info-card bg-white border border-zinc-200 rounded-xl p-3 text-center text-xs"><div class="w-full h-3 rounded bg-[#fff7f7] border border-red-200 mb-2"></div><strong>สีชมพูอ่อน</strong><br>วันหยุดนักขัตฤกษ์</div>
+        <div class="info-card bg-white border border-zinc-200 rounded-xl p-3 text-center text-xs"><div class="w-full h-3 rounded bg-[#fef2f2] border border-red-300 mb-2"></div><strong>สีแดงอ่อน</strong><br>ไม่มีบันทึก (ต้องชี้แจง)</div>
+        <div class="info-card bg-white border border-zinc-200 rounded-xl p-3 text-center text-xs"><div class="w-full h-3 rounded bg-[#f8fafc] border border-zinc-200 mb-2"></div><strong>สีเทา</strong><br>วันเสาร์-อาทิตย์</div>
+    </div>
+</section>
+
+<section id="step5" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-yellow-500 text-zinc-900">05</div><div><h2 class="text-xl font-black text-zinc-800">กรอก Commission</h2><p class="text-zinc-400 text-sm">กรอกยอดขาย × % คอมมิชชั่น (ถ้ามี)</p></div></div>
+    <div class="mockup mb-5">
+        <div class="mockup-bar"><div class="dot bg-[#ff5f57]"></div><div class="dot bg-[#febc2e]"></div><div class="dot bg-[#28c840]"></div><div class="flex-1 bg-zinc-700 rounded ml-4 px-3 py-1 text-[11px] text-zinc-400 font-mono">app.html#ot-claim (Commission)</div></div>
+        <div class="bg-zinc-100 p-4">
+            <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                <div class="bg-zinc-800 px-5 py-3.5 flex items-center justify-between"><div><h3 class="text-sm font-black text-white">Commission</h3><p class="text-[10px] text-zinc-400 mt-0.5">กรอกยอดขาย × % คอมมิชชั่น</p></div><div class="text-right"><p class="text-[10px] text-zinc-400">ยอดขายขั้นต่ำ</p><p class="text-sm font-black text-yellow-400">฿5,000</p></div></div>
+                <div class="p-5">
+                    <div class="grid grid-cols-12 gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1"><div class="col-span-4">รายการ</div><div class="col-span-4 text-right">ยอดขาย (฿)</div><div class="col-span-1 text-right">% คอม</div><div class="col-span-2 text-right">ได้รับ (฿)</div><div class="col-span-1"></div></div>
+                    <div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5 mb-2"><input type="text" value="Page 365" disabled class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white"><input type="number" value="12500" disabled class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white text-right"><span class="col-span-1 text-xs font-black text-zinc-500 text-center bg-zinc-200 rounded-lg py-1.5">3%</span><span class="col-span-2 text-xs font-black text-zinc-700 text-right">฿375</span><button class="col-span-1 text-zinc-300 text-center"><i class="fa-solid fa-times"></i></button></div>
+                    <button class="text-xs font-black text-yellow-600 flex items-center gap-1.5 mt-1"><i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ</button>
+                    <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-end"><span class="text-sm">รวม Commission: <b class="text-zinc-800 text-base">฿375</b></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5 text-sm text-zinc-600 space-y-2">
+        <p><strong>❶</strong> กรอกชื่อรายการ → <strong>❷</strong> กรอกยอดขาย (฿) → <strong>❸</strong> % คอมระบบตั้งค่าจากโปรไฟล์</p>
+        <p>กด <span class="text-yellow-600 font-black"><i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ</span> ถ้ามีหลายรายการ</p>
+        <p class="text-orange-600">⚠️ หากยอดขายรวมไม่ถึงขั้นต่ำ Commission จะเป็น ฿0</p>
+    </div>
+</section>
+
+<section id="step6" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-yellow-500 text-zinc-900">06</div><div><h2 class="text-xl font-black text-zinc-800">ยื่นขออนุมัติ & ดูประวัติ</h2><p class="text-zinc-400 text-sm">กรอกหมายเหตุ แล้วกดส่งให้หัวหน้า</p></div></div>
+    <div class="mockup mb-5">
+        <div class="mockup-bar"><div class="dot bg-[#ff5f57]"></div><div class="dot bg-[#febc2e]"></div><div class="dot bg-[#28c840]"></div><div class="flex-1 bg-zinc-700 rounded ml-4 px-3 py-1 text-[11px] text-zinc-400 font-mono">app.html#ot-claim (ส่ง+ประวัติ)</div></div>
+        <div class="bg-zinc-100 p-4 space-y-4">
+            <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm p-5">
+                <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">หมายเหตุรวมถึงหัวหน้า (ถ้ามี)</label>
+                <div class="border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-400 mb-4">เช่น ทำงานล่วงเวลาโปรเจกต์...</div>
+                <div class="flex gap-3 justify-end">
+                    <button class="px-5 py-2.5 bg-zinc-100 text-zinc-700 font-black rounded-xl text-xs"><i class="fa-regular fa-floppy-disk mr-1"></i> บันทึก Draft</button>
+                    <button class="px-6 py-2.5 bg-yellow-500 text-zinc-900 font-black rounded-xl text-xs shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> ยื่นขออนุมัติ</button>
+                </div>
+                <div class="mt-2 flex justify-end gap-4 text-[10px]"><span class="text-zinc-400">← บันทึกไว้ก่อน</span><span class="text-red-500 font-bold">← กดส่งให้หัวหน้า!</span></div>
+            </div>
+            <div class="bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-2xl p-4 text-sm font-bold">⏳ รออนุมัติจากหัวหน้า</div>
+            <div><h3 class="text-sm font-black text-zinc-700 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> ประวัติการยื่น OT</h3>
+                <div class="space-y-2">
+                    <div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center gap-3"><div class="flex-1 min-w-0"><p class="font-black text-zinc-800 text-sm">งวด 3/2026</p><p class="text-xs text-zinc-500 mt-0.5">OT คิดเป็น: <b>15.00 ชม.</b> · Commission: <b>฿375</b></p></div><span class="text-[10px] font-black px-3 py-1.5 rounded-xl bg-yellow-100 text-yellow-800">รออนุมัติ</span><p class="text-[10px] text-zinc-400">2026-03-25</p></div>
+                    <div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center gap-3"><div class="flex-1 min-w-0"><p class="font-black text-zinc-800 text-sm">งวด 2/2026</p><p class="text-xs text-zinc-500 mt-0.5">OT คิดเป็น: <b>12.50 ชม.</b> · Commission: <b>฿500</b></p></div><span class="text-[10px] font-black px-3 py-1.5 rounded-xl bg-green-100 text-green-800">✅ อนุมัติแล้ว</span><p class="text-[10px] text-zinc-400">2026-02-26</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5 text-sm text-zinc-600 space-y-2">
+        <p><strong class="text-zinc-800">บันทึก Draft</strong> = บันทึกไว้ก่อน ยังไม่ส่ง กลับมาแก้ไขได้</p>
+        <p><strong class="text-yellow-600">ยื่นขออนุมัติ</strong> = ส่งจริง ระบบแจ้งเตือนหัวหน้าอัตโนมัติ → เมื่อส่งแล้ว <strong class="text-red-500">แก้ไขไม่ได้</strong></p>
+    </div>
+</section>
+
+<section id="tips" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-amber-500 text-white"><i class="fa-solid fa-lightbulb"></i></div><div><h2 class="text-xl font-black text-zinc-800">ข้อควรระวัง</h2></div></div>
+    <div class="grid md:grid-cols-2 gap-4">
+        <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center"><i class="fa-solid fa-clock text-red-500 text-sm"></i></div><h3 class="font-black text-red-600 text-sm">ระยะเวลา</h3></div><p class="text-sm text-zinc-600">ต้องเบิก OT <strong>ภายใน 3 วัน</strong>หลังจากวันที่ทำ OT</p></div>
+        <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center"><i class="fa-solid fa-user-check text-yellow-600 text-sm"></i></div><h3 class="font-black text-yellow-700 text-sm">อนุมัติล่วงหน้า</h3></div><p class="text-sm text-zinc-600">ต้องได้รับ <strong>อนุมัติจากหัวหน้างาน</strong> ก่อนทำ OT</p></div>
+        <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fa-solid fa-fingerprint text-blue-500 text-sm"></i></div><h3 class="font-black text-blue-700 text-sm">บันทึกเวลา</h3></div><p class="text-sm text-zinc-600">ชั่วโมง OT ต้อง <strong>ตรงกับเวลาสแกนเข้า-ออกงาน</strong></p></div>
+        <div class="info-card bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation text-orange-500 text-sm"></i></div><h3 class="font-black text-orange-700 text-sm">OT สูงสุด 36 ชม./งวด</h3></div><p class="text-sm text-zinc-600">หากเกิน 36 ชม./งวด ระบบจะแสดง <strong class="text-red-500">คำเตือนสีแดง</strong></p></div>
+    </div>
+</section>
+
+<section id="faq" class="scroll-mt-24">
+    <div class="flex items-center gap-4 mb-5"><div class="step-num bg-zinc-200 text-zinc-600"><i class="fa-solid fa-circle-question"></i></div><div><h2 class="text-xl font-black text-zinc-800">คำถามที่พบบ่อย (FAQ)</h2></div></div>
+    <div class="space-y-3">
+        <details class="group bg-white border border-zinc-200 rounded-2xl overflow-hidden"><summary class="flex items-center justify-between cursor-pointer p-5 text-sm font-bold text-zinc-700 hover:text-yellow-600"><span><i class="fa-solid fa-lock text-yellow-500 mr-2"></i>ทำไมบางวันมีไอคอนกุญแจ?</span><i class="fa-solid fa-chevron-down text-zinc-400 group-open:rotate-180 transition-transform"></i></summary><div class="px-5 pb-5 text-sm text-zinc-500 border-t border-zinc-100 pt-4">ไม่มีข้อมูลเวลาเข้า-ออกงาน ให้กดปุ่ม <span class="inline-flex items-center bg-fuchsia-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg"><i class="fa-solid fa-pen-to-square mr-1 text-[8px]"></i>ชี้แจง</span> เพื่อส่งคำขอชี้แจงเวลาให้หัวหน้าอนุมัติก่อน</div></details>
+        <details class="group bg-white border border-zinc-200 rounded-2xl overflow-hidden"><summary class="flex items-center justify-between cursor-pointer p-5 text-sm font-bold text-zinc-700 hover:text-yellow-600"><span><i class="fa-solid fa-pen-to-square text-yellow-500 mr-2"></i>กดปุ่ม "ชี้แจง" แล้วต้องทำอย่างไร?</span><i class="fa-solid fa-chevron-down text-zinc-400 group-open:rotate-180 transition-transform"></i></summary><div class="px-5 pb-5 text-sm text-zinc-500 border-t border-zinc-100 pt-4">ระบบจะเปิด Popup ให้กรอก: เวลาเข้า-ออกงานจริง, ประเภท (ชี้แจง/แก้ไข) และเหตุผล แล้วกด "ส่งขออนุมัติ"</div></details>
+        <details class="group bg-white border border-zinc-200 rounded-2xl overflow-hidden"><summary class="flex items-center justify-between cursor-pointer p-5 text-sm font-bold text-zinc-700 hover:text-yellow-600"><span><i class="fa-solid fa-floppy-disk text-yellow-500 mr-2"></i>"Draft" ต่างจาก "ยื่นขออนุมัติ" อย่างไร?</span><i class="fa-solid fa-chevron-down text-zinc-400 group-open:rotate-180 transition-transform"></i></summary><div class="px-5 pb-5 text-sm text-zinc-500 border-t border-zinc-100 pt-4"><strong>Draft</strong> = บันทึกไว้ แก้ไขได้ ยังไม่ส่ง | <strong class="text-yellow-700">ยื่นขออนุมัติ</strong> = ส่งจริง แก้ไขไม่ได้</div></details>
+        <details class="group bg-white border border-zinc-200 rounded-2xl overflow-hidden"><summary class="flex items-center justify-between cursor-pointer p-5 text-sm font-bold text-zinc-700 hover:text-yellow-600"><span><i class="fa-solid fa-money-check-dollar text-yellow-500 mr-2"></i>OT จะเข้าเงินเดือนเมื่อไหร่?</span><i class="fa-solid fa-chevron-down text-zinc-400 group-open:rotate-180 transition-transform"></i></summary><div class="px-5 pb-5 text-sm text-zinc-500 border-t border-zinc-100 pt-4">OT ที่ได้รับอนุมัติจะคำนวณรวมเข้ากับ <strong>เงินเดือนรอบถัดไป</strong> (จ่ายทุกวันที่ 28)</div></details>
+        <details class="group bg-white border border-zinc-200 rounded-2xl overflow-hidden"><summary class="flex items-center justify-between cursor-pointer p-5 text-sm font-bold text-zinc-700 hover:text-yellow-600"><span><i class="fa-solid fa-headset text-yellow-500 mr-2"></i>ติดต่อ HR ได้ที่ไหน?</span><i class="fa-solid fa-chevron-down text-zinc-400 group-open:rotate-180 transition-transform"></i></summary><div class="px-5 pb-5 text-sm text-zinc-500 border-t border-zinc-100 pt-4 space-y-1.5"><div><i class="fa-solid fa-phone text-yellow-500 mr-2"></i>โทร: ภายใน 1234</div><div><i class="fa-solid fa-envelope text-yellow-500 mr-2"></i>อีเมล: hr@lamsang.com</div><div><i class="fa-brands fa-line text-yellow-500 mr-2"></i>Line: @lamsang-hr</div></div></details>
+    </div>
+</section>
+
+</div></main>
+
+<footer class="bg-white border-t border-zinc-200 py-8 px-4">
+    <div class="max-w-4xl mx-auto text-center">
+        <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Logo" class="h-12 w-auto mx-auto mb-3 opacity-50">
+        <p class="text-zinc-400 text-sm">© 2026 Lamsang Group All Rights Reserved.</p>
+        <p class="text-zinc-300 text-xs mt-1">HRIS OT Manual v2.0 | มีนาคม 2026</p>
+        <div class="mt-4"><a href="app.html#ot-claim" class="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-bold text-sm px-6 py-2.5 rounded-xl shadow hover:shadow-lg no-print"><i class="fa-solid fa-arrow-left"></i> กลับหน้าเบิก OT</a></div>
+    </div>
+</footer>
+
+<button id="btt" onclick="window.scrollTo({top:0})" class="btt no-print w-12 h-12 bg-yellow-500 text-zinc-900 rounded-full shadow-lg flex items-center justify-center hover:bg-yellow-400"><i class="fa-solid fa-arrow-up font-bold"></i></button>
+
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progress').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';document.getElementById('btt').classList.toggle('show',window.scrollY>400)});
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.style.opacity='1';x.target.style.transform='translateY(0)'}})},{threshold:0.08});
+document.querySelectorAll('section[id]').forEach(s=>{s.style.opacity='0';s.style.transform='translateY(20px)';s.style.transition='opacity .5s ease,transform .5s ease';obs.observe(s)});
+</script>
+</body></html>
