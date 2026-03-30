@@ -6557,185 +6557,242 @@ PAGES['payslip-admin'] = {
         PAGES['ot-claim'] = {
             title: 'เบิก OT & Commission',
             html: `
-            <style>
-                .ot-row-sel td { background:#fefce8; }
-                .ot-row-weekend td { background:#f8fafc; color:#94a3b8; }
-                .ot-row-missing td { background:#fef2f2; }
-                .ot-row-normal td { background:#fff; }
-                .ot-row-holiday td { background:#fff7f7; }
-                .ot-row-comp td { background:#fffbeb; }
-                .ot-tr-hover:hover td { filter: brightness(0.97); }
-                .ot-status-pending  { background:#fef9c3; color:#92400e; }
-                .ot-status-approved { background:#dcfce7; color:#166534; }
-                .ot-status-rejected { background:#fee2e2; color:#991b1b; }
-                .ot-status-draft    { background:#f4f4f5; color:#52525b; }
-                /* Popup backdrop */
-                #ot-explain-popup { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; padding:1rem; }
-                #ot-explain-popup.open { display:flex; }
-            </style>
+<style>
+:root { --ot-gold:#eab308; --ot-dark:#18181b; }
+/* ─── Day Card ─── */
+.ot-card {
+  border-radius:1rem; border:2px solid #f4f4f5; background:#fff;
+  transition:all .18s; overflow:hidden;
+}
+.ot-card.sel      { border-color:#eab308; background:#fefce8; }
+.ot-card.missing  { border-color:#fca5a5; background:#fef2f2; }
+.ot-card.holiday  { border-color:#fca5a5; background:#fff7f7; }
+.ot-card.comp     { border-color:#fde68a; background:#fffbeb; }
+.ot-card.weekend  { border-color:#e4e4e7; background:#f8fafc; }
+.ot-card-top { display:flex; align-items:center; gap:.75rem; padding:.875rem 1rem; cursor:pointer; user-select:none; }
+.ot-card-top:active { opacity:.85; }
+.ot-card-body { padding:.75rem 1rem 1rem; border-top:1px solid #f4f4f5; display:none; }
+.ot-card.expanded .ot-card-body { display:block; }
+/* Checkbox custom */
+.ot-chk-wrap { display:flex; align-items:center; gap:.5rem; }
+.ot-chk { width:1.25rem; height:1.25rem; accent-color:#eab308; cursor:pointer; flex-shrink:0; }
+/* Status badge */
+.ot-badge { font-size:.65rem; font-weight:900; padding:.25rem .6rem; border-radius:.5rem; white-space:nowrap; }
+.ot-badge-ok      { background:#dcfce7; color:#166534; }
+.ot-badge-missing { background:#fce7f3; color:#9d174d; }
+.ot-badge-holiday { background:#fee2e2; color:#991b1b; }
+.ot-badge-comp    { background:#fef3c7; color:#92400e; }
+.ot-badge-weekend { background:#f1f5f9; color:#64748b; }
+.ot-badge-pending { background:#fef9c3; color:#92400e; }
+.ot-badge-approved{ background:#dcfce7; color:#166534; }
+.ot-badge-rejected{ background:#fee2e2; color:#991b1b; }
+/* Time pill */
+.ot-time-pill { font-size:.75rem; font-weight:700; font-family:monospace; background:#f4f4f5; border-radius:.4rem; padding:.15rem .5rem; }
+.ot-time-pill.in-time  { background:#dcfce7; color:#166534; }
+.ot-time-pill.out-time { background:#dbeafe; color:#1d4ed8; }
+/* Input mini */
+.ot-input-sm {
+  width:100%; font-size:.8rem; font-weight:600; border:2px solid #e4e4e7;
+  border-radius:.6rem; padding:.5rem .75rem; outline:none; font-family:inherit;
+  transition:border-color .15s; background:#fff;
+}
+.ot-input-sm:focus { border-color:#eab308; }
+/* Sticky submit bar */
+#ot-sticky-bar {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background:rgba(255,255,255,.95); backdrop-filter:blur(12px);
+  border-top:1px solid #e4e4e7;
+  padding:.875rem 1rem env(safe-area-inset-bottom, .5rem);
+  display:none;
+}
+/* Commission row */
+.comm-row-card { background:#f8fafc; border-radius:.75rem; padding:.75rem; margin-bottom:.5rem; }
+/* History cards */
+.ot-hist-card { background:#fff; border:1px solid #f4f4f5; border-radius:1rem; padding:1rem; }
+/* status */
+.ot-status-pending  { background:#fef9c3; color:#92400e; }
+.ot-status-approved { background:#dcfce7; color:#166534; }
+.ot-status-rejected { background:#fee2e2; color:#991b1b; }
+.ot-status-draft    { background:#f4f4f5; color:#71717a; }
+/* Animate in */
+@keyframes otFadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.ot-animate { animation:otFadeUp .2s ease both; }
+</style>
 
-            <!-- Popup ชี้แจงเวลา -->
-            <div id="ot-explain-popup">
-              <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 relative">
-                <button onclick="otCloseExplain()" class="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 transition-colors">
-                  <i class="fa-solid fa-times text-lg"></i>
-                </button>
-                <h3 class="text-lg font-black text-zinc-800 mb-1">ชี้แจงเวลาทำงาน</h3>
-                <p id="ot-exp-date-label" class="text-sm text-zinc-500 mb-5"></p>
-                <div class="space-y-4">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-1.5">เวลาเข้างาน</label>
-                      <input type="time" id="ot-exp-in" class="input-field text-sm font-bold">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-1.5">เวลาออกงาน</label>
-                      <input type="time" id="ot-exp-out" class="input-field text-sm font-bold">
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-1.5">ประเภท</label>
-                    <select id="ot-exp-type" class="input-field text-sm">
-                      <option value="explain">ชี้แจงเวลา (ลืมสแกน/สแกนไม่ติด)</option>
-                      <option value="adjust">แก้ไขเวลา</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-1.5">เหตุผล <span class="text-red-400">*</span></label>
-                    <textarea id="ot-exp-reason" rows="2" class="input-field resize-none text-sm" placeholder="เช่น ลืมสแกนออก / สแกนเนอร์ขัดข้อง..."></textarea>
-                  </div>
-                </div>
-                <div class="flex gap-3 mt-5">
-                  <button onclick="otCloseExplain()" class="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">ยกเลิก</button>
-                  <button onclick="otSubmitExplain()" id="ot-exp-submit-btn"
-                    class="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm transition-all shadow-md">
-                    <i class="fa-solid fa-paper-plane mr-1.5"></i>ส่งขออนุมัติ
-                  </button>
-                </div>
-              </div>
-            </div>
+<!-- ── Explain Popup (slide-up sheet) ── -->
+<div id="ot-explain-popup" class="fixed inset-0 z-[400] flex items-end justify-center hidden" style="transition:opacity .2s">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="otCloseExplain()"></div>
+  <div class="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl p-6 pb-8 space-y-4" style="max-height:90vh;overflow-y:auto">
+    <div class="w-10 h-1 bg-zinc-200 rounded-full mx-auto mb-4"></div>
+    <p class="font-black text-zinc-800 text-base" id="ot-exp-date-label">วันที่...</p>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">เวลาเข้างาน</label>
+        <input type="time" id="ot-exp-in" class="ot-input-sm">
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">เวลาออกงาน</label>
+        <input type="time" id="ot-exp-out" class="ot-input-sm">
+      </div>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ประเภท</label>
+      <select id="ot-exp-type" class="ot-input-sm">
+        <option value="explain">ชี้แจงเวลาทำงาน</option>
+        <option value="leave">ลาหยุด</option>
+        <option value="wfh">Work from Home</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">เหตุผล *</label>
+      <textarea id="ot-exp-reason" rows="2" class="ot-input-sm resize-none" placeholder="ระบุเหตุผล..."></textarea>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="otCloseExplain()" class="flex-1 py-3 border-2 border-zinc-200 text-zinc-600 font-black rounded-2xl text-sm">ยกเลิก</button>
+      <button onclick="otSubmitExplain()" id="ot-exp-submit-btn"
+        class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-2xl text-sm transition-all shadow-md">
+        <i class="fa-solid fa-paper-plane mr-1.5"></i>ส่งขออนุมัติ
+      </button>
+    </div>
+  </div>
+</div>
 
-            <div class="p-6 lg:p-8 max-w-5xl mx-auto">
-              <div class="mb-6 flex justify-between items-start">
-                  <div>
-                    <h2 class="text-2xl font-black text-zinc-800">เบิก OT & Commission</h2>
-                    <p class="text-sm text-zinc-500 mt-1">ตรวจสอบเวลาทำงาน เลือกวันเบิก OT และกรอก Commission แล้วส่งให้หัวหน้าอนุมัติ</p>
-                  </div>
-                  <a href="ot-manual.html" target="_blank" class="text-xs font-black text-yellow-600 hover:text-yellow-700 bg-yellow-50 px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 border border-yellow-100">
-                    <i class="fa-solid fa-book-open"></i> คู่มือการเบิก OT
-                  </a>
-                </div>
+<!-- ── Main Page ── -->
+<div class="pb-28">
 
-              <!-- เลือกงวด -->
-              <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm p-5 mb-5">
-                <div class="flex flex-wrap items-end gap-4">
-                  <div class="flex-1 min-w-[220px]">
-                    <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-1.5">งวดเงินเดือน</label>
-                    <select id="ot-period-sel" class="input-field" onchange="otLoadPeriod()">
-                      <option value="">— เลือกงวด —</option>
-                    </select>
-                  </div>
-                  <div class="flex flex-wrap gap-3 text-[10px] font-black pb-1">
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-50 border border-red-300 inline-block"></span>วันหยุด ×1.5</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-yellow-50 border border-yellow-300 inline-block"></span>ชดเชย ×1.5</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-zinc-100 border border-zinc-300 inline-block"></span>ปกติ</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-fuchsia-50 border border-fuchsia-300 inline-block"></span>ไม่มีบันทึก</span>
-                  </div>
-                </div>
-              </div>
+  <!-- Header -->
+  <div class="bg-zinc-900 px-5 pt-6 pb-5">
+    <div class="flex items-center justify-between mb-1">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 bg-yellow-400/20 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-business-time text-yellow-400"></i>
+        </div>
+        <h2 class="text-lg font-black text-white tracking-tight">เบิก OT & Commission</h2>
+      </div>
+      <a href="ot-manual.html" target="_blank"
+        class="text-[10px] font-black text-yellow-400 border border-yellow-400/30 bg-yellow-400/10 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+        <i class="fa-solid fa-book-open"></i> คู่มือ
+      </a>
+    </div>
+    <p class="text-xs text-zinc-400 ml-11">เลือกวันเบิก OT · กรอก Commission · ส่งอนุมัติ</p>
+  </div>
 
-              <!-- status bar -->
-              <div id="ot-claim-status-bar" class="hidden mb-5"></div>
+  <!-- Period Selector -->
+  <div class="px-4 pt-4 pb-2">
+    <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">งวดเงินเดือน</label>
+    <select id="ot-period-sel" class="ot-input-sm" onchange="otLoadPeriod()">
+      <option value="">— เลือกงวด —</option>
+    </select>
+  </div>
 
-              <!-- ตาราง + OT content -->
-              <div id="ot-table-wrap" class="hidden">
+  <!-- Legend pills -->
+  <div class="px-4 pb-3 flex flex-wrap gap-1.5">
+    <span class="flex items-center gap-1 text-[10px] font-bold text-zinc-500"><span class="w-2.5 h-2.5 rounded bg-red-100 border border-red-300 inline-block"></span>วันหยุดนักขัตฤกษ์ ×1.5</span>
+    <span class="flex items-center gap-1 text-[10px] font-bold text-zinc-500"><span class="w-2.5 h-2.5 rounded bg-yellow-50 border border-yellow-300 inline-block"></span>วันชดเชย ×1.5</span>
+    <span class="flex items-center gap-1 text-[10px] font-bold text-zinc-500"><span class="w-2.5 h-2.5 rounded bg-fuchsia-50 border border-fuchsia-300 inline-block"></span>ไม่มีบันทึก</span>
+  </div>
 
-                <!-- ตารางเวลาทำงานรายวัน -->
-                <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden mb-5">
-                  <div class="bg-zinc-900 px-5 py-3.5 flex items-center justify-between flex-wrap gap-2">
-                    <h3 class="text-sm font-black text-white">เวลาทำงานรายวัน</h3>
-                    <span id="ot-selected-count" class="text-xs font-black text-zinc-400">เลือก OT: 0 วัน</span>
-                  </div>
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                      <thead class="bg-zinc-50 border-b border-zinc-100">
-                        <tr class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          <th class="text-left px-4 py-3 w-8">#</th>
-                          <th class="text-left px-4 py-3">วันที่</th>
-                          <th class="text-center px-4 py-3">เข้างาน</th>
-                          <th class="text-center px-4 py-3">ออกงาน</th>
-                          <th class="text-center px-4 py-3">ชม. OT</th>
-                          <th class="text-center px-4 py-3">คิดเป็น</th>
-                          <th class="text-center px-4 py-3 min-w-[120px]">เหตุผล OT</th>
-                          <th class="text-center px-4 py-3">เบิก OT</th>
-                          <th class="text-center px-4 py-3">สถานะ</th>
-                        </tr>
-                      </thead>
-                      <tbody id="ot-day-grid"></tbody>
-                    </table>
-                  </div>
-                  <div class="px-5 py-3 bg-zinc-50 border-t border-zinc-100 flex flex-wrap gap-5 text-sm items-center">
-                    <span>รวม OT (คิดเป็น): <b id="ot-conv-total" class="text-yellow-700 font-black">0 ชม.</b></span>
-                    <span id="ot-cap-warn" class="hidden text-red-500 font-bold text-xs"><i class="fa-solid fa-triangle-exclamation mr-1"></i>เกิน 36 ชม./งวด</span>
-                  </div>
-                </div>
+  <!-- Status bar -->
+  <div id="ot-claim-status-bar" class="hidden px-4 mb-2"></div>
 
-                <!-- Commission -->
-                <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden mb-5">
-                  <div class="bg-zinc-800 px-5 py-3.5 flex items-center justify-between">
-                    <div>
-                      <h3 class="text-sm font-black text-white">Commission</h3>
-                      <p class="text-[10px] text-zinc-400 mt-0.5">กรอกยอดขาย × % คอมมิชชั่น</p>
-                    </div>
-                    <div id="comm-min-badge" class="hidden text-right">
-                      <p class="text-[10px] text-zinc-400">ยอดขายขั้นต่ำ</p>
-                      <p id="comm-min-value" class="text-sm font-black text-yellow-400">฿0</p>
-                    </div>
-                  </div>
-                  <div class="p-5">
-                    <div class="grid grid-cols-12 gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">
-                      <div class="col-span-4">รายการ</div>
-                      <div class="col-span-4 text-right">ยอดขาย (฿)</div>
-                      <div class="col-span-1 text-right">% คอม</div>
-                      <div class="col-span-2 text-right">ได้รับ (฿)</div>
-                      <div class="col-span-1"></div>
-                    </div>
-                    <div id="ot-comm-rows" class="space-y-2 mb-3"></div>
-                    <button onclick="otAddCommRow()" class="text-xs font-black text-yellow-600 hover:text-yellow-700 flex items-center gap-1.5 transition-colors mt-1">
-                      <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ
-                    </button>
-                    <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between flex-wrap gap-2">
-                      <span id="ot-comm-min-warn" class="hidden text-xs text-orange-600 font-bold"></span>
-                      <span class="text-sm ml-auto">รวม Commission: <b id="ot-comm-total" class="text-zinc-800 text-base">฿0</b></span>
-                    </div>
-                  </div>
-                </div>
+  <!-- Content area -->
+  <div id="ot-table-wrap" class="hidden px-4 space-y-3">
 
-                <!-- หมายเหตุ + ปุ่มส่ง -->
-                <div class="bg-white rounded-2xl border border-zinc-200 shadow-sm p-5">
-                  <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">หมายเหตุรวมถึงหัวหน้า (ถ้ามี)</label>
-                  <textarea id="ot-note" rows="2" class="input-field resize-none mb-4" placeholder="เช่น ทำงานล่วงเวลาโปรเจกต์..."></textarea>
-                  <div class="flex gap-3 justify-end flex-wrap">
-                    <button onclick="otSaveDraft()" class="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-xs transition-all">
-                      <i class="fa-regular fa-floppy-disk mr-1"></i> บันทึก Draft
-                    </button>
-                    <button onclick="otSubmit()" class="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-xs transition-all shadow-md">
-                      <i class="fa-solid fa-paper-plane mr-1"></i> ยื่นขออนุมัติ
-                    </button>
-                  </div>
-                </div>
-              </div>
+    <!-- Section title -->
+    <div class="flex items-center justify-between py-1">
+      <h3 class="text-xs font-black text-zinc-700 uppercase tracking-widest flex items-center gap-2">
+        <i class="fa-solid fa-calendar-days text-yellow-500"></i> เวลาทำงานรายวัน
+      </h3>
+      <span id="ot-selected-count" class="text-[10px] font-black text-yellow-700 bg-yellow-100 px-2.5 py-1 rounded-full">เลือก OT: 0 วัน</span>
+    </div>
 
-              <!-- ประวัติ -->
-              <div class="mt-8">
-                <h3 class="text-sm font-black text-zinc-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> ประวัติการยื่น OT
-                </h3>
-                <div id="ot-history-list" class="space-y-3">
-                  <div class="text-center py-8 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
-                </div>
-              </div>
-            </div>`,
+    <!-- Day cards list -->
+    <div id="ot-day-grid" class="space-y-2"></div>
+
+    <!-- OT total footer -->
+    <div class="bg-zinc-900 rounded-2xl px-5 py-4 flex items-center justify-between">
+      <div>
+        <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">รวม OT (คิดเป็น)</p>
+        <p class="font-black text-yellow-400 text-xl num" id="ot-conv-total">0 ชม.</p>
+      </div>
+      <span id="ot-cap-warn" class="hidden text-xs font-black text-red-400 bg-red-900/30 px-3 py-1.5 rounded-xl">
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i>เกิน 36 ชม./งวด
+      </span>
+    </div>
+
+    <!-- Commission section -->
+    <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+      <div class="bg-zinc-800 px-5 py-4 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-black text-white">Commission</h3>
+          <p class="text-[10px] text-zinc-400 mt-0.5">กรอกยอดขาย × % คอมมิชชั่น</p>
+        </div>
+        <div id="comm-min-badge" class="hidden text-right">
+          <p class="text-[10px] text-zinc-400">ยอดขายขั้นต่ำ</p>
+          <p id="comm-min-value" class="text-sm font-black text-yellow-400">฿0</p>
+        </div>
+      </div>
+      <div class="p-4 space-y-3">
+        <!-- Column labels (desktop hint) -->
+        <div class="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">
+          <div class="col-span-4">รายการ</div>
+          <div class="col-span-4 text-right">ยอดขาย (฿)</div>
+          <div class="col-span-1 text-center">%</div>
+          <div class="col-span-2 text-right">ได้รับ (฿)</div>
+          <div class="col-span-1"></div>
+        </div>
+        <div id="ot-comm-rows" class="space-y-2"></div>
+        <button onclick="otAddCommRow()" class="w-full py-2.5 border-2 border-dashed border-zinc-200 hover:border-yellow-400 rounded-xl text-xs font-black text-zinc-400 hover:text-yellow-600 transition-all flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-plus-circle"></i> เพิ่มรายการ Commission
+        </button>
+        <div class="pt-2 border-t border-zinc-100 flex items-center justify-between">
+          <span id="ot-comm-min-warn" class="hidden text-xs text-orange-600 font-bold"></span>
+          <span class="text-sm ml-auto">รวม: <b id="ot-comm-total" class="text-zinc-800 text-base font-black">฿0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4">
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">หมายเหตุถึงหัวหน้า (ถ้ามี)</label>
+      <textarea id="ot-note" rows="2" class="ot-input-sm resize-none" placeholder="เช่น ทำงานล่วงเวลาโปรเจกต์..."></textarea>
+    </div>
+
+    <!-- History section -->
+    <div class="pt-2">
+      <h3 class="text-xs font-black text-zinc-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> ประวัติการยื่น OT
+      </h3>
+      <div id="ot-history-list" class="space-y-2">
+        <div class="text-center py-8 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
+      </div>
+    </div>
+
+  </div><!-- /ot-table-wrap -->
+
+  <!-- History when no period selected -->
+  <div id="ot-history-outside" class="px-4 mt-4 hidden">
+    <h3 class="text-xs font-black text-zinc-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-clock-rotate-left text-yellow-500"></i> ประวัติการยื่น OT
+    </h3>
+    <div id="ot-history-list-out" class="space-y-2">
+      <div class="text-center py-8 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
+    </div>
+  </div>
+
+</div><!-- /pb-28 -->
+
+<!-- Sticky Bottom Bar -->
+<div id="ot-sticky-bar">
+  <div class="flex gap-3 max-w-lg mx-auto">
+    <button onclick="otSaveDraft()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-2xl text-sm transition-all flex items-center justify-center gap-1.5">
+      <i class="fa-regular fa-floppy-disk"></i> Draft
+    </button>
+    <button onclick="otSubmit()" class="flex-[2] py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-2xl text-sm transition-all shadow-lg flex items-center justify-center gap-2">
+      <i class="fa-solid fa-paper-plane"></i> ยื่นขออนุมัติ
+    </button>
+  </div>
+</div>`,
 
             async init(user, profile, db, APP_ID) {
                 let mySchedule = null, currentPeriod = null;
@@ -6788,26 +6845,46 @@ PAGES['payslip-admin'] = {
                                 collection(db,'artifacts',APP_ID,'public','data','ot_requests'),
                                 where('uid','==',user.uid)
                             ));
-                            if (hSnap.empty) { list.innerHTML = '<div class="text-center py-8 text-zinc-300 text-sm">ยังไม่มีประวัติ</div>'; return; }
+                            const listOut = document.getElementById('ot-history-list-out');
+                            if (hSnap.empty) {
+                                const emptyHtml = '<div class="text-center py-8 text-zinc-300 text-sm font-bold">ยังไม่มีประวัติการยื่น OT</div>';
+                                if (list) list.innerHTML = emptyHtml;
+                                if (listOut) listOut.innerHTML = emptyHtml;
+                                document.getElementById('ot-history-outside').classList.remove('hidden');
+                                return;
+                            }
                             const stMap = { draft:'Draft', pending:'รอนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
                             const stCls = { draft:'ot-status-draft', pending:'ot-status-pending', approved:'ot-status-approved', rejected:'ot-status-rejected' };
                             const sorted = hSnap.docs.map(d => ({id:d.id,...d.data()}))
                                 .sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-                            list.innerHTML = sorted.map(r => `
-                                <div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center gap-3">
+                            const histHtml = sorted.map(r => `
+                                <div class="ot-hist-card flex items-start gap-3">
                                     <div class="flex-1 min-w-0">
-                                        <p class="font-black text-zinc-800 text-sm">${r.periodLabel||r.periodId}</p>
-                                        <p class="text-xs text-zinc-500 mt-0.5">OT คิดเป็น: <b>${(r.otConverted||0).toFixed(2)} ชม.</b> · Commission: <b>฿${(r.commTotal||0).toLocaleString()}</b></p>
-                                        ${r.managerNote ? `<p class="text-xs text-red-500 mt-1 italic">"${r.managerNote}"</p>` : ''}
+                                        <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                                            <p class="font-black text-zinc-800 text-sm">${r.periodLabel||r.periodId}</p>
+                                            <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${stCls[r.status]||'ot-status-draft'}">${stMap[r.status]||r.status}</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-zinc-500 mt-1">
+                                            <span><i class="fa-solid fa-clock text-yellow-500 mr-1"></i>OT: <b>${(r.otConverted||0).toFixed(2)} ชม.</b></span>
+                                            <span><i class="fa-solid fa-coins text-green-500 mr-1"></i>Commission: <b>฿${(r.commTotal||0).toLocaleString()}</b></span>
+                                        </div>
+                                        ${r.managerNote ? `<p class="text-xs text-red-500 mt-1.5 italic bg-red-50 px-2 py-1 rounded-lg">"${r.managerNote}"</p>` : ''}
                                     </div>
-                                    <span class="text-[10px] font-black px-3 py-1.5 rounded-xl ${stCls[r.status]||'ot-status-draft'}">${stMap[r.status]||r.status}</span>
-                                    <p class="text-[10px] text-zinc-400 whitespace-nowrap">${(r.createdAt||'').slice(0,10)}</p>
+                                    <p class="text-[10px] text-zinc-400 whitespace-nowrap flex-shrink-0 pt-0.5">${(r.createdAt||'').slice(0,10)}</p>
                                 </div>`).join('');
+                            if (list) list.innerHTML = histHtml;
+                            const listOut2 = document.getElementById('ot-history-list-out');
+                            if (listOut2) listOut2.innerHTML = histHtml;
+                            document.getElementById('ot-history-outside').classList.remove('hidden');
                         } catch(e) {
-                            if (list) list.innerHTML = '<div class="text-center py-6 text-zinc-400 text-xs">ไม่สามารถโหลดประวัติได้</div>';
+                            const errHtml = '<div class="text-center py-6 text-zinc-400 text-xs">ไม่สามารถโหลดประวัติได้</div>';
+                            if (list) list.innerHTML = errHtml;
+                            const listOutErr = document.getElementById('ot-history-list-out');
+                            if (listOutErr) listOutErr.innerHTML = errHtml;
                         }
                     }
                     loadHistory();
+                    document.getElementById('ot-history-outside').classList.remove('hidden');
 
                     // ─── Load period data ──────────────────────────────────
                     window.otLoadPeriod = async () => {
@@ -6815,10 +6892,11 @@ PAGES['payslip-admin'] = {
                         if (!pid) return;
                         document.getElementById('ot-table-wrap').classList.add('hidden');
                         document.getElementById('ot-claim-status-bar').classList.add('hidden');
+                        document.getElementById('ot-sticky-bar').style.display = 'none';
                         selectedDays = {};
                         // แสดง loading indicator ในพื้นที่ grid
                         const gridEl = document.getElementById('ot-day-grid');
-                        if (gridEl) gridEl.innerHTML = '<div class="col-span-full text-center py-8 text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+                        if (gridEl) gridEl.innerHTML = '<div class="text-center py-8 text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
                         try {
 
                         const pSnap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid));
@@ -6946,11 +7024,14 @@ PAGES['payslip-admin'] = {
                         } else sb.classList.add('hidden');
 
                         document.getElementById('ot-table-wrap').classList.remove('hidden');
+                        document.getElementById('ot-sticky-bar').style.display = 'block';
+                        document.getElementById('ot-history-outside').classList.add('hidden');
                         } catch(err) {
                             console.error('otLoadPeriod error:', err);
                             const gEl = document.getElementById('ot-day-grid');
-                            if (gEl) gEl.innerHTML = `<div class="col-span-full text-center py-8 text-red-400 text-sm font-medium"><i class="fa-solid fa-circle-exclamation mr-2"></i>โหลดข้อมูลไม่ได้: ${err.message}</div>`;
+                            if (gEl) gEl.innerHTML = `<div class="text-center py-8 text-red-400 text-sm font-medium"><i class="fa-solid fa-circle-exclamation mr-2"></i>โหลดข้อมูลไม่ได้: ${err.message}</div>`;
                             document.getElementById('ot-table-wrap').classList.remove('hidden');
+                            document.getElementById('ot-sticky-bar').style.display = 'block';
                         }
                     };
 
@@ -6969,10 +7050,10 @@ PAGES['payslip-admin'] = {
                         document.getElementById('ot-exp-out').value = d?.outTime || we;
                         document.getElementById('ot-exp-reason').value = '';
                         document.getElementById('ot-exp-type').value = 'explain';
-                        document.getElementById('ot-explain-popup').classList.add('open');
+                        document.getElementById('ot-explain-popup').classList.remove('hidden');
                     };
                     window.otCloseExplain = () => {
-                        document.getElementById('ot-explain-popup').classList.remove('open');
+                        document.getElementById('ot-explain-popup').classList.add('hidden');
                         explainTargetDay = null;
                     };
                     window.otSubmitExplain = async () => {
@@ -7008,104 +7089,155 @@ PAGES['payslip-admin'] = {
                         }
                     };
 
-                    // ─── Render Day Table (แทน grid cards) ───────────────
+                    // ─── Render Day Cards (Mobile-first) ────────────────
                     function renderDayGrid() {
-                        const tbody = document.getElementById('ot-day-grid');
-                        if (!tbody) return;
+                        const wrap = document.getElementById('ot-day-grid');
+                        if (!wrap) return;
                         if (!allDays.length) {
-                            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-zinc-400">ไม่พบวันทำงานในงวดนี้</td></tr>';
+                            wrap.innerHTML = '<div class="text-center py-10 text-zinc-400">ไม่พบวันทำงานในงวดนี้</div>';
                             updateTotals();
                             return;
                         }
                         const hpd = getDayWorkHours(mySchedule);
-                        tbody.innerHTML = allDays.map((d, i) => {
-                            const sel       = !!selectedDays[d.day];
-                            const noRecord  = !d.hasClock;
-                            const isAutoOT  = d.type === 'holiday' || d.type === 'comp' || d.type === 'weekend';
-                            const canOT     = !isLocked && d.hasClock;
-                            const entry     = selectedDays[d.day] || { hours: 0, note: '' };
-
-                            // สี row
-                            let rowClass = 'ot-row-normal';
-                            if (d.type === 'weekend')      rowClass = 'ot-row-weekend';
-                            else if (d.type === 'holiday') rowClass = 'ot-row-holiday';
-                            else if (d.type === 'comp')    rowClass = 'ot-row-comp';
-                            if (sel)      rowClass = 'ot-row-sel';
-                            else if (noRecord && d.type === 'normal') rowClass = 'ot-row-missing';
-
-                            // label ประเภท + ชื่อวันหยุด
-                            const typeLabel = d.type === 'holiday'
-                                ? `<span class="text-[10px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md">${d.holName||'วันหยุดนักขัตฤกษ์'}</span>`
-                                : d.type === 'comp'
-                                ? '<span class="text-[10px] font-black bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md">วันชดเชย</span>'
-                                : d.type === 'weekend'
-                                ? ''  // วันเสาร์/อาทิตย์ไม่ต้องมี badge
-                                : '';
-
-                            // เวลา + สถานะ
-                            const inCell  = d.inTime  || '<span class="text-zinc-300">–</span>';
-                            const outCell = d.outTime || '<span class="text-zinc-300">–</span>';
-
-                            // OT hours cell
-                            const mult = isAutoOT ? 1.5 : 1.0;
-                            const hrs  = isAutoOT
+                        // Remember which cards were expanded before re-render
+                        const expanded = new Set(
+                            [...document.querySelectorAll('.ot-card.expanded')].map(el => el.dataset.day)
+                        );
+                        wrap.innerHTML = allDays.map((d, i) => {
+                            const sel      = !!selectedDays[d.day];
+                            const noRecord = !d.hasClock;
+                            const isAutoOT = d.type === 'holiday' || d.type === 'comp' || d.type === 'weekend';
+                            const canOT    = !isLocked && d.hasClock;
+                            const entry    = selectedDays[d.day] || { hours: 0, note: '' };
+                            const mult     = isAutoOT ? 1.5 : 1.0;
+                            const hrs      = isAutoOT
                                 ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
                                 : (entry.hours || 0);
                             const conv = sel ? hrs * mult : 0;
-                            const hasRealTime = isAutoOT && d.inTime && d.outTime;
-                            const hrsLabel = `${hrs}<span class="text-[10px] text-zinc-400 ml-1">${hasRealTime ? 'ชม.' : 'hpd'}</span>`;
-                            const hoursCell = !sel ? '<span class="text-zinc-300 text-xs">–</span>'
-                                : isAutoOT
-                                    ? `<span class="font-black text-zinc-700">${hrsLabel}</span>`
-                                    : `<input type="number" min="0.5" max="24" step="0.5" value="${entry.hours||''}" placeholder="0"
-                                        oninput="otUpdateHours('${d.day}',Number(this.value))"
-                                        class="w-16 text-center text-sm border border-zinc-200 rounded-lg px-1.5 py-1 focus:border-yellow-400 focus:outline-none">`;
 
-                            // Note cell
-                            const noteCell = !sel ? '' : `<input type="text" value="${(entry.note||'').replace(/"/g,'&quot;')}" placeholder="${isAutoOT?'หมายเหตุ (ถ้ามี)':'เหตุผล OT *'}"
-                                onchange="otUpdateNote('${d.day}',this.value)"
-                                class="w-full text-xs border border-zinc-200 rounded-lg px-2 py-1.5 focus:border-yellow-400 focus:outline-none min-w-[120px]">`;
+                            // Card class
+                            let cardClass = 'ot-card';
+                            if (sel)                                      cardClass += ' sel';
+                            else if (noRecord && d.type === 'normal')     cardClass += ' missing';
+                            else if (d.type === 'holiday')                cardClass += ' holiday';
+                            else if (d.type === 'comp')                   cardClass += ' comp';
+                            else if (d.type === 'weekend')                cardClass += ' weekend';
+                            if (expanded.has(d.day) || sel)               cardClass += ' expanded';
 
-                            // สถานะ / ปุ่ม
-                            let statusCell = '';
+                            // Day label badges
+                            const dayTypeBadge = d.type === 'holiday'
+                                ? `<span class="ot-badge ot-badge-holiday">${d.holName||'หยุดนักขัตฤกษ์'}</span>`
+                                : d.type === 'comp'
+                                ? `<span class="ot-badge ot-badge-comp">วันชดเชย</span>`
+                                : d.type === 'weekend'
+                                ? `<span class="ot-badge ot-badge-weekend">หยุดประจำสัปดาห์</span>`
+                                : '';
+
+                            // Time pills
+                            const inPill  = d.inTime
+                                ? `<span class="ot-time-pill in-time">${d.inTime}</span>`
+                                : `<span class="ot-time-pill text-zinc-400">–</span>`;
+                            const outPill = d.outTime
+                                ? `<span class="ot-time-pill out-time">${d.outTime}</span>`
+                                : `<span class="ot-time-pill text-zinc-400">–</span>`;
+
+                            // Status badge
+                            let statusBadge = '';
                             const isOffDay = d.type === 'holiday' || d.type === 'weekend' || d.type === 'comp';
-                            if (isOffDay && !d.hasClock) {
-                                // วันหยุด/เสาร์-อาทิตย์ ไม่มีบันทึก → ไม่ต้องชี้แจง
-                                statusCell = d.type === 'holiday'
-                                    ? '<span class="text-[10px] font-bold text-red-300">หยุดนักขัตฤกษ์</span>'
-                                    : d.type === 'comp'
-                                    ? '<span class="text-[10px] font-bold text-amber-400">วันชดเชย</span>'
-                                    : '<span class="text-zinc-200 text-xs">–</span>';
-                            } else if (noRecord && d.type === 'normal') {
-                                // วันทำงานปกติ ไม่มีบันทึก → ต้องชี้แจง
-                                statusCell = `<button onclick="otOpenExplain('${d.day}')"
-                                    class="text-[11px] font-black bg-fuchsia-500 hover:bg-fuchsia-600 text-white px-3 py-1.5 rounded-xl transition-all whitespace-nowrap">
-                                    <i class="fa-solid fa-pen-to-square mr-1"></i>ชี้แจง</button>`;
+                            if (noRecord && !isOffDay) {
+                                statusBadge = `<span class="ot-badge ot-badge-missing">ไม่มีบันทึก</span>`;
                             } else if (d.hasClock) {
-                                statusCell = '<span class="text-[10px] font-black bg-green-50 text-green-600 px-2 py-1 rounded-lg whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span>';
+                                statusBadge = `<span class="ot-badge ot-badge-ok"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว</span>`;
                             }
 
-                            // Checkbox เบิก OT
-                            const checkCell = canOT
-                                ? `<input type="checkbox" ${sel?'checked':''} onchange="otToggleDay(${i})"
-                                    class="w-4 h-4 accent-yellow-500 cursor-pointer">`
-                                : `<span class="text-zinc-200 text-xs"><i class="fa-solid fa-lock"></i></span>`;
+                            // Checkbox area
+                            const checkHtml = canOT
+                                ? `<input type="checkbox" class="ot-chk" ${sel?'checked':''} onchange="otToggleDay(${i})" onclick="event.stopPropagation()">`
+                                : `<i class="fa-solid fa-lock text-zinc-300 text-sm"></i>`;
 
-                            return `<tr class="${rowClass} ot-tr-hover border-b border-zinc-100 transition-colors">
-                                <td class="px-3 py-3 text-xs text-zinc-400 font-bold">${i+1}</td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <p class="font-black text-zinc-800 text-sm">${d.day.slice(8)} <span class="font-normal text-zinc-400 text-xs">${THday[d.dow]}</span></p>
-                                    ${typeLabel}
-                                </td>
-                                <td class="px-4 py-3 text-center font-mono text-sm ${d.inTime?'text-zinc-700':'text-zinc-300'}">${inCell}</td>
-                                <td class="px-4 py-3 text-center font-mono text-sm ${d.outTime?'text-zinc-700':'text-zinc-300'}">${outCell}</td>
-                                <td class="px-4 py-3 text-center">${hoursCell}</td>
-                                <td class="px-4 py-3 text-center font-black text-yellow-700 text-sm">${sel ? conv.toFixed(2) : '<span class="text-zinc-300 text-xs">–</span>'}</td>
-                                <td class="px-4 py-3">${noteCell}</td>
-                                <td class="px-4 py-3 text-center">${checkCell}</td>
-                                <td class="px-4 py-3 text-center">${statusCell}</td>
-                            </tr>`;
+                            // OT hours input (inside expanded body)
+                            const hrsInput = isAutoOT
+                                ? `<span class="font-black text-zinc-800">${hrs} ชม.</span>`
+                                : `<input type="number" min="0.5" max="24" step="0.5"
+                                    value="${entry.hours||''}" placeholder="0"
+                                    oninput="otUpdateHours('${d.day}',Number(this.value))"
+                                    class="ot-input-sm w-24 text-center"
+                                    onclick="event.stopPropagation()">`;
+
+                            // Note input
+                            const noteInput = `<input type="text" value="${(entry.note||'').replace(/"/g,'&quot;')}"
+                                placeholder="${isAutoOT?'หมายเหตุ (ถ้ามี)':'เหตุผล OT *'}"
+                                onchange="otUpdateNote('${d.day}',this.value)"
+                                onclick="event.stopPropagation()"
+                                class="ot-input-sm">`;
+
+                            // Explain button
+                            const explainBtn = (noRecord && d.type === 'normal')
+                                ? `<button onclick="event.stopPropagation();otOpenExplain('${d.day}')"
+                                    class="w-full mt-2 py-2 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-black rounded-xl text-xs transition-all">
+                                    <i class="fa-solid fa-pen-to-square mr-1"></i>ชี้แจงเวลา
+                                  </button>`
+                                : '';
+
+                            // OT detail inside expanded body
+                            const otBody = sel ? `
+                                <div class="grid grid-cols-2 gap-3 mb-2">
+                                    <div>
+                                        <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">${isAutoOT ? 'ชม. OT (อัตโนมัติ)' : 'จำนวนชม. OT'}</p>
+                                        ${hrsInput}
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">คิดเป็น (×${mult})</p>
+                                        <span class="font-black text-yellow-700 text-lg">${conv.toFixed(2)} ชม.</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">${isAutoOT?'หมายเหตุ':'เหตุผล OT *'}</p>
+                                    ${noteInput}
+                                </div>` : '';
+
+                            const isExpanded = cardClass.includes('expanded');
+
+                            return `<div class="${cardClass} ot-animate" data-day="${d.day}" data-idx="${i}">
+                                <div class="ot-card-top" onclick="otToggleExpand(this.parentElement)">
+                                    <!-- Left: check + date -->
+                                    <div class="ot-chk-wrap flex-shrink-0">${checkHtml}</div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="font-black text-zinc-800 text-sm">${d.day.slice(5).replace('-','/')} <span class="text-zinc-400 font-normal">${THday[d.dow]}</span></span>
+                                            ${dayTypeBadge}
+                                            ${statusBadge}
+                                        </div>
+                                        <div class="flex items-center gap-1.5 mt-1">
+                                            ${inPill}
+                                            <i class="fa-solid fa-arrow-right text-zinc-300 text-[10px]"></i>
+                                            ${outPill}
+                                        </div>
+                                    </div>
+                                    <!-- Right: OT summary or chevron -->
+                                    <div class="flex-shrink-0 text-right flex flex-col items-end gap-1">
+                                        ${sel ? `<span class="text-xs font-black text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-lg">${conv.toFixed(2)} ชม.</span>` : ''}
+                                        <i class="fa-solid fa-chevron-${isExpanded?'up':'down'} text-zinc-300 text-xs mt-1"></i>
+                                    </div>
+                                </div>
+                                <div class="ot-card-body">
+                                    ${otBody}
+                                    ${explainBtn}
+                                </div>
+                            </div>`;
                         }).join('');
+                        updateTotals();
+                    }
+
+                    window.otToggleExpand = (card) => {
+                        card.classList.toggle('expanded');
+                        const chevron = card.querySelector('.fa-chevron-up, .fa-chevron-down');
+                        if (chevron) {
+                            chevron.classList.toggle('fa-chevron-up');
+                            chevron.classList.toggle('fa-chevron-down');
+                        }
+                    };
+
                         updateTotals();
                     }
 
@@ -7187,18 +7319,31 @@ PAGES['payslip-admin'] = {
                             // ถ้ายอดขายรวมไม่ถึงขั้นต่ำ → ได้รับ ฿0
                             const result = belowMin ? 0 : (Math.round((r.sales||0)*(r.pct||0))/100);
                             const fmtResult = Number.isInteger(result) ? result.toLocaleString() : result.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
-                            return `<div class="grid grid-cols-12 gap-2 items-center bg-zinc-50 rounded-xl px-3 py-2.5">
-                                <input type="text" value="${r.desc||''}" placeholder="รายการ..."
-                                    ${isLocked?'disabled':''}
-                                    onchange="_commRows[${i}].desc=this.value"
-                                    class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none">
-                                <input type="number" value="${r.sales||''}" min="0" placeholder="ยอดขาย (฿)"
-                                    ${isLocked?'disabled':''}
-                                    oninput="_commRows[${i}].sales=Number(this.value)||0;otCalcComm()"
-                                    class="col-span-4 text-xs border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:border-yellow-500 focus:outline-none text-right">
-                                <span class="col-span-1 text-xs font-black text-zinc-500 text-center bg-zinc-200 rounded-lg py-1.5">${r.pct||defaultPct}%</span>
-                                <span id="comm-result-${i}" class="col-span-2 text-xs font-black ${belowMin?'text-red-400 line-through':'text-zinc-700'} text-right">฿${fmtResult}</span>
-                                ${!isLocked?`<button onclick="_commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="col-span-1 text-zinc-300 hover:text-red-400 transition-colors text-center"><i class="fa-solid fa-times"></i></button>`:'<div class="col-span-1"></div>'}
+                            return `<div class="comm-row-card">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input type="text" value="${r.desc||''}" placeholder="ชื่อรายการ เช่น Page365..."
+                                        ${isLocked?'disabled':''}
+                                        onchange="_commRows[${i}].desc=this.value"
+                                        class="ot-input-sm flex-1">
+                                    ${!isLocked?`<button onclick="_commRows.splice(${i},1);renderCommUI_();otCalcComm()" class="w-8 h-8 flex items-center justify-center text-zinc-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"><i class="fa-solid fa-times"></i></button>`:''}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1">
+                                        <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">ยอดขาย (฿)</p>
+                                        <input type="number" value="${r.sales||''}" min="0" placeholder="0"
+                                            ${isLocked?'disabled':''}
+                                            oninput="_commRows[${i}].sales=Number(this.value)||0;otCalcComm()"
+                                            class="ot-input-sm text-right">
+                                    </div>
+                                    <div class="flex-shrink-0 text-center px-1">
+                                        <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">%</p>
+                                        <span class="inline-block text-sm font-black text-zinc-700 bg-zinc-200 rounded-lg px-3 py-2">${r.pct||defaultPct}%</span>
+                                    </div>
+                                    <div class="flex-shrink-0 text-right min-w-[72px]">
+                                        <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">ได้รับ</p>
+                                        <span id="comm-result-${i}" class="text-sm font-black ${belowMin?'text-red-400 line-through':'text-green-700'}">฿${fmtResult}</span>
+                                    </div>
+                                </div>
                             </div>`;
                         }).join('');
 
@@ -7329,7 +7474,7 @@ PAGES['payslip-admin'] = {
                 return () => {
                     if (unsubHistory) unsubHistory();
                     ['otLoadPeriod','otToggleDay','otUpdateHours','otUpdateNote',
-                     'otAddCommRow','otCalcComm','renderCommUI_','otSaveDraft','otSubmit',
+                     'otAddCommRow','otCalcComm','renderCommUI_','otSaveDraft','otSubmit','otToggleExpand',
                      'otOpenExplain','otCloseExplain','otSubmitExplain'].forEach(k => delete window[k]);
                 };
             }
