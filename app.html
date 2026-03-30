@@ -3984,6 +3984,66 @@ PAGES['payroll'] = {
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     KBIZ Bank Export Modal
+═══════════════════════════════════════════════════════ -->
+<div id="pr-bank-modal" class="fixed inset-0 z-[300] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="prBankClose()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-500/20 rounded-2xl flex items-center justify-center">
+          <i class="fa-solid fa-building-columns text-green-400 text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-white text-lg leading-tight">Export โอนเงินเดือน (KBIZ)</h3>
+          <p id="pr-bank-period-sub" class="text-zinc-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">กำลังโหลด...</p>
+        </div>
+      </div>
+      <button onclick="prBankClose()" class="text-zinc-400 hover:text-white transition-colors">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Effective Date + Select All -->
+    <div class="px-6 pt-5 pb-3 border-b border-zinc-100 shrink-0 space-y-3">
+      <div class="flex items-center gap-4 flex-wrap">
+        <div class="flex-1 min-w-[160px]">
+          <label class="pr-lbl mb-1 block">วันที่เงินเข้าบัญชี (DD/MM/YYYY)</label>
+          <input type="date" id="pr-bank-date" class="pr-input" />
+        </div>
+        <div class="flex items-center gap-2 pt-4">
+          <input type="checkbox" id="pr-bank-chk-all" class="w-4 h-4 accent-zinc-900 cursor-pointer" onchange="prBankToggleAll(this.checked)">
+          <label for="pr-bank-chk-all" class="text-xs font-black text-zinc-600 uppercase tracking-widest cursor-pointer select-none">เลือกทั้งหมด</label>
+        </div>
+      </div>
+      <p class="text-[11px] text-zinc-400 font-medium">เลือกพนักงานที่ต้องการ Export — เฉพาะที่มีเลขบัญชีธนาคารเท่านั้น</p>
+    </div>
+
+    <!-- Employee List -->
+    <div id="pr-bank-list" class="flex-1 overflow-y-auto divide-y divide-zinc-100 px-2 py-2">
+      <div class="py-10 text-center text-zinc-400">
+        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+        <p class="text-sm font-bold mt-2">กำลังโหลด...</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between gap-3 shrink-0">
+      <p class="text-xs text-zinc-400 font-bold"><span id="pr-bank-sel-count">0</span> คนที่เลือก</p>
+      <div class="flex gap-2">
+        <button onclick="prBankClose()" class="px-5 py-2.5 rounded-xl text-xs font-black text-zinc-500 hover:text-zinc-800 border-2 border-zinc-200 hover:border-zinc-400 transition-all uppercase tracking-widest">
+          ยกเลิก
+        </button>
+        <button onclick="prBankExport()" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
+          <i class="fa-solid fa-file-excel"></i> Export KBIZ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Create Period -->
 <div id="pr-modal-create" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseCreate()"></div>
@@ -4154,6 +4214,9 @@ PAGES['payroll'] = {
                 ${p.status==='final'?`<button onclick="prPaid('${p.id}')" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm"><i class="fa-solid fa-check-double"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22</button>`:''}
                 <button onclick="prXLSX('${p.id}')" class="inline-flex items-center gap-2 border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
                   <i class="fa-solid fa-file-excel"></i> Export XLSX
+                </button>
+                <button onclick="prBankOpen('${p.id}')" class="inline-flex items-center gap-2 border-2 border-blue-200 hover:border-blue-500 text-blue-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
+                  <i class="fa-solid fa-building-columns"></i> Export KBIZ
                 </button>
                 <button onclick="prLineOpen('${p.id}')" class="inline-flex items-center gap-2 bg-[#06C755] hover:bg-[#05b04a] text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
                   <i class="fa-brands fa-line"></i> ส่งสลิปทาง LINE
@@ -4583,6 +4646,243 @@ PAGES['payroll'] = {
             showToast('📥 Export XLSX สำเร็จ', 'success');
         };
 
+        // ── KBIZ Bank Export Logic ────────────────────────────────────
+        const BANK_CODES = { KBANK:'004', SCB:'014', BBL:'002', KTB:'006', BAY:'025', GSB:'030', BAAC:'034', TTB:'011', UOB:'024', CIMB:'022' };
+        let _bankActivePid = null;
+        let _bankRecords   = [];
+
+        window.prBankOpen = async (pid) => {
+            _bankActivePid = pid;
+            const p = periods.find(x => x.id === pid);
+            if (!p) return;
+
+            document.getElementById('pr-bank-modal')?.classList.remove('hidden');
+            const sub = document.getElementById('pr-bank-period-sub');
+            if (sub) sub.textContent = `งวดที่ ${p.periodNo} / ${p.year}`;
+
+            // Default effective date = today
+            const dateEl = document.getElementById('pr-bank-date');
+            if (dateEl && !dateEl.value) {
+                const today = new Date();
+                dateEl.value = today.toISOString().split('T')[0];
+            }
+
+            const list = document.getElementById('pr-bank-list');
+            if (list) list.innerHTML = '<div class="py-10 text-center text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm font-bold mt-2">กำลังโหลด...</p></div>';
+
+            // Use already-loaded records if same period
+            _bankRecords = records.filter(r => r.periodId === pid || !r.periodId);
+            if (!_bankRecords.length) _bankRecords = records;
+            prBankRenderList();
+        };
+
+        function prBankRenderList() {
+            const list = document.getElementById('pr-bank-list');
+            if (!list) return;
+            const withBank = _bankRecords.filter(r => r.bankAccount && r.bankAccount.trim());
+            const noBank   = _bankRecords.filter(r => !r.bankAccount || !r.bankAccount.trim());
+
+            if (!_bankRecords.length) {
+                list.innerHTML = '<div class="py-10 text-center text-zinc-400"><i class="fa-solid fa-users-slash text-2xl mb-2"></i><p class="text-sm font-bold">ไม่มีข้อมูลพนักงาน</p></div>';
+                return;
+            }
+
+            let html = '';
+            if (withBank.length) {
+                html += `<div class="px-4 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 sticky top-0">มีบัญชีธนาคาร (${withBank.length} คน)</div>`;
+                withBank.forEach(r => {
+                    const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
+                    const bankLabel = r.bankName || 'ธนาคาร';
+                    const code = BANK_CODES[r.bankName] || '???';
+                    const hasCode = BANK_CODES[r.bankName];
+                    html += `<label class="flex items-center gap-4 px-4 py-3 hover:bg-blue-50 cursor-pointer transition-all">
+                        <input type="checkbox" class="pr-bank-chk w-4 h-4 accent-zinc-900 cursor-pointer shrink-0" value="${r.id}" checked onchange="prBankUpdateCount()">
+                        <img src="${av}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-zinc-200">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-zinc-800 text-sm truncate">${r.name || ''}</p>
+                            <p class="text-[11px] text-zinc-400 font-medium truncate">${bankLabel} ${hasCode ? `(${code})` : '<span class="text-red-400">ไม่รู้จักรหัสธนาคาร</span>'} · ${r.bankAccount || ''}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="font-black text-sm text-zinc-800 num">฿${(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                            <p class="text-[10px] text-zinc-400">สุทธิ</p>
+                        </div>
+                    </label>`;
+                });
+            }
+            if (noBank.length) {
+                html += `<div class="px-4 py-2 text-[10px] font-black text-red-400 uppercase tracking-widest bg-red-50 sticky top-0">ไม่มีข้อมูลบัญชี (${noBank.length} คน — ไม่รวมใน Export)</div>`;
+                noBank.forEach(r => {
+                    const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
+                    html += `<div class="flex items-center gap-4 px-4 py-3 opacity-40">
+                        <div class="w-4 h-4 shrink-0"></div>
+                        <img src="${av}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-zinc-200">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-zinc-800 text-sm truncate">${r.name || ''}</p>
+                            <p class="text-[11px] text-red-400 font-bold">ยังไม่ได้ระบุบัญชีธนาคาร</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="font-black text-sm text-zinc-500 num">฿${(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                        </div>
+                    </div>`;
+                });
+            }
+            list.innerHTML = html;
+            prBankUpdateCount();
+
+            // Sync select-all checkbox
+            const allChk = document.getElementById('pr-bank-chk-all');
+            if (allChk) allChk.checked = withBank.length > 0;
+        }
+
+        window.prBankUpdateCount = () => {
+            const checked = document.querySelectorAll('.pr-bank-chk:checked').length;
+            const el = document.getElementById('pr-bank-sel-count');
+            if (el) el.textContent = checked;
+        };
+
+        window.prBankToggleAll = (checked) => {
+            document.querySelectorAll('.pr-bank-chk').forEach(c => { c.checked = checked; });
+            prBankUpdateCount();
+        };
+
+        window.prBankClose = () => {
+            document.getElementById('pr-bank-modal')?.classList.add('hidden');
+        };
+
+        window.prBankExport = async () => {
+            const dateEl = document.getElementById('pr-bank-date');
+            if (!dateEl || !dateEl.value) { showToast('กรุณาระบุวันที่เงินเข้าบัญชี', 'error'); return; }
+
+            const selectedIds = new Set([...document.querySelectorAll('.pr-bank-chk:checked')].map(c => c.value));
+            if (!selectedIds.size) { showToast('กรุณาเลือกพนักงานอย่างน้อย 1 คน', 'error'); return; }
+
+            // Format effective date DD/MM/YYYY
+            const [yyyy, mm, dd] = dateEl.value.split('-');
+            const effectiveDate = `${dd}/${mm}/${yyyy}`;
+
+            const selected = _bankRecords.filter(r => selectedIds.has(r.id) && r.bankAccount && r.bankAccount.trim());
+            if (!selected.length) { showToast('ไม่มีพนักงานที่มีบัญชีธนาคารในรายการที่เลือก', 'error'); return; }
+
+            if (typeof XLSX === 'undefined') {
+                await new Promise((res, rej) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    s.onload = res; s.onerror = rej;
+                    document.head.appendChild(s);
+                });
+            }
+
+            const period = periods.find(p => p.id === _bankActivePid);
+
+            // ── Build KBIZ template format ──
+            const wb = XLSX.utils.book_new();
+            const ws = {};
+
+            // Row 1: Summary formulas (as values to match template style)
+            const totalAmt = selected.reduce((s, r) => s + (r.netPay || 0), 0);
+            ws['A1'] = { v: 'Total No. of Transaction / จำนวนรายการทั้งหมด ', t: 's' };
+            ws['B1'] = { v: selected.length, t: 'n' };
+            ws['C1'] = { v: 'Total Amount / จำนวนเงินทั้งหมด ', t: 's' };
+            ws['D1'] = { v: totalAmt, t: 'n', z: '#,##0.00' };
+
+            // Row 2: blank
+            ws['A2'] = { v: '', t: 's' };
+
+            // Row 3: Headers
+            const headers = [
+                'Bank Code / 
+รหัสธนาคาร',
+                'Account number / 
+เลขบัญชีรับเงิน',
+                'Account name / 
+ชื่อบัญชีรับเงิน',
+                'Amount/ 
+จำนวนเงิน',
+                'Effective Date /
+วันที่เงินเข้าบัญชี
+(DD/MM/YYYY) '
+            ];
+            const cols = ['A','B','C','D','E'];
+            headers.forEach((h, i) => {
+                ws[`${cols[i]}3`] = { v: h, t: 's' };
+            });
+
+            // Data rows starting at row 4
+            selected.forEach((r, i) => {
+                const row = i + 4;
+                const bankCode = BANK_CODES[r.bankName] || '';
+                ws[`A${row}`] = { v: bankCode, t: 's' };
+                ws[`B${row}`] = { v: (r.bankAccount || '').trim(), t: 's' };
+                ws[`C${row}`] = { v: r.name || '', t: 's' };
+                ws[`D${row}`] = { v: r.netPay || 0, t: 'n', z: '#,##0.00' };
+                ws[`E${row}`] = { v: effectiveDate, t: 's' };
+            });
+
+            // Set sheet range
+            const lastRow = selected.length + 3;
+            ws['!ref'] = `A1:E${lastRow}`;
+
+            // Column widths matching template
+            ws['!cols'] = [
+                { wch: 18 },  // Bank Code
+                { wch: 22 },  // Account Number
+                { wch: 30 },  // Account Name
+                { wch: 20 },  // Amount
+                { wch: 28 },  // Effective Date
+            ];
+
+            // Row heights
+            ws['!rows'] = [];
+            ws['!rows'][2] = { hpt: 50 }; // header row taller for wrapped text
+
+            // Styles — Row 1 summary
+            ['A1','B1','C1','D1'].forEach(addr => {
+                if (!ws[addr]) return;
+                ws[addr].s = {
+                    font: { bold: true, name: 'Calibri', sz: 10 },
+                    fill: { fgColor: { rgb: 'FFF2CC' }, patternType: 'solid' },
+                    alignment: { vertical: 'center', wrapText: false },
+                    border: { top:{style:'thin',color:{rgb:'CCCCCC'}}, bottom:{style:'thin',color:{rgb:'CCCCCC'}}, left:{style:'thin',color:{rgb:'CCCCCC'}}, right:{style:'thin',color:{rgb:'CCCCCC'}} }
+                };
+            });
+
+            // Styles — Header row 3
+            cols.forEach(c => {
+                const addr = `${c}3`;
+                if (!ws[addr]) return;
+                ws[addr].s = {
+                    font: { bold: true, name: 'Calibri', sz: 10 },
+                    fill: { fgColor: { rgb: 'D6DCE4' }, patternType: 'solid' },
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                    border: { top:{style:'thin',color:{rgb:'999999'}}, bottom:{style:'thin',color:{rgb:'999999'}}, left:{style:'thin',color:{rgb:'999999'}}, right:{style:'thin',color:{rgb:'999999'}} }
+                };
+            });
+
+            // Styles — Data rows
+            for (let i = 0; i < selected.length; i++) {
+                const row = i + 4;
+                cols.forEach((c, ci) => {
+                    const addr = `${c}${row}`;
+                    if (!ws[addr]) return;
+                    const isNum = ci === 3;
+                    ws[addr].s = {
+                        font: { name: 'Calibri', sz: 10 },
+                        alignment: { horizontal: isNum ? 'right' : (ci === 0 ? 'center' : 'left'), vertical: 'center' },
+                        border: { top:{style:'thin',color:{rgb:'E4E4E7'}}, bottom:{style:'thin',color:{rgb:'E4E4E7'}}, left:{style:'thin',color:{rgb:'E4E4E7'}}, right:{style:'thin',color:{rgb:'E4E4E7'}} }
+                    };
+                });
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Transaction Upload');
+
+            const pNo = period ? String(period.periodNo).padStart(2,'0') : '00';
+            const pYr = period ? period.year : new Date().getFullYear();
+            const filename = `KBIZ_PayrollTransfer_${pYr}_${pNo}_${dd}${mm}${yyyy}.xlsx`;
+            XLSX.writeFile(wb, filename, { bookSST: false, type: 'binary', cellStyles: true });
+            prBankClose();
+            showToast(`📥 Export KBIZ สำเร็จ (${selected.length} รายการ)`, 'success');
+        };
+
         // ── LINE Payroll Send Logic ──────────────────────────────────
         let _lineActivePid = null;
         let _lineRecords   = [];
@@ -4868,6 +5168,7 @@ PAGES['payroll'] = {
             ['prSel','prOpenCreate','prCloseCreate','prDoCreate','prGenAll',
              'prOpenRec','prCloseRec','prRecalc','prSaveRec',
              'prFinal','prPaid','prDel','prCSV','prXLSX',
+             'prBankOpen','prBankClose','prBankExport','prBankToggleAll','prBankUpdateCount',
              'prLineOpen','prLineClose','prLineFilter','prLineToggleAll','prLineSend'
             ].forEach(k=>delete window[k]);
         };
