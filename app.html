@@ -504,7 +504,65 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
+        // ================================================================
+        // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
+        // ================================================================
+        const TH_TZ = 'Asia/Bangkok';
+        const TH_OFFSET_MS = 7 * 60 * 60 * 1000; // +07:00
+
+        /**
+         * คืนวันที่วันนี้ในรูปแบบ 'YYYY-MM-DD' ตามเวลาไทย (ไม่ใช้ toISOString ที่เป็น UTC)
+         */
+        window.todayTH = function() {
+            return nowTH().slice(0, 10);
+        };
+
+        /**
+         * คืน ISO string ปัจจุบันโดยใช้ offset ของไทย (UTC+7)
+         * ใช้แทน new Date().toISOString() เมื่อต้องการ local date ที่ถูกต้อง
+         */
+        window.nowTH = function() {
+            const now = new Date();
+            // shift เวลาเป็น UTC+7 แล้วตัด timezone ออก ให้ได้ local ISO string
+            const shifted = new Date(now.getTime() + TH_OFFSET_MS);
+            return shifted.toISOString().replace('Z', '+07:00');
+        };
+
+        /**
+         * แปลง Date object เป็น 'YYYY-MM-DD' ตามเวลาไทย
+         */
+        window.dateToTHStr = function(d) {
+            if (!d) return '';
+            const shifted = new Date(d.getTime() + TH_OFFSET_MS);
+            return shifted.toISOString().slice(0, 10);
+        };
+
+        /**
+         * คืน new Date() ที่ shift ให้เป็นเวลาไทยแล้ว (ใช้แทน new Date() ในการหา local date)
+         */
+        window.newDateTH = function() {
+            return new Date(new Date().getTime() + TH_OFFSET_MS);
+        };
+
+        /**
+         * สร้าง ISO timestamp string สำหรับบันทึกลง Firestore
+         * ยังคงเป็น UTC ISO string (ถูกต้องสำหรับ Firestore) แต่ใช้เวลา device ปัจจุบัน
+         */
+        window.nowISO = function() {
+            return new Date().toISOString();
+        };
+
+        /**
+         * แปลง date string 'YYYY-MM-DD' เป็น Date object โดยใช้เวลาไทย (ไม่ shift)
+         * ป้องกันปัญหา new Date('2025-01-15') ที่ parse เป็น UTC midnight แล้ว shift ไปวันก่อน
+         */
+        window.parseDateTH = function(ds) {
+            if (!ds) return null;
+            // force parse เป็น noon local time เพื่อป้องกัน DST/timezone edge cases
+            return new Date(ds + 'T12:00:00+07:00');
+        };
+
+        // ================================================================
             apiKey: "AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY",
             authDomain: "hris-21093.firebaseapp.com",
             projectId: "hris-21093",
@@ -988,7 +1046,9 @@
         function fmtNotifDate(ds) {
             if (!ds) return '';
             try {
-                return new Date(ds).toLocaleDateString('th-TH', { day:'numeric', month:'short' });
+                // ds อาจเป็น ISO timestamp (UTC) หรือ 'YYYY-MM-DD' — ต้องระบุ timeZone ให้ถูกต้อง
+                const d = ds.length === 10 ? new Date(ds + 'T12:00:00+07:00') : new Date(ds);
+                return d.toLocaleDateString('th-TH', { day:'numeric', month:'short', timeZone:'Asia/Bangkok' });
             } catch { return ds; }
         }
 
@@ -1185,8 +1245,8 @@
             const breakMins = schedule.breakMinutes ?? 60;
         
             let total = 0;
-            let cur = new Date(startDate + 'T12:00:00');
-            const endDay = new Date(endDate + 'T12:00:00');
+            let cur = new Date(startDate + 'T12:00:00+07:00');
+            const endDay = new Date(endDate + 'T12:00:00+07:00');
         
             while (cur <= endDay) {
                 const yr  = cur.getFullYear();
@@ -1296,7 +1356,7 @@
                     .map(d => d.data())
                     .filter(u => (u.role === 'manager' || u.role === 'admin') && u.lineId);
                 const appUrl = location.origin + location.pathname + '#leave-mgmt';
-                const fmtD = ds => new Date(ds+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
+                const fmtD = ds => new Date(ds+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
                 const dateRange = req.startDate === req.endDate
                     ? fmtD(req.startDate)
                     : `${fmtD(req.startDate)} – ${fmtD(req.endDate)}`;
@@ -1364,7 +1424,7 @@
                 const emp = empSnap.data();
                 if (!emp.lineId) return;
                 const isApproved = action === 'approve';
-                const fmtD = ds => new Date(ds+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
+                const fmtD = ds => new Date(ds+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
                 const dateRange = req.startDate === req.endDate
                     ? fmtD(req.startDate)
                     : `${fmtD(req.startDate)} – ${fmtD(req.endDate)}`;
@@ -1537,7 +1597,7 @@
                 // ── วันที่ topbar
                 document.getElementById('welcome-name').textContent = profile.name;
                 const dateEl = document.getElementById('home-date');
-                if (dateEl) dateEl.textContent = new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+                if (dateEl) dateEl.textContent = new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'Asia/Bangkok'});
         
                 // ── Admin btn
                 if (profile.role === 'admin' || profile.role === 'manager') {
@@ -1548,21 +1608,21 @@
                 }
         
                 // ── สถานะวันนี้ (time logs)
-                const todayStr = new Date().toISOString().slice(0,10);
+                const todayStr = todayTH();
                 const logsSnap = await getDocs(
                     query(collection(db,'artifacts',APP_ID,'public','data','time_logs'),
                           where('uid','==',user.uid))
                 );
                 const todayLogs = logsSnap.docs.map(d=>d.data())
-                    .filter(l => (l.localDate||l.timestamp?.slice(0,10)) === todayStr)
+                    .filter(l => (l.localDate || (l.timestamp ? dateToTHStr(new Date(l.timestamp)) : '')) === todayStr)
                     .sort((a,b) => a.timestamp > b.timestamp ? 1 : -1);
                 const inLog  = todayLogs.find(l=>l.type==='clock_in');
                 const outLog = [...todayLogs].reverse().find(l=>l.type==='clock_out');
                 const tsEl = document.getElementById('today-status');
                 if (tsEl) {
                     if (inLog) {
-                        const inTime  = new Date(inLog.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-                        const outTime = outLog ? new Date(outLog.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : null;
+                        const inTime  = new Date(inLog.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+                        const outTime = outLog ? new Date(outLog.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : null;
                         tsEl.innerHTML = `
                         <div class="flex justify-around gap-2">
                           <div>
@@ -1627,20 +1687,21 @@
         
                 // ── วันหยุดที่กำลังจะมาถึง
                 const upEl = document.getElementById('upcoming-holidays');
-                const today = new Date(); today.setHours(0,0,0,0);
+                const todayDateStr = todayTH();
                 const upcoming = (window._publicHolidays || [])
-                    .filter(h => new Date(h.date+'T00:00:00') >= today)
+                    .filter(h => h.date >= todayDateStr)
                     .slice(0,4);
                 if (upEl) {
                     if (!upcoming.length) {
                         upEl.innerHTML = `<p class="text-xs text-zinc-400 text-center py-3">ไม่มีข้อมูลวันหยุด</p>`;
                     } else {
-                        const DAYS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+                        const todayMs = parseDateTH(todayDateStr).getTime();
+                        const DAYS = ['อา','จ','อ','พ','ศ','ส'];
                         upEl.innerHTML = upcoming.map(h => {
-                            const d    = new Date(h.date+'T00:00:00');
-                            const diff = Math.round((d-today)/(1000*60*60*24));
-                            const thD  = d.toLocaleDateString('th-TH',{day:'numeric',month:'short'});
-                            const dayN = DAYS[d.getDay()];
+                            const d    = parseDateTH(h.date);
+                            const diff = Math.round((d.getTime()-todayMs)/(1000*60*60*24));
+                            const thD  = d.toLocaleDateString('th-TH',{day:'numeric',month:'short',timeZone:'Asia/Bangkok'});
+                            const dayN = ['อา','จ','อ','พ','พฤ','ศ','ส'][d.getDay()];
                             const badge = diff===0 ? 'bg-red-100 text-red-700' :
                                           diff<=7  ? 'bg-yellow-100 text-yellow-700' :
                                                      'bg-zinc-100 text-zinc-500';
@@ -1682,7 +1743,7 @@
                         }
                         annEl.innerHTML = docs.map(a => {
                             const dateStr = a.createdAt
-                                ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})
+                                ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Bangkok'})
                                 : '';
                             const tagColor = {
                                 info:    'bg-blue-100 text-blue-700',
@@ -1815,8 +1876,9 @@
                 let myLeaves = []; // leave requests ที่อนุมัติแล้ว
                 let clockInterval;
 
+                // ใช้ dateToTHStr (global helper UTC+7) แทน getTimezoneOffset ที่ไม่น่าเชื่อถือ
                 function getLocalISO(d) {
-                    return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                    return dateToTHStr(d);
                 }
 
                 // โหลด leave requests ของตัวเอง
@@ -1846,8 +1908,8 @@
                     const now = new Date();
                     const el = document.getElementById('current-time-display');
                     const del = document.getElementById('current-date-display');
-                    if (el) el.textContent = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                    if (del) del.textContent = now.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                    if (el) el.textContent = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+                    if (del) del.textContent = now.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok' });
                 }
                 updateClock();
                 clockInterval = setInterval(updateClock, 1000);
@@ -1903,7 +1965,7 @@
                         const lastOut  = outs[outs.length - 1];
                         const toShow   = [firstIn, lastOut].filter(Boolean);
                         toShow.forEach(log => {
-                            const time  = new Date(log.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                            const time  = new Date(log.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
                             const isIn  = log.type === 'clock_in';
                             html += `<div class="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm hover:border-yellow-300 transition-all">
                                 <div class="flex items-center">
@@ -1959,9 +2021,9 @@
                     selectedDateStr = ds;
                     renderCalendar();
                     renderLogs();
-                    const d = new Date(ds);
+                    const d = parseDateTH(ds);
                     const el = document.getElementById('selected-date-text');
-                    if (el) el.textContent = getLocalISO(new Date()) === ds ? 'วันนี้' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                    if (el) el.textContent = todayTH() === ds ? 'วันนี้' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
                 };
 
                 document.getElementById('btn-prev-month')?.addEventListener('click', () => {
@@ -1991,7 +2053,9 @@
                     try {
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), {
                             uid: user.uid, name: profile.name, type: 'clock_in',
-                            timestamp: new Date().toISOString(), branch: profile.branch || 'Lamsang Group'
+                            timestamp: new Date().toISOString(),
+                            localDate: todayTH(),
+                            branch: profile.branch || 'Lamsang Group'
                         });
                         showToast('✅ บันทึกเวลาเข้างานแล้ว', 'success');
                     } catch (e) { alert(e.message); }
@@ -2003,7 +2067,9 @@
                     try {
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), {
                             uid: user.uid, name: profile.name, type: 'clock_out',
-                            timestamp: new Date().toISOString(), branch: profile.branch || 'Lamsang Group'
+                            timestamp: new Date().toISOString(),
+                            localDate: todayTH(),
+                            branch: profile.branch || 'Lamsang Group'
                         });
                         showToast('✅ บันทึกเวลาออกงานแล้ว', 'success');
                     } catch (e) { alert(e.message); }
@@ -2145,7 +2211,7 @@
                 document.getElementById('display-role').textContent = profile.position || profile.role.toUpperCase();
                 document.getElementById('display-branch').textContent = profile.branch || 'สำนักงานใหญ่';
                 document.getElementById('display-emp-code').textContent = profile.employeeCode || '-';
-                document.getElementById('display-start-date').textContent = profile.startDate ? new Date(profile.startDate).toLocaleDateString('th-TH') : '-';
+                document.getElementById('display-start-date').textContent = profile.startDate ? new Date(profile.startDate+'T12:00:00+07:00').toLocaleDateString('th-TH', {timeZone:'Asia/Bangkok'}) : '-';
                 const st = document.getElementById('display-status');
                 if (profile.status === 'resigned') { st.textContent = 'ลาออก'; st.className = 'font-bold text-red-600'; }
                 else if (profile.status === 'probation') { st.textContent = 'ทดลองงาน'; st.className = 'font-bold text-blue-600'; }
@@ -2171,7 +2237,7 @@
                 document.getElementById('ro-fname-th').value = profile.fnameTH || (profile.name ? profile.name.split(' ')[0] : '-');
                 document.getElementById('ro-lname-th').value = profile.lnameTH || (profile.name ? profile.name.split(' ').slice(1).join(' ') : '-');
                 document.getElementById('ro-gender').value = profile.gender || '-';
-                document.getElementById('ro-dob').value = profile.dob ? new Date(profile.dob).toLocaleDateString('th-TH') : '-';
+                document.getElementById('ro-dob').value = profile.dob ? new Date(profile.dob+'T12:00:00+07:00').toLocaleDateString('th-TH', {timeZone:'Asia/Bangkok'}) : '-';
                 let idCardShow = profile.idCard || '-';
                 if (idCardShow.length >= 13) idCardShow = 'X-XXXX-XXXXX-' + idCardShow.slice(-4);
                 document.getElementById('ro-idcard').value = idCardShow;
@@ -2796,8 +2862,8 @@
         let myRequests = [];
         let selectedLeaveType = null;
         let isHourly = false;
-        let calYear  = new Date().getFullYear();
-        let calMonth = new Date().getMonth();
+        let calYear  = newDateTH().getFullYear();
+        let calMonth = newDateTH().getMonth();
 
         // โหลดตารางงานส่วนตัว
         const schedSnap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', user.uid));
@@ -2979,7 +3045,7 @@
             }
         }
         function setDefaultDates() {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = todayTH();
             const sd = document.getElementById('req-start-date');
             const ed = document.getElementById('req-end-date');
             if (sd) sd.value = today;
@@ -3012,8 +3078,8 @@
             const warn = document.getElementById('leave-date-warn');
             if (!warn) return;
             const msgs = [];
-            let d = new Date(sd + 'T12:00:00');
-            const eDay = new Date(ed + 'T12:00:00');
+            let d = new Date(sd + 'T12:00:00+07:00');
+            const eDay = new Date(ed + 'T12:00:00+07:00');
             while (d <= eDay) {
                 // ใช้ local date แทน toISOString() เพื่อป้องกัน timezone shift (UTC+7 → วันหดไป 1)
                 const yr  = d.getFullYear();
@@ -3166,7 +3232,7 @@
                     ? fmtDate(r.startDate)
                     : `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}`;
                 const timeRange = r.isHourly ? ` (${r.startTime}–${r.endTime})` : '';
-                const todayStr = new Date().toISOString().slice(0,10);
+                const todayStr = todayTH();
                 const canCancel = (r.status === 'pending' || r.status === 'approved') && r.startDate > todayStr;
                 return `
                 <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -3196,7 +3262,7 @@
         window.cancelLeaveRequest = async (id) => {
             const req = myRequests.find(r => r.id === id);
             if (!req) return;
-            const todayNow = new Date().toISOString().slice(0,10);
+            const todayNow = todayTH();
             if (req.startDate <= todayNow) {
                 showToast('วันลาถึงแล้ว ไม่สามารถยกเลิกเองได้ กรุณาติดต่อหัวหน้า', 'error');
                 return;
@@ -3232,14 +3298,14 @@
             if (title) title.textContent = `${months[calMonth]} ${calYear + 543}`;
             const firstDay = new Date(calYear, calMonth, 1).getDay();
             const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-            const today = new Date().toISOString().slice(0, 10);
+            const today = todayTH();
             // Map leave days
             const leaveMap = {};
             myRequests.filter(r => r.status !== 'cancelled' && r.status !== 'rejected').forEach(r => {
-                let d = new Date(r.startDate);
-                const end = new Date(r.endDate);
+                let d = parseDateTH(r.startDate);
+                const end = parseDateTH(r.endDate);
                 while (d <= end) {
-                    const ds = d.toISOString().slice(0, 10);
+                    const ds = dateToTHStr(d);
                     if (!leaveMap[ds]) leaveMap[ds] = [];
                     leaveMap[ds].push(r);
                     d.setDate(d.getDate() + 1);
@@ -3278,7 +3344,9 @@
 
         function fmtDate(ds) {
             if (!ds) return '-';
-            return new Date(ds).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+            // รองรับทั้ง 'YYYY-MM-DD' และ full ISO timestamp จาก Firestore
+            const d = ds.length === 10 ? new Date(ds+'T12:00:00+07:00') : new Date(ds);
+            return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
         }
 
         return () => {
@@ -3394,7 +3462,7 @@ PAGES['leave-mgmt'] = {
         );
 
         function updateStats() {
-            const now = new Date();
+            const now = newDateTH();
             const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
             document.getElementById('stat-pending').textContent  = allRequests.filter(r => r.status === 'pending').length;
             document.getElementById('stat-approved').textContent = allRequests.filter(r => r.status === 'approved' && r.createdAt?.startsWith(thisMonth)).length;
@@ -3484,7 +3552,7 @@ PAGES['leave-mgmt'] = {
                       <div class="text-right">
                         <p class="text-[10px] text-zinc-400 font-bold uppercase">อนุมัติโดย</p>
                         <p class="text-xs font-bold text-zinc-600">${r.approvedBy || '-'}</p>
-                        <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt.slice(0,10)) : ''}</p>
+                        <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt) : ''}</p>
                       </div>
                       <button onclick="mgrCancelLeave('${r.id}')"
                         class="inline-flex items-center gap-1.5 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border-2 border-orange-200 hover:border-orange-500 font-black px-4 py-2 rounded-xl text-[10px] transition-all uppercase tracking-widest">
@@ -3494,7 +3562,7 @@ PAGES['leave-mgmt'] = {
                     <div class="shrink-0 text-right">
                       <p class="text-[10px] text-zinc-400 font-bold uppercase">ดำเนินการโดย</p>
                       <p class="text-xs font-bold text-zinc-600">${r.approvedBy || '-'}</p>
-                      <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt.slice(0,10)) : ''}</p>
+                      <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt) : ''}</p>
                     </div>`}
                   </div>
                 </div>`;
@@ -3663,7 +3731,9 @@ PAGES['leave-mgmt'] = {
 
         function fmtDate(ds) {
             if (!ds) return '-';
-            return new Date(ds).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+            // รองรับทั้ง 'YYYY-MM-DD' และ full ISO timestamp จาก Firestore
+            const d = ds.length === 10 ? new Date(ds+'T12:00:00+07:00') : new Date(ds);
+            return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
         }
 
         return () => {
@@ -4360,7 +4430,7 @@ PAGES['payroll'] = {
 
         let periods = [], activeId = null, records = [], employees = [], editId = null, unsubRec = null;
         const fmt  = n => Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
-        const fmtD = s => s ? new Date(s).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '-';
+        const fmtD = s => s ? new Date(s+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit',timeZone:'Asia/Bangkok'}) : '-';
         const gN   = id => parseFloat(document.getElementById(id)?.value||0)||0;
         const gV   = id => document.getElementById(id)?.value?.trim()||'';
         const sEl  = id => document.getElementById(id);
@@ -4499,13 +4569,16 @@ PAGES['payroll'] = {
         }
 
         window.prOpenCreate = () => {
-            const now=new Date(), y=now.getFullYear();
+            const now=newDateTH(), y=now.getFullYear();
             const nx=periods.length ? Math.max(...periods.filter(p=>p.year==y).map(p=>p.periodNo||0))+1 : 1;
             const sv=(id,v)=>{const e=sEl(id);if(e)e.value=v;};
             sv('pr-no',nx); sv('pr-yr',y);
             const gy=now.getFullYear(), gm=now.getMonth();
-            sv('pr-s',new Date(gy,gm,1).toISOString().slice(0,10));
-            sv('pr-e',new Date(gy,gm+1,0).toISOString().slice(0,10));
+            // ใช้ format YYYY-MM-DD โดยตรง ไม่ผ่าน toISOString เพื่อป้องกัน UTC shift
+            const pad=n=>String(n).padStart(2,'0');
+            sv('pr-s',`${gy}-${pad(gm+1)}-01`);
+            const lastDay=new Date(gy,gm+1,0).getDate();
+            sv('pr-e',`${gy}-${pad(gm+1)}-${pad(lastDay)}`);
             sEl('pr-modal-create')?.classList.remove('hidden');
         };
         window.prCloseCreate = () => sEl('pr-modal-create')?.classList.add('hidden');
@@ -4526,8 +4599,8 @@ PAGES['payroll'] = {
 
         function cntDays(sd,ed,sc){
             const ws=new Set(sc.workDays||[1,2,3,4,5]), hd=new Set(sc.holidays||[]);
-            let n=0, d=new Date(sd+'T00:00:00'), end=new Date(ed+'T00:00:00');
-            while(d<=end){const ds=d.toISOString().slice(0,10);if(ws.has(d.getDay())&&!hd.has(ds))n++;d.setDate(d.getDate()+1);}
+            let n=0, d=parseDateTH(sd), end=parseDateTH(ed);
+            while(d<=end){const ds=dateToTHStr(d);if(ws.has(d.getDay())&&!hd.has(ds))n++;d.setDate(d.getDate()+1);}
             return n;
         }
         function calcTax(sal,mode){
@@ -4908,11 +4981,10 @@ PAGES['payroll'] = {
             const sub = document.getElementById('pr-bank-period-sub');
             if (sub) sub.textContent = `งวดที่ ${p.periodNo} / ${p.year}`;
 
-            // Default effective date = today
+            // Default effective date = today (เวลาไทย)
             const dateEl = document.getElementById('pr-bank-date');
             if (dateEl && !dateEl.value) {
-                const today = new Date();
-                dateEl.value = today.toISOString().split('T')[0];
+                dateEl.value = todayTH();
             }
 
             const list = document.getElementById('pr-bank-list');
@@ -5118,7 +5190,7 @@ PAGES['payroll'] = {
             XLSX.utils.book_append_sheet(wb, ws, 'Transaction Upload');
 
             const pNo = period ? String(period.periodNo).padStart(2,'0') : '00';
-            const pYr = period ? period.year : new Date().getFullYear();
+            const pYr = period ? period.year : newDateTH().getFullYear();
             const filename = `KBIZ_PayrollTransfer_${pYr}_${pNo}_${dd}${mm}${yyyy}.xlsx`;
             XLSX.writeFile(wb, filename, { bookSST: false, type: 'binary', cellStyles: true });
             prBankClose();
@@ -5585,7 +5657,7 @@ PAGES['time-request'] = {
         window.trOpenModal = (prefill) => {
             selectedType = 'explain';
             trSetType('explain');
-            const today = new Date().toISOString().slice(0,10);
+            const today = todayTH();
             const d = document.getElementById('tr-date'); if(d) d.value = prefill?.date || today;
             ['tr-time-in','tr-time-out','tr-orig-in','tr-orig-out','tr-reason'].forEach(id => {
                 const el = document.getElementById(id); if(el) el.value = '';
@@ -5957,7 +6029,7 @@ PAGES['time-import'] = {
 
         // ตั้งวันที่เริ่มต้นเป็นวันนี้
         const ti = document.getElementById('ti-date');
-        if (ti) ti.value = new Date().toISOString().slice(0,10);
+        if (ti) ti.value = todayTH();
 
         // Recent imports listener
         const unsub = onSnapshot(
@@ -5978,7 +6050,7 @@ PAGES['time-import'] = {
                       </div>
                       <div class="flex-1 min-w-0">
                         <p class="font-bold text-zinc-800 text-xs truncate">${emp?.name||l.uid}</p>
-                        <p class="text-[10px] text-zinc-400">${l.localDate} · ${l.timestamp?.slice(11,16)||''} · ${l.note||''}</p>
+                        <p class="text-[10px] text-zinc-400">${l.localDate} · ${l.timestamp ? new Date(l.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : ''} · ${l.note||''}</p>
                       </div>
                       <span class="text-[10px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">${l.importedBy||'Admin'}</span>
                     </div>`;
@@ -6234,9 +6306,9 @@ PAGES['holidays'] = {
                     <span class="text-[10px] text-zinc-400 font-bold ml-auto">${grouped[yr].length} วัน</span>
                 </div>`;
                 grouped[yr].forEach(h => {
-                    const d = new Date(h.date+'T00:00:00');
+                    const d = parseDateTH(h.date);
                     const dayName = DAY_NAMES[d.getDay()];
-                    const thDate = d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+                    const thDate = d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Bangkok'});
                     const typeBadge = { national:'bg-red-100 text-red-700', royal:'bg-purple-100 text-purple-700', company:'bg-blue-100 text-blue-700', regional:'bg-orange-100 text-orange-700' }[h.type]||'bg-zinc-100 text-zinc-600';
                     html += `<div class="flex items-center gap-4 px-5 py-4 hover:bg-zinc-50 transition-all group">
                       <div class="w-12 text-center shrink-0">
@@ -7112,7 +7184,7 @@ PAGES['payslip-admin'] = {
                                         </div>
                                         ${r.managerNote ? `<p class="text-xs text-red-500 mt-1.5 italic bg-red-50 px-2 py-1 rounded-lg">"${r.managerNote}"</p>` : ''}
                                     </div>
-                                    <p class="text-[10px] text-zinc-400 whitespace-nowrap flex-shrink-0 pt-0.5">${(r.createdAt||'').slice(0,10)}</p>
+                                    <p class="text-[10px] text-zinc-400 whitespace-nowrap flex-shrink-0 pt-0.5">${r.createdAt ? new Date(r.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit',timeZone:'Asia/Bangkok'}) : ''}</p>
                                 </div>`).join('');
                             if (list) list.innerHTML = histHtml;
                             const listOut2 = document.getElementById('ot-history-list-out');
@@ -7163,11 +7235,11 @@ PAGES['payslip-admin'] = {
                             const t = d.data();
                             // รองรับทั้ง field: timestamp (ISO) และ localDate (YYYY-MM-DD จาก time_requests approved)
                             const ts  = t.timestamp || '';
-                            const day = t.localDate || ts.slice(0,10);
+                            const day = t.localDate || (ts ? dateToTHStr(new Date(ts)) : '');
                             if (!day || day < currentPeriod.startDate || day > currentPeriod.endDate) return;
                             if (!dayMap[day]) dayMap[day] = { in:null, out:null };
                             // ใช้ timestamp จริงในการเปรียบเทียบ earliest/latest
-                            const tsNorm = ts || (day + 'T00:00:00.000Z');
+                            const tsNorm = ts || (day + 'T00:00:00.000+07:00');
                             if (t.type==='clock_in'  && (!dayMap[day].in  || tsNorm < dayMap[day].in))  dayMap[day].in  = tsNorm;
                             if (t.type==='clock_out' && (!dayMap[day].out || tsNorm > dayMap[day].out)) dayMap[day].out = tsNorm;
                         });
@@ -7178,12 +7250,12 @@ PAGES['payslip-admin'] = {
                         const holName = Object.fromEntries(holidays.map(h => [h.date, h.name]));
                         const compDays = new Set();
                         holidays.forEach(h => {
-                            const dow = new Date(h.date+'T00:00:00').getDay();
+                            const dow = parseDateTH(h.date).getDay();
                             if (!workDaySet.has(dow)) {
-                                let next = new Date(h.date+'T00:00:00');
+                                let next = parseDateTH(h.date);
                                 for (let i=1;i<=7;i++) {
                                     next.setDate(next.getDate()+1);
-                                    const ns = next.toISOString().slice(0,10);
+                                    const ns = dateToTHStr(next);
                                     if (workDaySet.has(next.getDay()) && !holSet.has(ns)) { compDays.add(ns); break; }
                                 }
                             }
@@ -7192,19 +7264,12 @@ PAGES['payslip-admin'] = {
                         // สร้าง allDays — ทุกวันทำงาน (workDay) + วันหยุด + ชดเชย ในงวด
                         // แสดงทุกวัน รวมวันที่ไม่มีบันทึก เพื่อให้พนักงานชี้แจง
                         allDays = [];
-                        // ใช้ local date string โดยตรง ไม่ผ่าน toISOString() เพื่อหลีกเลี่ยง UTC offset
-                        const localDateStr = (d) => {
-                            const y = d.getFullYear();
-                            const m = String(d.getMonth()+1).padStart(2,'0');
-                            const dd = String(d.getDate()).padStart(2,'0');
-                            return `${y}-${m}-${dd}`;
-                        };
-                        const todayStr = localDateStr(new Date());
-                        // parse startDate/endDate อย่างถูกต้องโดยไม่มี timezone shift
-                        const [sy,sm,sd2] = currentPeriod.startDate.split('-').map(Number);
-                        const [ey,em,ed2] = currentPeriod.endDate.split('-').map(Number);
-                        let cur = new Date(sy, sm-1, sd2);        // local midnight
-                        const endD = new Date(ey, em-1, ed2);
+                        // ใช้ dateToTHStr (UTC+7) เสมอ ไม่ขึ้นกับ timezone ของ device
+                        const localDateStr = (d) => dateToTHStr(d);
+                        const todayStr = todayTH();
+                        // parse startDate/endDate ด้วย parseDateTH (noon +07:00) ป้องกัน DST shift
+                        let cur  = parseDateTH(currentPeriod.startDate);
+                        const endD = parseDateTH(currentPeriod.endDate);
 
                         while (cur <= endD) {
                             const ds  = localDateStr(cur);
@@ -7285,8 +7350,8 @@ PAGES['payslip-admin'] = {
                         const d = allDays.find(x => x.day === dayStr);
                         const ws = mySchedule.workStart || '08:00';
                         const we = mySchedule.workEnd   || '17:00';
-                        const dateObj = new Date(dayStr + 'T00:00:00');
-                        const dayLabel = dateObj.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+                        const dateObj = new Date(dayStr + 'T12:00:00+07:00');
+                        const dayLabel = dateObj.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone:'Asia/Bangkok' });
                         document.getElementById('ot-exp-date-label').textContent = dayLabel;
                         document.getElementById('ot-exp-in').value  = d?.inTime  || ws;
                         document.getElementById('ot-exp-out').value = d?.outTime || we;
@@ -7819,7 +7884,7 @@ PAGES['payslip-admin'] = {
                                 <div class="px-5 py-4 bg-zinc-50 border-b border-zinc-100 flex flex-wrap items-center gap-3">
                                     <div class="flex-1 min-w-0">
                                         <p class="font-black text-zinc-800">${r.name} <span class="text-zinc-400 font-normal text-sm">— ${r.periodLabel||r.periodId}</span></p>
-                                        <p class="text-xs text-zinc-500 mt-0.5">${r.periodStart||''} ถึง ${r.periodEnd||''} · ยื่นเมื่อ ${(r.createdAt||'').slice(0,10)}</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">${r.periodStart||''} ถึง ${r.periodEnd||''} · ยื่นเมื่อ ${r.createdAt ? new Date(r.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit',timeZone:'Asia/Bangkok'}) : ''}</p>
                                     </div>
                                     <span class="text-[10px] font-black px-3 py-1.5 rounded-xl ${stCls[r.status]||'ot-status-draft'}">${stMap[r.status]||r.status}</span>
                                 </div>
@@ -8415,7 +8480,7 @@ PAGES['payslip-admin'] = {
                     el.innerHTML = list.map(a => {
                         const isActive = a.id===activeId;
                         const tag = TAGS.find(t=>t.id===a.tag)||TAGS[0];
-                        const dateStr = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '';
+                        const dateStr = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit',timeZone:'Asia/Bangkok'}) : '';
                         return `<button onclick="annSelect('${a.id}')"
                           class="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-zinc-50 transition-all ${isActive?'bg-yellow-50 border-l-4 border-yellow-500':''}">
                           <div class="flex-1 min-w-0">
