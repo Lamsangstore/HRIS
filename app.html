@@ -1886,7 +1886,7 @@
                                 <div class="flex items-center"><div class="w-3 h-3 bg-green-500 rounded-full mr-1.5"></div> ลงเวลาแล้ว</div>
                                 <div class="flex items-center"><div class="w-3 h-3 bg-yellow-400 rounded-full mr-1.5"></div> วันที่เลือก</div>
                                 <div class="flex items-center"><div class="w-3 h-3 bg-red-200 rounded-full mr-1.5"></div> วันหยุดนักขัตฤกษ์</div>
-                                <div class="flex items-center"><div class="w-3 h-3 rounded-full mr-1.5" style="background:#d8b4fe"></div> วันหยุดของคุณ</div>
+                                <div class="flex items-center"><div class="w-3 h-3 rounded-full mr-1.5" style="background:#d8b4fe"></div> วันหยุด</div>
                                 <div class="flex items-center"><div class="w-3 h-3 bg-blue-100 rounded-full mr-1.5"></div> วันลา</div>
                                 <div class="flex items-center"><div class="w-3 h-3 bg-orange-100 rounded-full mr-1.5"></div> รอพิจารณา</div>
                             </div>
@@ -1962,23 +1962,25 @@
                     myLogs.forEach(l => { logsMap[l.localDate] = true; });
                     const leaveMap = buildLeaveMap();
                     const personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
+                    const workDaySet = new Set((mySchedule && mySchedule.workDays) ? mySchedule.workDays : [1,2,3,4,5]);
                     const leaveTypeLabel = { sick:'ป่วย', personal:'กิจ', vacation:'พักร้อน', maternity:'คลอด', ordain:'บวช', military:'ทหาร', other:'ลา' };
                     const leaveTypeClass = { sick:'leave-sick', personal:'leave-personal', vacation:'leave-vacation', maternity:'leave-maternity', ordain:'leave-ordain', military:'leave-military', other:'leave-other' };
                     let html = '';
                     for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
                     for (let d = 1; d <= daysInMonth; d++) {
                         const ds = getLocalISO(new Date(displayYear, displayMonth, d));
+                        const dow = new Date(displayYear, displayMonth, d).getDay();
                         let cls = 'cal-cell';
                         let label = '';
                         const isHol = isPublicHoliday(ds);
-                        const isPerHol = personalHolSet.has(ds);
+                        const isOffDay = !workDaySet.has(dow) || personalHolSet.has(ds);
                         const lv = leaveMap[ds];
                         if (isHol) {
                             cls += ' holiday-cell';
                             const holName = getHolidayName(ds) || '\u0e2b\u0e22\u0e38\u0e14\u0e19\u0e31\u0e01\u0e02\u0e31\u0e15\u0e24\u0e01\u0e29\u0e4c';
                             const holShort = holName.length > 6 ? holName.slice(0,6)+'\u2026' : holName;
                             label = '<span class="cal-label" style="color:inherit;opacity:0.8">' + holShort + '</span>';
-                        } else if (isPerHol) {
+                        } else if (isOffDay) {
                             cls += ' personal-holiday';
                             label = '<span class="cal-label" style="color:inherit;opacity:0.8">\u0e2b\u0e22\u0e38\u0e14</span>';
                         } else if (lv) {
@@ -3347,6 +3349,7 @@
             var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
             var today = todayTH();
             var personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
+            var workDaySet2 = new Set((mySchedule && mySchedule.workDays) ? mySchedule.workDays : [1,2,3,4,5]);
             var leaveMap = {};
             myRequests.filter(function(r){ return r.status !== 'cancelled' && r.status !== 'rejected'; }).forEach(function(r) {
                 var d = parseDateTH(r.startDate);
@@ -3373,7 +3376,8 @@
                 var ds = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
                 var isToday2 = ds === today;
                 var isHol2 = isPublicHoliday(ds);
-                var isPerHol2 = personalHolSet.has(ds);
+                var dow2 = new Date(ds + 'T12:00:00+07:00').getDay();
+                var isPerHol2 = !workDaySet2.has(dow2) || personalHolSet.has(ds);
                 var leaves2 = leaveMap[ds] || [];
                 var hasPending2 = leaves2.some(function(r){ return r.status === 'pending'; });
                 var approved2 = leaves2.filter(function(r){ return r.status === 'approved'; });
