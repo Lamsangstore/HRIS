@@ -18,6 +18,22 @@
     <meta name="theme-color" content="#18181b">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            safelist: [
+                'bg-purple-100','text-purple-700',
+                'bg-purple-300','bg-purple-400',
+                'bg-red-100','text-red-700','bg-red-50',
+                'bg-amber-100','text-amber-700','bg-amber-300',
+                'bg-blue-50','text-blue-700','bg-blue-400',
+                'bg-green-50','text-green-700','bg-green-400',
+                'bg-pink-50','text-pink-700','bg-pink-400',
+                'bg-orange-50','text-orange-700','bg-orange-400',
+                'bg-slate-100','text-slate-600','bg-slate-400',
+                'bg-zinc-100','text-zinc-600','bg-zinc-400',
+            ]
+        }
+    </script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
@@ -1906,7 +1922,7 @@
                 try {
                     const schedSnap = await getDoc(doc(db,'artifacts',appId,'public','data','work_schedules',user.uid));
                     mySchedule = schedSnap.exists() ? schedSnap.data() : null;
-                } catch(e) { console.warn('schedule load:', e); }
+                } catch(e) { console.warn('[TIME] schedule load error:', e); }
 
                 // สร้าง map วันลา: date → {type, status}
                 function buildLeaveMap() {
@@ -1945,7 +1961,7 @@
                     const logsMap = {};
                     myLogs.forEach(l => { logsMap[l.localDate] = true; });
                     const leaveMap = buildLeaveMap();
-                    const personalHolSet = new Set((mySchedule && mySchedule.holidays) || []);
+                    const personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
                     const leaveTypeLabel = { sick:'ป่วย', personal:'กิจ', vacation:'พักร้อน', maternity:'คลอด', ordain:'บวช', military:'ทหาร', other:'ลา' };
                     const leaveTypeClass = { sick:'leave-sick', personal:'leave-personal', vacation:'leave-vacation', maternity:'leave-maternity', ordain:'leave-ordain', military:'leave-military', other:'leave-other' };
                     let html = '';
@@ -3330,7 +3346,7 @@
             var firstDay = new Date(calYear, calMonth, 1).getDay();
             var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
             var today = todayTH();
-            var personalHolSet = new Set((mySchedule && mySchedule.holidays) || []);
+            var personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
             var leaveMap = {};
             myRequests.filter(function(r){ return r.status !== 'cancelled' && r.status !== 'rejected'; }).forEach(function(r) {
                 var d = parseDateTH(r.startDate);
