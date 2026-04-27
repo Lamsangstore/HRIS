@@ -7011,6 +7011,12 @@ PAGES['payslip-admin'] = {
   padding:.875rem 1rem env(safe-area-inset-bottom, .5rem);
   display:none;
 }
+@media (max-width: 767px) {
+  #ot-sticky-bar {
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: .875rem;
+  }
+}
 /* Commission row */
 .comm-row-card { background:#f8fafc; border-radius:.75rem; padding:.75rem; margin-bottom:.5rem; }
 /* History cards */
@@ -7510,7 +7516,7 @@ PAGES['payslip-admin'] = {
                             const entry    = selectedDays[d.day] || { hours: 0, note: '' };
                             const mult     = isAutoOT ? 1.5 : 1.0;
                             const hrs      = isAutoOT
-                                ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
+                                ? (entry.hoursOverride != null ? entry.hoursOverride : calcAutoOTHours(d.inTime, d.outTime, mySchedule))
                                 : (entry.hours || 0);
                             const conv = sel ? hrs * mult : 0;
 
@@ -7555,8 +7561,22 @@ PAGES['payslip-admin'] = {
                                 : `<i class="fa-solid fa-lock text-zinc-300 text-sm"></i>`;
 
                             // OT hours input (inside expanded body)
+                            const autoHrs = isAutoOT ? calcAutoOTHours(d.inTime, d.outTime, mySchedule) : null;
+                            const displayHrs = isAutoOT
+                                ? (entry.hoursOverride != null ? entry.hoursOverride : autoHrs)
+                                : hrs;
+                            const isOverridden = isAutoOT && entry.hoursOverride != null;
                             const hrsInput = isAutoOT
-                                ? `<span class="font-black text-zinc-800">${hrs} ชม.</span>`
+                                ? `<div class="flex items-center gap-2">
+                                    <input type="number" min="0.5" max="24" step="0.5"
+                                        value="${displayHrs}"
+                                        oninput="otUpdateAutoHours('${d.day}',Number(this.value),${autoHrs})"
+                                        class="ot-input-sm w-20 text-center ${isOverridden?'border-amber-400 bg-amber-50':''}"
+                                        onclick="event.stopPropagation()">
+                                    ${isOverridden
+                                        ? `<button onclick="event.stopPropagation();otResetAutoHours('${d.day}')" title="รีเซ็ตเป็นอัตโนมัติ" class="text-amber-500 hover:text-amber-700 text-xs transition-all"><i class="fa-solid fa-rotate-left"></i></button>`
+                                        : `<span class="text-[10px] text-zinc-400 font-bold italic">auto</span>`}
+                                   </div>`
                                 : `<input type="number" min="0.5" max="24" step="0.5"
                                     value="${entry.hours||''}" placeholder="0"
                                     oninput="otUpdateHours('${d.day}',Number(this.value))"
@@ -7582,7 +7602,7 @@ PAGES['payslip-admin'] = {
                             const otBody = sel ? `
                                 <div class="grid grid-cols-2 gap-3 mb-2">
                                     <div>
-                                        <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">${isAutoOT ? 'ชม. OT (อัตโนมัติ)' : 'จำนวนชม. OT'}</p>
+                                        <p class="text-[10px] font-black uppercase tracking-widest mb-1 ${isAutoOT && isOverridden ? 'text-amber-500' : 'text-zinc-500'}">${isAutoOT ? (isOverridden ? 'ชม. OT (แก้ไขแล้ว)' : 'ชม. OT (อัตโนมัติ)') : 'จำนวนชม. OT'}</p>
                                         ${hrsInput}
                                     </div>
                                     <div>
@@ -7645,7 +7665,7 @@ PAGES['payslip-admin'] = {
                             const isAuto = d.type==='holiday' || d.type==='comp' || d.type==='weekend';
                             const mult   = isAuto ? 1.5 : 1.0;
                             const hrs    = isAuto
-                                ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
+                                ? (e.hoursOverride != null ? e.hoursOverride : calcAutoOTHours(d.inTime, d.outTime, mySchedule))
                                 : (e.hours || 0);
                             convSum += hrs * mult;
                         });
@@ -7683,6 +7703,24 @@ PAGES['payslip-admin'] = {
 
                     window.otUpdateHours = (day, val) => {
                         if (selectedDays[day]) { selectedDays[day].hours = val; updateTotals(); }
+                    };
+                    window.otUpdateAutoHours = (day, val, autoVal) => {
+                        if (!selectedDays[day]) return;
+                        // ถ้าค่าเท่ากับ auto ให้ล้าง override
+                        if (val === autoVal) {
+                            delete selectedDays[day].hoursOverride;
+                        } else {
+                            selectedDays[day].hoursOverride = val;
+                        }
+                        updateTotals();
+                        renderDayGrid();
+                    };
+                    window.otResetAutoHours = (day) => {
+                        if (selectedDays[day]) {
+                            delete selectedDays[day].hoursOverride;
+                            updateTotals();
+                            renderDayGrid();
+                        }
                     };
                     window.otUpdateNote  = (day, val) => {
                         if (selectedDays[day]) selectedDays[day].note = val;
@@ -7790,7 +7828,7 @@ PAGES['payslip-admin'] = {
                             const isAuto = d.type==='holiday' || d.type==='comp' || d.type==='weekend';
                             const mult   = isAuto ? 1.5 : 1.0;
                             const raw    = isAuto
-                                ? calcAutoOTHours(d.inTime, d.outTime, mySchedule)
+                                ? (e.hoursOverride != null ? e.hoursOverride : calcAutoOTHours(d.inTime, d.outTime, mySchedule))
                                 : (e.hours || 0);
                             return { date:d.day, inTime:d.inTime, outTime:d.outTime,
                                      breakMinutes: mySchedule.breakMinutes ?? 60,
@@ -7870,6 +7908,7 @@ PAGES['payslip-admin'] = {
                 return () => {
                     if (unsubHistory) unsubHistory();
                     ['otLoadPeriod','otToggleDay','otUpdateHours','otUpdateNote',
+                     'otUpdateAutoHours','otResetAutoHours',
                      'otAddCommRow','otCalcComm','renderCommUI_','otSaveDraft','otSubmit','otToggleExpand',
                      'otOpenExplain','otCloseExplain','otSubmitExplain'].forEach(k => delete window[k]);
                 };
