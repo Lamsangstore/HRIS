@@ -4754,6 +4754,7 @@ PAGES['payroll'] = {
                         uid:emp.uid,employeeCode:emp.employeeCode||'',name:emp.name,
                         nickname:emp.nickname||'',lineId:emp.lineId||'',photoURL:emp.photoURL||'',
                         branch:emp.branch||'',position:emp.position||'',
+                        bankName:emp.bankName||'',bankAccount:emp.bankAccount||'',
                         baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,commissionMin:emp.commMin||emp.commissionMin||0,
                         workDays:wd,workHours:wh,commissionUnits:salesTotal,
                         earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:0,
@@ -5085,6 +5086,15 @@ PAGES['payroll'] = {
             // Use already-loaded records if same period
             _bankRecords = records.filter(r => r.periodId === pid || !r.periodId);
             if (!_bankRecords.length) _bankRecords = records;
+            // Fallback: เติม bankAccount/bankName จาก employees ถ้า record เก่าไม่มี
+            _bankRecords = _bankRecords.map(r => {
+                if (r.bankAccount && r.bankAccount.trim()) return r;
+                const emp = employees.find(e => e.uid === r.uid);
+                if (emp && emp.bankAccount) {
+                    return { ...r, bankAccount: emp.bankAccount, bankName: emp.bankName || '' };
+                }
+                return r;
+            });
             prBankRenderList();
         };
 
