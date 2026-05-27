@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Lamsang Group HRIS</title>
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
     <!-- iOS Home Screen Icon -->
@@ -41,6 +41,102 @@
 
     <style>
         body { font-family: 'Prompt', sans-serif; }
+
+        /* ========= MOBILE-FIRST FIXES (iOS Safari / Chrome iOS / Chrome Android / LINE LIFF) ========= */
+        /* iOS Safari treats 100vh as the largest possible viewport (ignoring the URL bar),
+           which makes h-screen overflow. Use 100dvh (dynamic viewport height) with fallback. */
+        html, body { height: 100%; }
+        @supports (height: 100dvh) {
+            .h-screen { height: 100dvh !important; }
+        }
+        @supports (min-height: 100dvh) {
+            .min-h-screen { min-height: 100dvh !important; }
+        }
+
+        /* iOS auto-zooms on focus when input font-size < 16px. Force 16px on focusable form elements. */
+        input, select, textarea, button {
+            font-size: 16px;
+        }
+        @media (min-width: 768px) {
+            input, select, textarea { font-size: inherit; }
+        }
+
+        /* Remove blue tap highlight, make taps feel instant (no 300ms delay) */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        a, button, [onclick], [role="button"], .nav-item, .mob-nav-item, .cal-cell {
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+        }
+
+        /* Prevent iOS rubber-band on background while inner divs scroll */
+        body { overscroll-behavior-y: none; }
+
+        /* LINE in-app browser sometimes renders position:fixed weirdly when keyboard opens.
+           Use safe-area + viewport-height-aware sizing for bottom nav */
+        @supports (padding: env(safe-area-inset-bottom)) {
+            #mobile-bottom-nav { padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px); }
+        }
+
+        /* Smooth momentum scrolling on iOS for all scroll containers */
+        .overflow-y-auto, .overflow-auto, .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Custom dialog (replaces alert/confirm/prompt for LINE LIFF compatibility) */
+        #lsg-dialog-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            display: none; align-items: center; justify-content: center;
+            z-index: 99999; padding: 1rem;
+            padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            font-family: 'Prompt', sans-serif;
+        }
+        #lsg-dialog-backdrop.open { display: flex; animation: lsg-fade-in 0.15s ease; }
+        @keyframes lsg-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        #lsg-dialog-box {
+            background: #fff; border-radius: 1.25rem; max-width: 420px; width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            overflow: hidden; transform: scale(0.96);
+            animation: lsg-pop-in 0.18s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        }
+        @keyframes lsg-pop-in { to { transform: scale(1); } }
+        #lsg-dialog-box .lsg-d-head { padding: 1.25rem 1.5rem 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        #lsg-dialog-box .lsg-d-icon { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        #lsg-dialog-box .lsg-d-title { font-weight: 900; font-size: 1rem; color: #18181b; }
+        #lsg-dialog-box .lsg-d-body { padding: 0.25rem 1.5rem 1.25rem; color: #3f3f46; font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        #lsg-dialog-box .lsg-d-input { width: calc(100% - 3rem); margin: 0 1.5rem 1.25rem; padding: 0.75rem 1rem; border: 1.5px solid #e4e4e7; border-radius: 0.75rem; font-size: 16px; outline: none; transition: border-color 0.15s; }
+        #lsg-dialog-box .lsg-d-input:focus { border-color: #eab308; }
+        #lsg-dialog-box .lsg-d-foot { display: flex; gap: 0.5rem; padding: 0 1rem 1rem; flex-wrap: wrap; }
+        #lsg-dialog-box .lsg-d-btn { flex: 1; min-width: 100px; padding: 0.75rem 1rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.9rem; cursor: pointer; border: none; transition: all 0.15s; min-height: 44px; }
+        #lsg-dialog-box .lsg-d-btn-primary { background: #18181b; color: #eab308; }
+        #lsg-dialog-box .lsg-d-btn-primary:active { transform: scale(0.97); }
+        #lsg-dialog-box .lsg-d-btn-cancel { background: #f4f4f5; color: #52525b; }
+        #lsg-dialog-box .lsg-d-btn-cancel:active { transform: scale(0.97); }
+        #lsg-dialog-box .lsg-d-btn-danger { background: #dc2626; color: #fff; }
+        #lsg-dialog-box.icon-info .lsg-d-icon { background: #dbeafe; color: #2563eb; }
+        #lsg-dialog-box.icon-warn .lsg-d-icon { background: #fef3c7; color: #d97706; }
+        #lsg-dialog-box.icon-error .lsg-d-icon { background: #fee2e2; color: #dc2626; }
+        #lsg-dialog-box.icon-success .lsg-d-icon { background: #dcfce7; color: #16a34a; }
+        #lsg-dialog-box.icon-ask .lsg-d-icon { background: #fef9c3; color: #ca8a04; }
+
+        /* Toast (for short non-blocking messages) */
+        #lsg-toast {
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            left: 50%; transform: translateX(-50%) translateY(-150%);
+            background: #18181b; color: #fff; padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem; font-size: 0.875rem; font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 100000; max-width: 90vw; text-align: center;
+            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            pointer-events: none;
+        }
+        #lsg-toast.show { transform: translateX(-50%) translateY(0); }
+        #lsg-toast.error { background: #dc2626; }
+        #lsg-toast.success { background: #16a34a; }
 
         /* ========= SIDEBAR ========= */
         #app-sidebar {
@@ -369,6 +465,20 @@
 </head>
 <body class="bg-zinc-50 flex h-screen overflow-hidden text-zinc-800">
 
+    <!-- ===================== CUSTOM DIALOG (LINE LIFF / iOS friendly) ===================== -->
+    <div id="lsg-dialog-backdrop" role="dialog" aria-modal="true">
+        <div id="lsg-dialog-box">
+            <div class="lsg-d-head">
+                <div class="lsg-d-icon"><i class="fa-solid fa-info"></i></div>
+                <div class="lsg-d-title">แจ้งเตือน</div>
+            </div>
+            <div class="lsg-d-body"></div>
+            <input type="text" class="lsg-d-input" style="display:none" autocomplete="off" autocapitalize="off">
+            <div class="lsg-d-foot"></div>
+        </div>
+    </div>
+    <div id="lsg-toast"></div>
+
     <!-- ===================== SIDEBAR (อยู่ตลอด ไม่โหลดใหม่) ===================== -->
     <aside id="app-sidebar" class="bg-zinc-900 text-zinc-300 flex flex-col shadow-xl z-20 h-full overflow-hidden shrink-0">
         <!-- Sidebar Toggle Button -->
@@ -513,6 +623,165 @@
             <div id="page-content" class="min-h-full"></div>
         </div>
     </div>
+
+    <!-- ===================== MOBILE / LINE COMPAT SHIM ===================== -->
+    <script>
+    (function() {
+        // ---- Detect LINE in-app browser & iOS ----
+        const UA = (navigator.userAgent || '').toLowerCase();
+        window.__isLINE = UA.includes(' line/') || UA.includes('line/');
+        window.__isIOS  = /iphone|ipad|ipod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        window.__isAndroid = UA.includes('android');
+        if (window.__isLINE) document.documentElement.classList.add('is-line');
+        if (window.__isIOS)  document.documentElement.classList.add('is-ios');
+        if (window.__isAndroid) document.documentElement.classList.add('is-android');
+
+        // ---- Safe localStorage wrapper (Safari private mode / LIFF restricted) ----
+        window.safeStorage = {
+            get(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
+            set(k, v) { try { localStorage.setItem(k, v); return true; } catch(e) { return false; } },
+            remove(k) { try { localStorage.removeItem(k); } catch(e) {} }
+        };
+
+        // ---- Custom dialog (replaces alert / confirm / prompt) ----
+        // Native dialogs render badly in LINE in-app browser and freeze the page on iOS.
+        const $bd  = document.getElementById('lsg-dialog-backdrop');
+        const $box = document.getElementById('lsg-dialog-box');
+        function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+        function showDialog(opts) {
+            return new Promise(resolve => {
+                if (!$bd || !$box) { resolve(opts.kind === 'confirm' ? window.confirm(opts.message) : (opts.kind === 'prompt' ? window.prompt(opts.message, opts.defaultValue || '') : true)); return; }
+                const kind = opts.kind || 'alert';
+                const variant = opts.variant || (kind === 'confirm' ? 'ask' : (kind === 'prompt' ? 'info' : 'info'));
+                $box.className = '';
+                $box.classList.add('icon-' + variant);
+                const iconMap = { info: 'fa-info', warn: 'fa-triangle-exclamation', error: 'fa-circle-exclamation', success: 'fa-circle-check', ask: 'fa-circle-question' };
+                $box.querySelector('.lsg-d-icon').innerHTML = '<i class="fa-solid ' + (iconMap[variant] || 'fa-info') + '"></i>';
+                $box.querySelector('.lsg-d-title').textContent = opts.title || (kind === 'confirm' ? 'ยืนยัน' : (kind === 'prompt' ? 'กรอกข้อมูล' : 'แจ้งเตือน'));
+                $box.querySelector('.lsg-d-body').textContent = opts.message || '';
+
+                const $input = $box.querySelector('.lsg-d-input');
+                if (kind === 'prompt') {
+                    $input.style.display = 'block';
+                    $input.value = opts.defaultValue || '';
+                    $input.type = opts.inputType || 'text';
+                    setTimeout(() => $input.focus(), 100);
+                } else {
+                    $input.style.display = 'none';
+                }
+
+                const $foot = $box.querySelector('.lsg-d-foot');
+                $foot.innerHTML = '';
+                const cleanup = (result) => {
+                    $bd.classList.remove('open');
+                    document.body.style.overflow = '';
+                    resolve(result);
+                };
+
+                if (kind === 'alert') {
+                    const ok = document.createElement('button');
+                    ok.className = 'lsg-d-btn lsg-d-btn-primary';
+                    ok.textContent = opts.okText || 'ตกลง';
+                    ok.onclick = () => cleanup(true);
+                    $foot.appendChild(ok);
+                    setTimeout(() => ok.focus(), 100);
+                } else {
+                    const cancel = document.createElement('button');
+                    cancel.className = 'lsg-d-btn lsg-d-btn-cancel';
+                    cancel.textContent = opts.cancelText || 'ยกเลิก';
+                    cancel.onclick = () => cleanup(kind === 'confirm' ? false : null);
+                    const ok = document.createElement('button');
+                    ok.className = 'lsg-d-btn ' + (opts.danger ? 'lsg-d-btn-danger' : 'lsg-d-btn-primary');
+                    ok.textContent = opts.okText || 'ตกลง';
+                    ok.onclick = () => cleanup(kind === 'confirm' ? true : $input.value);
+                    $foot.appendChild(cancel);
+                    $foot.appendChild(ok);
+
+                    if (kind === 'prompt') {
+                        $input.onkeydown = (e) => { if (e.key === 'Enter') ok.click(); else if (e.key === 'Escape') cancel.click(); };
+                    }
+                }
+
+                $bd.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            });
+        }
+
+        window.lsgDialog = showDialog;
+
+        // Override native dialogs with our custom one.
+        // Native confirm/prompt are synchronous; we return a thenable that also has a sane default
+        // so legacy `if (confirm(...))` still works (it will treat the object as truthy).
+        // We provide async versions: lsgAlert / lsgConfirm / lsgPrompt.
+        window.lsgAlert = (msg, title, variant) => showDialog({ kind: 'alert', message: msg, title, variant: variant || 'info' });
+        window.lsgConfirm = (msg, opts = {}) => showDialog({ kind: 'confirm', message: msg, ...opts });
+        window.lsgPrompt = (msg, defaultValue, opts = {}) => showDialog({ kind: 'prompt', message: msg, defaultValue, ...opts });
+
+        // Replace native alert with non-blocking version (returns immediately, dialog still shows).
+        const _nativeAlert = window.alert.bind(window);
+        window.alert = function(msg) {
+            try { showDialog({ kind: 'alert', message: String(msg) }); }
+            catch (e) { _nativeAlert(msg); }
+        };
+
+        // We can't truly replace synchronous confirm/prompt, but we can keep native as fallback
+        // (Chrome on Android still works; LINE iOS sometimes blocks). The codebase uses these
+        // pattern: `if (confirm(...))`. Leave native confirm/prompt for now — they DO work in
+        // LINE on iOS/Android per current LINE app behavior, just look ugly. Devs should migrate
+        // to lsgConfirm/lsgPrompt where UX matters.
+
+        // ---- Toast (non-blocking notification) ----
+        let toastTimer = null;
+        const $toast = document.getElementById('lsg-toast');
+        window.lsgToast = function(message, type, duration) {
+            if (!$toast) return;
+            $toast.className = '';
+            if (type) $toast.classList.add(type);
+            $toast.textContent = message;
+            requestAnimationFrame(() => $toast.classList.add('show'));
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => $toast.classList.remove('show'), duration || 2500);
+        };
+
+        // ---- Safe window.open for LINE (blocked) ----
+        // In LINE LIFF, window.open() returns null. Fallback to location.href which always works.
+        window.safeOpen = function(url, target) {
+            try {
+                if (window.__isLINE) {
+                    // LIFF API if available
+                    if (window.liff && window.liff.openWindow) {
+                        window.liff.openWindow({ url, external: true });
+                        return;
+                    }
+                    // Otherwise navigate in same window (so user doesn't lose the URL)
+                    window.location.href = url;
+                    return;
+                }
+                const w = window.open(url, target || '_blank');
+                if (!w) {
+                    // Popup blocked — fallback to current window
+                    window.location.href = url;
+                }
+            } catch (e) {
+                window.location.href = url;
+            }
+        };
+
+        // ---- Visual viewport height for keyboard-aware fixed elements ----
+        // iOS Safari: when the keyboard opens, fixed bottom elements can overlap the input.
+        // Set --vvh on root to track the visible area.
+        function syncVVH() {
+            const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+            document.documentElement.style.setProperty('--vvh', vh + 'px');
+        }
+        syncVVH();
+        window.addEventListener('resize', syncVVH);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', syncVVH);
+        }
+    })();
+    </script>
 
     <!-- ===================== FIREBASE & SPA ROUTER ===================== -->
     <script type="module">
@@ -946,7 +1215,7 @@
         let _notifUnsubs    = [];
         let _notifItems     = [];   // { id, type, title, body, link, ts, read }
         let _notifPanelOpen = false;
-        let _seenIds        = new Set(JSON.parse(localStorage.getItem('_notifSeen') || '[]'));
+        let _seenIds        = new Set(JSON.parse((window.safeStorage && window.safeStorage.get('_notifSeen')) || '[]'));
 
         function stopNotifications() {
             _notifUnsubs.forEach(u => { try { u(); } catch(e){} });
@@ -2316,7 +2585,8 @@
                     if (!fi) {
                         fi = document.createElement('input');
                         fi.type = 'file'; fi.id = '_profile-file-input';
-                        fi.accept = 'image/jpeg,image/png,image/webp,image/gif';
+                        // image/* lets iOS/Android show "Take Photo" + "Choose from Library" picker
+                        fi.accept = 'image/*';
                         fi.style.display = 'none'; document.body.appendChild(fi);
                         fi.addEventListener('change', async () => {
                             const file = fi.files[0]; if (!file) return;
@@ -6691,7 +6961,7 @@ PAGES['payslip'] = {
             err.classList.add('hidden');
             try {
                 await signInWithEmailAndPassword(getAuth(), user.email, pw);
-                if (pendingUrl) window.open(pendingUrl, '_blank');
+                if (pendingUrl) { if (window.safeOpen) window.safeOpen(pendingUrl); else window.open(pendingUrl, '_blank'); }
                 psClosePw();
                 showToast('✅ ยืนยันตัวตนสำเร็จ', 'success');
             } catch {
@@ -7210,8 +7480,8 @@ PAGES['payslip-admin'] = {
     <button onclick="otSaveDraft()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-2xl text-sm transition-all flex items-center justify-center gap-1.5">
       <i class="fa-regular fa-floppy-disk"></i> Draft
     </button>
-    <button onclick="otSubmit()" class="flex-[2] py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-2xl text-sm transition-all shadow-lg flex items-center justify-center gap-2">
-      <i class="fa-solid fa-paper-plane"></i> ยื่นขออนุมัติ
+    <button onclick="otSubmit()" id="ot-submit-btn" type="button" class="flex-[2] py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-2xl text-sm transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+      <i class="fa-solid fa-paper-plane"></i> <span>ยื่นขออนุมัติ</span>
     </button>
   </div>
 </div>`,
@@ -7888,6 +8158,10 @@ PAGES['payslip-admin'] = {
                     };
 
                     window.otSubmit = async () => {
+                        const btn = document.getElementById('ot-submit-btn');
+                        // กันกดซ้ำ (สำคัญมากบนมือถือ — โดยเฉพาะ LINE in-app browser)
+                        if (btn && btn.disabled) return;
+
                         if (isLocked) { showToast('⚠️ ยื่นแล้วหรืออนุมัติแล้ว แก้ไขไม่ได้','error'); return; }
                         const selCount = Object.keys(selectedDays).length;
                         const commTotal = commRows.reduce((s,r) => s + (r.sales||0), 0);
@@ -7895,7 +8169,20 @@ PAGES['payslip-admin'] = {
                         // ตรวจหมายเหตุวันปกติ
                         const missingNote = allDays.filter(d => selectedDays[d.day] && d.type==='normal' && !selectedDays[d.day].note.trim());
                         if (missingNote.length) { showToast(`⚠️ กรุณากรอกเหตุผล OT วันที่ ${missingNote.map(d=>d.day.slice(8)).join(', ')}`, 'error'); return; }
-                        if (!confirm('ยืนยันการยื่นขออนุมัติ OT & Commission?')) return;
+
+                        // ใช้ custom dialog แทน confirm() เพราะ LINE in-app browser มักบล็อก native confirm
+                        const confirmed = (typeof window.lsgConfirm === 'function')
+                            ? await window.lsgConfirm('ยืนยันการยื่นขออนุมัติ OT & Commission?', { okText: 'ยื่นขออนุมัติ', cancelText: 'ยกเลิก', variant: 'ask' })
+                            : window.confirm('ยืนยันการยื่นขออนุมัติ OT & Commission?');
+                        if (!confirmed) return;
+
+                        // Lock ปุ่ม + แสดง spinner ระหว่างส่ง
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.dataset._origHtml = btn.innerHTML;
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>กำลังส่ง...</span>';
+                        }
+
                         try {
                             const { addDoc, updateDoc, doc, collection, query, getDocs, where } =
                                 await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
@@ -7910,7 +8197,16 @@ PAGES['payslip-admin'] = {
                             showToast('✅ ยื่นขออนุมัติแล้ว','success');
                             loadHistory();
                             otLoadPeriod();
-                        } catch(e) { showToast('❌ '+e.message,'error'); }
+                        } catch(e) {
+                            console.error('[otSubmit] error:', e);
+                            const msg = (e && (e.code || e.message)) ? (e.code ? `[${e.code}] ${e.message}` : e.message) : 'ไม่สามารถยื่นขออนุมัติได้';
+                            showToast('❌ ' + msg, 'error');
+                            // ปลดล็อกปุ่มกลับเมื่อพลาด
+                            if (btn) {
+                                btn.disabled = false;
+                                if (btn.dataset._origHtml) { btn.innerHTML = btn.dataset._origHtml; delete btn.dataset._origHtml; }
+                            }
+                        }
                     };
 
                 })();
