@@ -7816,17 +7816,15 @@ PAGES['certificate'] = {
 
         window.certPrint = () => {
             const titleTxt = certType === 'salary' ? 'หนังสือรับรองเงินเดือน' : 'หนังสือรับรองการทำงาน';
-            // สร้างผ่าน DOM แล้วเปิดในแท็บใหม่ผ่าน Blob URL — ไม่มี template ฝังในซอร์ส
-            const css = '@page { size: A4; margin: 25mm 20mm; } body { font-family: Sarabun, TH Sarabun New, Tahoma, sans-serif; font-size: 16px; line-height: 1.9; color: #18181b; }';
-            const html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>'
-                + titleTxt + ' - ' + (profile.name || '') + '</title><style>' + css
-                + '</style></head><body>' + buildCertHtml() + '</body></html>';
-            const blob = new Blob([html], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const win = window.open(url, '_blank');
-            if (!win) { showToast('เบราว์เซอร์บล็อกป๊อปอัป — กรุณาอนุญาตก่อน', 'error'); URL.revokeObjectURL(url); return; }
-            setTimeout(() => { try { win.focus(); win.print(); } catch(_) {} }, 800);
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            const win = window.open('about:blank', '_blank');
+            if (!win) { showToast('เบราว์เซอร์บล็อกป๊อปอัป — กรุณาอนุญาตก่อน', 'error'); return; }
+            const wd = win.document;
+            wd.title = titleTxt + ' - ' + (profile.name || '');
+            const style = wd.createElement('style');
+            style.textContent = '@page { size: A4; margin: 25mm 20mm; } body { font-family: Sarabun, TH Sarabun New, Tahoma, sans-serif; font-size: 16px; line-height: 1.9; color: #18181b; }';
+            wd.head.appendChild(style);
+            wd.body.innerHTML = buildCertHtml();
+            setTimeout(() => { try { win.focus(); win.print(); } catch(_) {} }, 600);
         };
 
         document.getElementById('cert-purpose')?.addEventListener('input', renderPreview);
