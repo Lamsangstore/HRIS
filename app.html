@@ -884,16 +884,22 @@
                 { id: 'time-approve',  icon: 'fa-user-clock',            label: 'อนุมัติเวลา',            show: isManager },
                 { id: 'staff-attendance', icon: 'fa-clock-rotate-left',  label: 'ประวัติเวลา (ทีม)',      show: isManager },
                 { id: 'staff-leaves',  icon: 'fa-calendar-days',         label: 'ประวัติการลา (ทีม)',     show: isManager },
+                { id: 'team-calendar', icon: 'fa-calendar-week',         label: 'ปฏิทินทีม',              show: isManager },
                 { id: 'profile',       icon: 'fa-id-badge',              label: 'โปรไฟล์ของฉัน',          show: true },
                 { id: 'payslip',       icon: 'fa-file-invoice',          label: 'สลิปเงินเดือน',          show: true },
+                { id: 'certificate',   icon: 'fa-file-signature',        label: 'หนังสือรับรอง',          show: true },
+                { id: 'my-review',     icon: 'fa-ranking-star',          label: 'ผลประเมินของฉัน',        show: true },
                 { id: 'ot-claim',      icon: 'fa-business-time',         label: 'เบิก OT & Commission',   show: true },
                 { id: 'ot-approve',    icon: 'fa-clipboard-check',       label: 'อนุมัติ OT',              show: isManager },
+                { id: 'review-admin',  icon: 'fa-clipboard-user',        label: 'ประเมินผลงาน',           show: isManager },
                 { id: '---',           icon: '',                         label: 'Admin Panel',             show: isAdmin, divider: true },
                 { id: 'announcements', icon: 'fa-bullhorn',              label: 'จัดการประกาศ',           show: isManager, adminStyle: true },
                 { id: 'add-employee',  icon: 'fa-user-plus',             label: 'เพิ่ม/แก้ไขพนักงาน',    show: isAdmin,   adminStyle: true },
                 { id: 'time-import',   icon: 'fa-file-arrow-up',         label: 'นำเข้าเวลางาน',          show: isAdmin,   adminStyle: true },
                 { id: 'holidays',      icon: 'fa-star',                  label: 'วันหยุดตามประเพณี',      show: isAdmin,   adminStyle: true },
                 { id: 'leave-admin',   icon: 'fa-sliders',               label: 'ตั้งค่าการลา',           show: isAdmin,   adminStyle: true },
+                { id: 'shift-admin',   icon: 'fa-clock',                 label: 'จัดการกะงาน',            show: isAdmin,   adminStyle: true },
+                { id: 'branch-locations', icon: 'fa-map-location-dot',   label: 'พิกัดสาขา & GPS',        show: isAdmin,   adminStyle: true },
                 { id: 'payroll',       icon: 'fa-file-invoice-dollar',   label: 'จัดการเงินเดือน',        show: isAdmin,   adminStyle: true },
                 { id: 'payslip-admin', icon: 'fa-folder-open',           label: 'จัดการ E-Pay Slip',      show: isAdmin,   adminStyle: true },
             ];
@@ -1089,7 +1095,77 @@
 
             // Navigate ไปหน้าแรก
             await navigateTo(startPage);
+
+            // เริ่มตรวจลืมลงเวลาออก (เช็คทันที + ทุก 10 นาที)
+            startForgotClockOutWatch(user, userProfile);
         });
+
+        // ── เตือนลืมลงเวลาออก ───────────────────────────────────────
+        // เลย workEnd + 1 ชม. แล้วมี clock_in วันนี้แต่ไม่มี clock_out → แสดงแบนเนอร์
+        let _forgotInterval = null;
+        async function startForgotClockOutWatch(user, profile) {
+            const { collection, doc, getDoc, getDocs, query, where }
+                = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+            let sched = { workEnd: '17:00', workDays: [1,2,3,4,5] };
+            try {
+                const s = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', user.uid));
+                if (s.exists()) sched = { ...sched, ...s.data() };
+            } catch {}
+
+            async function check() {
+                try {
+                    const today = todayTH();
+                    // ปิดแบนเนอร์ไปแล้ววันนี้ → ไม่เตือนซ้ำ
+                    if (sessionStorage.getItem('forgotClockOutDismissed') === today) return;
+
+                    const dow = newDateTH().getDay();
+                    const workDaySet = new Set(sched.workDays || [1,2,3,4,5]);
+                    if (!workDaySet.has(dow)) return;
+
+                    // เลยเวลาเลิกงาน + 1 ชม. หรือยัง
+                    const nowHM = newDateTH().toTimeString().slice(0,5);
+                    const [eh, em] = (sched.workEnd || '17:00').split(':').map(Number);
+                    const endPlus1 = String(Math.min(23, eh+1)).padStart(2,'0') + ':' + String(em).padStart(2,'0');
+                    if (nowHM < endPlus1) { removeForgotBanner(); return; }
+
+                    const snap = await getDocs(query(
+                        collection(db,'artifacts',APP_ID,'public','data','time_logs'),
+                        where('uid','==',user.uid), where('localDate','==',today)
+                    ));
+                    const logs = snap.docs.map(d=>d.data());
+                    const hasIn  = logs.some(l=>l.type==='clock_in');
+                    const hasOut = logs.some(l=>l.type==='clock_out');
+                    if (hasIn && !hasOut) showForgotBanner();
+                    else removeForgotBanner();
+                } catch(e) { console.warn('forgotClockOut:', e); }
+            }
+
+            function showForgotBanner() {
+                if (document.getElementById('forgot-clockout-banner')) return;
+                const div = document.createElement('div');
+                div.id = 'forgot-clockout-banner';
+                div.className = 'fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-[150] w-[92%] max-w-md bg-red-600 text-white rounded-2xl shadow-2xl p-4 flex items-center gap-3';
+                div.innerHTML = `
+                    <i class="fa-solid fa-bell fa-shake text-2xl text-yellow-300 shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-black text-sm">อย่าลืมลงเวลาออกงาน!</p>
+                        <p class="text-xs text-red-100">วันนี้คุณลงเวลาเข้า แต่ยังไม่ได้ลงเวลาออก</p>
+                    </div>
+                    <button onclick="navigateTo('time');document.getElementById('forgot-clockout-banner')?.remove();"
+                        class="bg-white text-red-600 font-black text-xs px-3 py-2 rounded-xl shrink-0 hover:bg-red-50">ลงเวลาออก</button>
+                    <button onclick="sessionStorage.setItem('forgotClockOutDismissed', '${todayTH()}');document.getElementById('forgot-clockout-banner')?.remove();"
+                        class="text-red-200 hover:text-white shrink-0"><i class="fa-solid fa-xmark"></i></button>`;
+                document.body.appendChild(div);
+            }
+            function removeForgotBanner() {
+                document.getElementById('forgot-clockout-banner')?.remove();
+            }
+
+            check();
+            if (_forgotInterval) clearInterval(_forgotInterval);
+            _forgotInterval = setInterval(check, 10 * 60 * 1000);
+        }
 
         window.handleLogout = () => {
             if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
@@ -1781,6 +1857,87 @@
             return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
+        // ── พิกัดต่อสาขา (Firestore: branch_locations) ────────────────
+        // doc id = ชื่อสาขา, fields: { lat, lng, radius }
+        // ถ้าสาขาไม่มีพิกัดตั้งไว้ → fallback เป็นพิกัดสำนักงานใหญ่ด้านบน
+        let _branchLocCache = null;
+        async function loadBranchLocations(forceReload) {
+            if (_branchLocCache && !forceReload) return _branchLocCache;
+            try {
+                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','branch_locations'));
+                const map = {};
+                snap.forEach(d => { map[d.id] = d.data(); });
+                _branchLocCache = map;
+            } catch(e) { console.warn('branch_locations:', e); _branchLocCache = {}; }
+            return _branchLocCache;
+        }
+        function officeFor(branch) {
+            const loc = _branchLocCache && branch ? _branchLocCache[branch] : null;
+            if (loc && loc.lat != null && loc.lng != null) {
+                return { lat: loc.lat, lng: loc.lng, radius: loc.radius || OFFICE_RADIUS_M, name: branch };
+            }
+            return { lat: OFFICE_LAT, lng: OFFICE_LNG, radius: OFFICE_RADIUS_M, name: branch || 'สำนักงานใหญ่' };
+        }
+
+        // ── แจ้งหัวหน้า/admin ผ่าน LINE เมื่อลงเวลานอกพื้นที่ ─────────
+        async function notifyManagersOutsideClock(empProfile, type, pos, distM, office) {
+            try {
+                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snap = await getDocs(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
+                const managers = snap.docs.map(d => d.data())
+                    .filter(u => (u.role === 'manager' || u.role === 'admin') && u.lineId && u.uid !== empProfile.uid);
+                if (!managers.length) return;
+                const actionTxt = type === 'clock_in' ? 'เข้างาน' : 'ออกงาน';
+                const distTxt = distM < 1000 ? `${distM} ม.` : `${(distM/1000).toFixed(2)} กม.`;
+                const timeTxt = new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+                const mapsUrl = `https://www.google.com/maps?q=${pos.lat},${pos.lng}`;
+                for (const mgr of managers) {
+                    await sendLineMessage(mgr.lineId, [{
+                        type: 'flex',
+                        altText: `⚠ ${empProfile.name} ลงเวลา${actionTxt}นอกพื้นที่ (ห่าง ${distTxt})`,
+                        contents: {
+                            type: 'bubble', size: 'kilo',
+                            header: {
+                                type: 'box', layout: 'vertical', paddingAll: '16px', backgroundColor: '#dc2626',
+                                contents: [{ type:'text', text:'⚠ ลงเวลานอกพื้นที่', color:'#ffffff', weight:'bold', size:'lg' }]
+                            },
+                            body: {
+                                type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+                                contents: [
+                                    { type:'text', text: empProfile.name, weight:'bold', size:'lg', color:'#18181b' },
+                                    { type:'text', text: (empProfile.branch||'') + (empProfile.position ? ' · '+empProfile.position : ''), size:'sm', color:'#71717a' },
+                                    { type:'separator', margin:'md' },
+                                    { type:'box', layout:'vertical', spacing:'xs', margin:'md', contents:[
+                                        { type:'box', layout:'horizontal', contents:[
+                                            { type:'text', text:'ประเภท', size:'sm', color:'#a1a1aa', flex:2 },
+                                            { type:'text', text:`ลงเวลา${actionTxt}`, size:'sm', weight:'bold', color:'#18181b', flex:3 }
+                                        ]},
+                                        { type:'box', layout:'horizontal', contents:[
+                                            { type:'text', text:'เวลา', size:'sm', color:'#a1a1aa', flex:2 },
+                                            { type:'text', text: timeTxt + ' น.', size:'sm', weight:'bold', color:'#18181b', flex:3 }
+                                        ]},
+                                        { type:'box', layout:'horizontal', contents:[
+                                            { type:'text', text:'ระยะห่าง', size:'sm', color:'#a1a1aa', flex:2 },
+                                            { type:'text', text:`${distTxt} จาก${office.name}`, size:'sm', weight:'bold', color:'#dc2626', flex:3, wrap:true }
+                                        ]},
+                                    ]}
+                                ]
+                            },
+                            footer: {
+                                type: 'box', layout: 'vertical', paddingAll: '12px',
+                                contents: [{
+                                    type: 'button',
+                                    action: { type:'uri', label:'📍 ดูตำแหน่งบนแผนที่', uri: mapsUrl },
+                                    style: 'primary', color: '#dc2626', height: 'sm'
+                                }]
+                            }
+                        }
+                    }]);
+                }
+            } catch(e) { console.warn('notifyOutsideClock:', e); }
+        }
+
         // ================================================================
         // PAGE DEFINITIONS
         // แต่ละหน้าเป็น object { title, html, init }
@@ -2223,19 +2380,9 @@
                 }
 
                 // ── GPS Location ────────────────────────────────────
-                // ตำแหน่งสำนักงาน (16°24'47.8"N 100°09'59.8"E) + รัศมีที่อนุญาต
-                const OFFICE_LAT = 16.4132778;
-                const OFFICE_LNG = 100.1666111;
-                const OFFICE_RADIUS_M = 100;
-
-                function distanceMeters(lat1, lng1, lat2, lng2) {
-                    const R = 6371000;
-                    const toRad = d => d * Math.PI / 180;
-                    const dLat = toRad(lat2 - lat1);
-                    const dLng = toRad(lng2 - lng1);
-                    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
-                    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                }
+                // พิกัด+รัศมีตามสาขาของพนักงาน (จาก branch_locations, fallback สำนักงานใหญ่)
+                await loadBranchLocations();
+                const myOffice = officeFor(profile.branch);
 
                 let currentPosition = null;     // {lat, lng, accuracy, ts}
                 let locWatchId = null;
@@ -2253,15 +2400,15 @@
 
                 function updateLocStatusFromPosition() {
                     if (!currentPosition) return;
-                    const d = distanceMeters(currentPosition.lat, currentPosition.lng, OFFICE_LAT, OFFICE_LNG);
+                    const d = distanceMeters(currentPosition.lat, currentPosition.lng, myOffice.lat, myOffice.lng);
                     const acc = currentPosition.accuracy;
-                    const inOffice = d <= OFFICE_RADIUS_M;
+                    const inOffice = d <= myOffice.radius;
                     const distTxt = d < 1000 ? `${Math.round(d)} ม.` : `${(d/1000).toFixed(2)} กม.`;
                     const accTxt = acc > 100 ? ` (±${Math.round(acc)}ม.)` : '';
                     if (inOffice) {
-                        setLocStatus(`✓ อยู่ในออฟฟิศ · ห่าง ${distTxt}${accTxt}`, 'text-green-600');
+                        setLocStatus(`✓ อยู่ในพื้นที่ ${myOffice.name} · ห่าง ${distTxt}${accTxt}`, 'text-green-600');
                     } else {
-                        setLocStatus(`⚠ นอกออฟฟิศ · ห่าง ${distTxt}${accTxt}`, 'text-orange-500');
+                        setLocStatus(`⚠ นอกพื้นที่ ${myOffice.name} · ห่าง ${distTxt}${accTxt}`, 'text-orange-500');
                     }
                 }
 
@@ -2553,8 +2700,8 @@
                         };
                         let outsideOffice = false, distM = null;
                         if (pos) {
-                            distM = distanceMeters(pos.lat, pos.lng, OFFICE_LAT, OFFICE_LNG);
-                            outsideOffice = distM > OFFICE_RADIUS_M;
+                            distM = distanceMeters(pos.lat, pos.lng, myOffice.lat, myOffice.lng);
+                            outsideOffice = distM > myOffice.radius;
                             payload.lat = pos.lat;
                             payload.lng = pos.lng;
                             payload.accuracy = pos.accuracy;
@@ -2569,8 +2716,8 @@
                             const distTxt = distM < 1000 ? `${Math.round(distM)} ม.` : `${(distM/1000).toFixed(2)} กม.`;
                             const actionTxt = type === 'clock_in' ? 'เข้างาน' : 'ออกงาน';
                             const ok = confirm(
-                                `⚠ คุณอยู่นอกพื้นที่สำนักงาน (ห่าง ${distTxt})\n` +
-                                `รัศมีที่อนุญาต: ${OFFICE_RADIUS_M} เมตร\n\n` +
+                                `⚠ คุณอยู่นอกพื้นที่ ${myOffice.name} (ห่าง ${distTxt})\n` +
+                                `รัศมีที่อนุญาต: ${myOffice.radius} เมตร\n\n` +
                                 `ต้องการลงเวลา${actionTxt}ต่อหรือไม่?\n` +
                                 `(ระบบจะแจ้งหัวหน้าและบันทึกตำแหน่งของคุณ)`
                             );
@@ -2581,6 +2728,11 @@
                         }
 
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), payload);
+
+                        // แจ้งหัวหน้าผ่าน LINE ถ้าลงเวลานอกพื้นที่
+                        if (outsideOffice) {
+                            notifyManagersOutsideClock(profile, type, pos, Math.round(distM), myOffice).catch(()=>{});
+                        }
                         const okMsg = type === 'clock_in' ? '✅ บันทึกเวลาเข้างานแล้ว' : '✅ บันทึกเวลาออกงานแล้ว';
                         let noteMsg = '';
                         let toastType = 'success';
@@ -3385,6 +3537,7 @@
         let myRequests = [];
         let selectedLeaveType = null;
         let isHourly = false;
+        let editingId = null;   // id ของคำขอ pending ที่กำลังแก้ไข (null = สร้างใหม่)
         let calYear  = newDateTH().getFullYear();
         let calMonth = newDateTH().getMonth();
 
@@ -3655,8 +3808,51 @@
         });
         document.getElementById('req-end-date')?.addEventListener('change', recalcHours);
 
-        window.openLeaveModal  = () => document.getElementById('leave-modal')?.classList.remove('hidden');
-        window.closeLeaveModal = () => document.getElementById('leave-modal')?.classList.add('hidden');
+        window.openLeaveModal  = () => {
+            editingId = null;
+            setModalMode(false);
+            document.getElementById('leave-modal')?.classList.remove('hidden');
+        };
+        window.closeLeaveModal = () => {
+            editingId = null;
+            document.getElementById('leave-modal')?.classList.add('hidden');
+        };
+
+        function setModalMode(isEdit) {
+            const titleEl = document.querySelector('#leave-modal h3');
+            const btn = document.getElementById('submit-leave-btn');
+            if (titleEl) titleEl.textContent = isEdit ? 'แก้ไขคำขอลา' : 'ยื่นคำขอลา';
+            if (btn) btn.innerHTML = isEdit
+                ? '<i class="fa-solid fa-floppy-disk"></i> บันทึกการแก้ไข'
+                : '<i class="fa-solid fa-paper-plane"></i> ส่งคำขอลา';
+        }
+
+        // แก้ไขคำขอที่ยัง pending — เปิด modal พร้อมข้อมูลเดิม
+        window.editLeaveRequest = (id) => {
+            const r = myRequests.find(x => x.id === id);
+            if (!r || r.status !== 'pending') { showToast('แก้ไขได้เฉพาะคำขอที่รอการอนุมัติ', 'error'); return; }
+            editingId = id;
+            selectLeaveType(r.type);
+            const sd = document.getElementById('req-start-date');
+            const ed = document.getElementById('req-end-date');
+            if (sd) sd.value = r.startDate;
+            if (ed) ed.value = r.endDate;
+            // ตั้ง hourly toggle ให้ตรงกับคำขอเดิม
+            if (!!r.isHourly !== isHourly) toggleHourly();
+            if (r.isHourly) {
+                const st = document.getElementById('req-start-time');
+                const et = document.getElementById('req-end-time');
+                if (st && r.startTime) st.value = r.startTime;
+                if (et && r.endTime) et.value = r.endTime;
+            }
+            const reason = document.getElementById('req-reason');
+            if (reason) reason.value = r.reason || '';
+            const att = document.getElementById('req-attachment');
+            if (att) att.value = r.attachment || '';
+            recalcHours();
+            setModalMode(true);
+            document.getElementById('leave-modal')?.classList.remove('hidden');
+        };
 
         window.submitLeaveRequest = async () => {
             if (!selectedLeaveType) { showToast('กรุณาเลือกประเภทการลา', 'error'); return; }
@@ -3674,6 +3870,7 @@
                 showToast('วันที่เลือกไม่มีชั่วโมงทำงาน (เป็นวันหยุดหรือนอกตารางงาน)', 'error'); return;
             }
             const hasOverlap = myRequests.some(r =>
+                r.id !== editingId &&
                 r.status !== 'cancelled' && r.status !== 'rejected' &&
                 r.startDate <= ed && r.endDate >= sd
             );
@@ -3700,25 +3897,43 @@
             const btn = document.getElementById('submit-leave-btn');
             btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังส่ง...';
             try {
-                await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'), {
-                    uid: user.uid, employeeName: profile.name, employeeCode: profile.employeeCode || '',
-                    branch: profile.branch || '', position: profile.position || '',
-                    photoURL: profile.photoURL || '',
-                    type: selectedLeaveType, typeName: getLeaveTypeInfo(selectedLeaveType).label,
-                    startDate: sd, endDate: ed, startTime: st, endTime: et,
-                    isHourly, totalHours: hrs,
-                    reason, attachment: document.getElementById('req-attachment')?.value.trim() || '',
-                    status: 'pending',
-                    createdAt: new Date().toISOString(),
-                });
-                showToast('✅ ส่งคำขอลาเรียบร้อยแล้ว', 'success');
-                // แจ้ง manager/admin ผ่าน LINE
-                notifyManagersNewLeave({
-                    uid: user.uid, employeeName: profile.name,
-                    branch: profile.branch||'', position: profile.position||'',
-                    typeName: getLeaveTypeInfo(selectedLeaveType).label,
-                    startDate: sd, endDate: ed, reason,
-                }).catch(()=>{});
+                if (editingId) {
+                    // แก้ไขคำขอ pending เดิม — เช็คอีกรอบกันสถานะเปลี่ยนระหว่างแก้
+                    const cur = myRequests.find(x => x.id === editingId);
+                    if (!cur || cur.status !== 'pending') {
+                        showToast('คำขอนี้ถูกดำเนินการไปแล้ว ไม่สามารถแก้ไขได้', 'error');
+                        closeLeaveModal();
+                        return;
+                    }
+                    await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', editingId), {
+                        type: selectedLeaveType, typeName: getLeaveTypeInfo(selectedLeaveType).label,
+                        startDate: sd, endDate: ed, startTime: st, endTime: et,
+                        isHourly, totalHours: hrs,
+                        reason, attachment: document.getElementById('req-attachment')?.value.trim() || '',
+                        editedAt: new Date().toISOString(),
+                    });
+                    showToast('✅ บันทึกการแก้ไขแล้ว', 'success');
+                } else {
+                    await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'), {
+                        uid: user.uid, employeeName: profile.name, employeeCode: profile.employeeCode || '',
+                        branch: profile.branch || '', position: profile.position || '',
+                        photoURL: profile.photoURL || '',
+                        type: selectedLeaveType, typeName: getLeaveTypeInfo(selectedLeaveType).label,
+                        startDate: sd, endDate: ed, startTime: st, endTime: et,
+                        isHourly, totalHours: hrs,
+                        reason, attachment: document.getElementById('req-attachment')?.value.trim() || '',
+                        status: 'pending',
+                        createdAt: new Date().toISOString(),
+                    });
+                    showToast('✅ ส่งคำขอลาเรียบร้อยแล้ว', 'success');
+                    // แจ้ง manager/admin ผ่าน LINE
+                    notifyManagersNewLeave({
+                        uid: user.uid, employeeName: profile.name,
+                        branch: profile.branch||'', position: profile.position||'',
+                        typeName: getLeaveTypeInfo(selectedLeaveType).label,
+                        startDate: sd, endDate: ed, reason,
+                    }).catch(()=>{});
+                }
                 closeLeaveModal();
                 selectedLeaveType = null;
                 document.getElementById('employee-form')?.reset?.();
@@ -3776,7 +3991,10 @@
                   <div class="text-right shrink-0">
                     <p class="font-black text-zinc-800 text-lg">${hoursToDisplay(r.totalHours, mySchedule)}</p>
                     <p class="text-[10px] text-zinc-400 font-bold uppercase">ชั่วโมงลา</p>
-                    ${canCancel ? `<button onclick="cancelLeaveRequest('${r.id}')" class="mt-2 text-[10px] text-red-500 hover:text-red-700 font-black uppercase bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-all">ยกเลิก</button>` : ''}
+                    <div class="flex gap-1.5 justify-end mt-2">
+                      ${r.status === 'pending' ? `<button onclick="editLeaveRequest('${r.id}')" class="text-[10px] text-zinc-600 hover:text-zinc-900 font-black uppercase bg-zinc-100 hover:bg-yellow-100 px-3 py-1 rounded-lg transition-all"><i class="fa-solid fa-pen mr-1"></i>แก้ไข</button>` : ''}
+                      ${canCancel ? `<button onclick="cancelLeaveRequest('${r.id}')" class="text-[10px] text-red-500 hover:text-red-700 font-black uppercase bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-all">ยกเลิก</button>` : ''}
+                    </div>
                   </div>
                 </div>`;
             }).join('');
@@ -3919,7 +4137,7 @@
             if (typeof unsubReq === 'function') unsubReq();
             if (typeof unsubBal === 'function') unsubBal();
             ['selectLeaveType','toggleHourly','openLeaveModal','closeLeaveModal',
-             'submitLeaveRequest','cancelLeaveRequest','leaveCalPrev','leaveCalNext',
+             'submitLeaveRequest','cancelLeaveRequest','editLeaveRequest','leaveCalPrev','leaveCalNext',
              'switchLeaveTab'].forEach(k => delete window[k]);
         };
     }
@@ -6558,11 +6776,17 @@ PAGES['staff-attendance'] = {
 
   <!-- Results -->
   <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
-    <div class="px-5 py-3 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
+    <div class="px-5 py-3 border-b border-zinc-100 flex flex-wrap gap-2 justify-between items-center bg-zinc-50">
       <p class="font-black text-zinc-700 text-sm uppercase tracking-widest"><i class="fa-solid fa-list-ul text-yellow-500 mr-2"></i> ผลลัพธ์</p>
-      <span class="text-xs font-bold text-zinc-500" id="sa-count">-</span>
+      <div class="flex items-center gap-3">
+        <div class="flex bg-zinc-200 p-0.5 rounded-lg">
+          <button id="sa-view-daily" onclick="saSetView('daily')" class="text-[11px] font-black px-3 py-1 rounded-md bg-white text-zinc-800 shadow-sm">รายวัน</button>
+          <button id="sa-view-summary" onclick="saSetView('summary')" class="text-[11px] font-black px-3 py-1 rounded-md text-zinc-500">สรุปรายคน</button>
+        </div>
+        <span class="text-xs font-bold text-zinc-500" id="sa-count">-</span>
+      </div>
     </div>
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto" id="sa-daily-wrap">
       <table class="w-full text-sm">
         <thead class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest">
           <tr>
@@ -6581,6 +6805,26 @@ PAGES['staff-attendance'] = {
         </tbody>
       </table>
     </div>
+    <div class="overflow-x-auto hidden" id="sa-summary-wrap">
+      <table class="w-full text-sm">
+        <thead class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest">
+          <tr>
+            <th class="px-4 py-2 text-left font-black">พนักงาน</th>
+            <th class="px-4 py-2 text-left font-black">สาขา</th>
+            <th class="px-4 py-2 text-center font-black">มาทำงาน</th>
+            <th class="px-4 py-2 text-center font-black">สาย</th>
+            <th class="px-4 py-2 text-center font-black">ออกก่อน</th>
+            <th class="px-4 py-2 text-center font-black">ไม่ครบ</th>
+            <th class="px-4 py-2 text-center font-black">ขาด</th>
+            <th class="px-4 py-2 text-center font-black">ลา</th>
+            <th class="px-4 py-2 text-center font-black">OT</th>
+            <th class="px-4 py-2 text-center font-black">นอกพื้นที่</th>
+            <th class="px-4 py-2 text-right font-black">รวม ชม.</th>
+          </tr>
+        </thead>
+        <tbody id="sa-summary-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>`,
 
@@ -6590,12 +6834,29 @@ PAGES['staff-attendance'] = {
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
 
-        // โหลดพนักงาน + schedule + leave (approved)
-        const [empSnap, schedSnap, leaveSnap] = await Promise.all([
+        // โหลดพนักงาน + schedule + leave (approved) + กะงาน + พิกัดสาขา
+        const [empSnap, schedSnap, leaveSnap, shiftSnap] = await Promise.all([
             getDocs(col('users')),
             getDocs(col('work_schedules')),
             getDocs(query(col('leave_requests'), where('status','==','approved'))),
+            getDocs(col('shifts')),
+            loadBranchLocations(),
         ]);
+        const shiftMap = {};
+        shiftSnap.forEach(d => shiftMap[d.id] = d.data());
+
+        // เวลาเข้า-ออก-พัก ที่มีผลจริงของวันนั้น (กะรายวัน > ตารางปกติ)
+        function effTimes(sched, dow) {
+            const sid = sched && sched.shiftByDay ? sched.shiftByDay[dow] : null;
+            const sh = sid ? shiftMap[sid] : null;
+            return {
+                start: (sh && sh.start) || (sched && sched.workStart) || null,
+                end:   (sh && sh.end)   || (sched && sched.workEnd)   || null,
+                breakMinutes: sh && sh.breakMinutes != null ? sh.breakMinutes
+                    : (sched && sched.breakMinutes != null ? sched.breakMinutes : 60),
+                shiftName: sh ? sh.name : null,
+            };
+        }
         const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(e => e.name);
         employees.sort((a,b)=>a.name.localeCompare(b.name,'th'));
         const empMap = Object.fromEntries(employees.map(e => [e.uid, e]));
@@ -6724,6 +6985,7 @@ PAGES['staff-attendance'] = {
                 const rows = [];
                 empsInScope.forEach(emp => {
                     const sched = schedMap[emp.uid] || null;
+                    const empOffice = officeFor(emp.branch);
                     const workDaySet = new Set((sched && sched.workDays) ? sched.workDays : [1,2,3,4,5]);
                     const personalHolSet = new Set((sched && Array.isArray(sched.holidays)) ? sched.holidays : []);
                     const empLeaves = leaveByUid[emp.uid] || {};
@@ -6744,19 +7006,20 @@ PAGES['staff-attendance'] = {
                             outLast = g.outs[g.outs.length-1];
                         }
 
+                        // เวลาอ้างอิงของวันนี้ — ใช้กะรายวันถ้ามี ไม่งั้นใช้ตารางปกติ
+                        const eff = effTimes(sched, dow);
                         let hours = 0, isLate = false, isEarlyOut = false;
                         if (inFirst && outLast) {
                             const ms = new Date(outLast.timestamp) - new Date(inFirst.timestamp);
-                            const brk = sched && sched.breakMinutes ? sched.breakMinutes : 60;
-                            hours = Math.max(0, ms/3600000 - brk/60);
+                            hours = Math.max(0, ms/3600000 - eff.breakMinutes/60);
                         }
-                        if (inFirst && sched && sched.workStart && isWorkDay) {
+                        if (inFirst && eff.start && isWorkDay) {
                             const inT = new Date(inFirst.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
-                            isLate = inT > sched.workStart;
+                            isLate = inT > eff.start;
                         }
-                        if (outLast && sched && sched.workEnd && isWorkDay) {
+                        if (outLast && eff.end && isWorkDay) {
                             const outT = new Date(outLast.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
-                            isEarlyOut = outT < sched.workEnd;
+                            isEarlyOut = outT < eff.end;
                         }
 
                         // กำหนดสถานะ
@@ -6815,27 +7078,28 @@ PAGES['staff-attendance'] = {
                             inLng:  inFirst && inFirst.lng != null ? inFirst.lng : null,
                             inAcc:  inFirst && inFirst.accuracy != null ? inFirst.accuracy : null,
                             inDist: inFirst && inFirst.lat != null && inFirst.lng != null
-                                ? (inFirst.distanceM != null ? inFirst.distanceM : Math.round(distanceMeters(inFirst.lat, inFirst.lng, OFFICE_LAT, OFFICE_LNG)))
+                                ? (inFirst.distanceM != null ? inFirst.distanceM : Math.round(distanceMeters(inFirst.lat, inFirst.lng, empOffice.lat, empOffice.lng)))
                                 : null,
                             inOutside: !!(inFirst && inFirst.lat != null && inFirst.lng != null && (
                                 inFirst.outsideOffice != null
                                     ? inFirst.outsideOffice
-                                    : distanceMeters(inFirst.lat, inFirst.lng, OFFICE_LAT, OFFICE_LNG) > OFFICE_RADIUS_M
+                                    : distanceMeters(inFirst.lat, inFirst.lng, empOffice.lat, empOffice.lng) > empOffice.radius
                             )),
                             inDenied:   !!(inFirst && inFirst.locationDenied),
                             outLat: outLast && outLast.lat != null ? outLast.lat : null,
                             outLng: outLast && outLast.lng != null ? outLast.lng : null,
                             outAcc: outLast && outLast.accuracy != null ? outLast.accuracy : null,
                             outDist: outLast && outLast.lat != null && outLast.lng != null
-                                ? (outLast.distanceM != null ? outLast.distanceM : Math.round(distanceMeters(outLast.lat, outLast.lng, OFFICE_LAT, OFFICE_LNG)))
+                                ? (outLast.distanceM != null ? outLast.distanceM : Math.round(distanceMeters(outLast.lat, outLast.lng, empOffice.lat, empOffice.lng)))
                                 : null,
                             outOutside: !!(outLast && outLast.lat != null && outLast.lng != null && (
                                 outLast.outsideOffice != null
                                     ? outLast.outsideOffice
-                                    : distanceMeters(outLast.lat, outLast.lng, OFFICE_LAT, OFFICE_LNG) > OFFICE_RADIUS_M
+                                    : distanceMeters(outLast.lat, outLast.lng, empOffice.lat, empOffice.lng) > empOffice.radius
                             )),
                             outDenied:  !!(outLast && outLast.locationDenied),
                             hours,
+                            shift: eff.shiftName,
                             complete: !!(inFirst && outLast),
                             isLate,
                             isEarlyOut,
@@ -6861,7 +7125,10 @@ PAGES['staff-attendance'] = {
         function renderRows(rows) {
             const tbody = document.getElementById('sa-tbody');
             const cnt = document.getElementById('sa-count');
-            if (cnt) cnt.textContent = rows.length + ' รายการ';
+            if (cnt) cnt.textContent = (typeof saView !== 'undefined' && saView === 'summary')
+                ? buildSummary(rows).length + ' คน'
+                : rows.length + ' รายการ';
+            if (typeof saView !== 'undefined' && saView === 'summary') renderSummary(rows);
 
             // stats
             const empSet = new Set(rows.filter(r=>r.complete||!r.isAbsent).map(r=>r.uid));
@@ -6909,7 +7176,7 @@ PAGES['staff-attendance'] = {
                 return `<tr class="sa-row border-b border-zinc-100 ${rowBg}">
                     <td class="px-4 py-3 whitespace-nowrap">
                         <div class="font-bold text-zinc-700 text-xs">${dateLabel}</div>
-                        <div class="text-[10px] font-black text-zinc-400 uppercase">${r.dow}</div>
+                        <div class="text-[10px] font-black text-zinc-400 uppercase">${r.dow}${r.shift ? ` · <span class="text-indigo-500">${r.shift}</span>` : ''}</div>
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-2">
@@ -6927,8 +7194,88 @@ PAGES['staff-attendance'] = {
             }).join('');
         }
 
+        // ── สรุปรายคน ─────────────────────────────────────────
+        let saView = 'daily';
+
+        function buildSummary(rows) {
+            const byUid = {};
+            rows.forEach(r => {
+                if (!byUid[r.uid]) byUid[r.uid] = {
+                    uid: r.uid, name: r.name, code: r.code, branch: r.branch, photoURL: r.photoURL,
+                    present: 0, late: 0, earlyOut: 0, incomplete: 0, absent: 0, leave: 0, ot: 0, outside: 0, hours: 0,
+                };
+                const s = byUid[r.uid];
+                if (r.isAbsent) s.absent++;
+                else if (r.isLeave) s.leave++;
+                else if (r.isOT) { s.ot++; s.hours += r.hours; }
+                else if (!r.complete) s.incomplete++;
+                else {
+                    s.present++;
+                    s.hours += r.hours;
+                    if (r.isLate) s.late++;
+                    if (r.isEarlyOut) s.earlyOut++;
+                }
+                if (r.inOutside || r.outOutside) s.outside++;
+            });
+            return Object.values(byUid).sort((a,b)=>a.name.localeCompare(b.name,'th'));
+        }
+
+        function renderSummary(rows) {
+            const tbody = document.getElementById('sa-summary-tbody');
+            if (!tbody) return;
+            const sums = buildSummary(rows);
+            if (!sums.length) {
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-16 text-zinc-300 font-bold text-sm">ไม่พบข้อมูลในช่วงนี้</td></tr>`;
+                return;
+            }
+            const numCell = (v, cls) => v > 0
+                ? `<td class="px-4 py-3 text-center font-black ${cls}">${v}</td>`
+                : `<td class="px-4 py-3 text-center text-zinc-300">-</td>`;
+            tbody.innerHTML = sums.map(s => {
+                const avatar = s.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=f4f4f5&color=27272a&bold=true`;
+                return `<tr class="sa-row border-b border-zinc-100">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <img src="${avatar}" onerror="handleImgError(this)" data-name="${s.name}" class="w-7 h-7 rounded-full object-cover border border-zinc-200">
+                            <div>
+                                <p class="font-bold text-zinc-800 text-xs">${s.name}</p>
+                                <p class="text-[10px] text-zinc-400 font-bold">${s.code||''}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-zinc-500 text-xs">${s.branch||'-'}</td>
+                    ${numCell(s.present, 'text-green-700')}
+                    ${numCell(s.late, 'text-orange-600')}
+                    ${numCell(s.earlyOut, 'text-pink-600')}
+                    ${numCell(s.incomplete, 'text-orange-500')}
+                    ${numCell(s.absent, 'text-red-600')}
+                    ${numCell(s.leave, 'text-blue-600')}
+                    ${numCell(s.ot, 'text-amber-600')}
+                    ${numCell(s.outside, 'text-red-500')}
+                    <td class="px-4 py-3 text-right font-black text-zinc-800">${s.hours.toFixed(1)}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.saSetView = (mode) => {
+            saView = mode;
+            const daily = mode === 'daily';
+            document.getElementById('sa-daily-wrap')?.classList.toggle('hidden', !daily);
+            document.getElementById('sa-summary-wrap')?.classList.toggle('hidden', daily);
+            const db_ = document.getElementById('sa-view-daily');
+            const sb_ = document.getElementById('sa-view-summary');
+            if (db_) db_.className = `text-[11px] font-black px-3 py-1 rounded-md ${daily?'bg-white text-zinc-800 shadow-sm':'text-zinc-500'}`;
+            if (sb_) sb_.className = `text-[11px] font-black px-3 py-1 rounded-md ${!daily?'bg-white text-zinc-800 shadow-sm':'text-zinc-500'}`;
+            if (!daily) renderSummary(lastRows);
+            const cnt = document.getElementById('sa-count');
+            if (cnt) cnt.textContent = daily
+                ? lastRows.length + ' รายการ'
+                : buildSummary(lastRows).length + ' คน';
+        };
+
         window.saExport = () => {
             if (!lastRows.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
+            if (saView === 'summary') { saExportSummary(); return; }
             const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','InLat','InLng','InAcc','InDistM','InOutside','ClockOut','OutLat','OutLng','OutAcc','OutDistM','OutOutside','InMapUrl','OutMapUrl','Hours','Status'];
             const lines = [header.join(',')];
             const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
@@ -6949,11 +7296,26 @@ PAGES['staff-attendance'] = {
             a.click(); URL.revokeObjectURL(url);
         };
 
+        function saExportSummary() {
+            const sums = buildSummary(lastRows);
+            const header = ['EmployeeCode','Name','Branch','PresentDays','Late','EarlyOut','Incomplete','Absent','LeaveDays','OTDays','OutsideOffice','TotalHours'];
+            const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
+            const lines = [header.join(',')];
+            sums.forEach(s => {
+                lines.push([s.code||'', esc(s.name), esc(s.branch), s.present, s.late, s.earlyOut, s.incomplete, s.absent, s.leave, s.ot, s.outside, s.hours.toFixed(2)].join(','));
+            });
+            const blob = new Blob(['﻿'+lines.join('\n')], { type:'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `attendance_summary_${document.getElementById('sa-from').value}_${document.getElementById('sa-to').value}.csv`;
+            a.click(); URL.revokeObjectURL(url);
+        }
+
         // โหลดอัตโนมัติครั้งแรก
         saLoad();
 
         return () => {
-            ['saSetRange','saLoad','saExport'].forEach(k => delete window[k]);
+            ['saSetRange','saLoad','saExport','saSetView'].forEach(k => delete window[k]);
         };
     }
 };
@@ -7334,6 +7696,892 @@ PAGES['staff-leaves'] = {
         return () => {
             ['slSetRange','slClearRange','slApply','slExport'].forEach(k => delete window[k]);
         };
+    }
+};
+
+// ================================================================
+// PAGE: certificate — หนังสือรับรองการทำงาน / เงินเดือน
+// ================================================================
+PAGES['certificate'] = {
+    title: 'หนังสือรับรอง',
+    html: `
+<div class="p-6 lg:p-8 max-w-3xl mx-auto">
+  <div class="mb-8">
+    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">หนังสือรับรอง</h2>
+    <p class="text-sm text-zinc-400 font-medium mt-0.5">ออกหนังสือรับรองการทำงาน / เงินเดือน แล้วพิมพ์หรือบันทึกเป็น PDF</p>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-zinc-200 p-6 mb-6">
+    <label class="block text-sm font-bold text-zinc-700 mb-3">เลือกประเภทหนังสือรับรอง</label>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <button id="cert-type-work" onclick="certSelect('work')"
+        class="p-4 rounded-xl border-2 border-yellow-500 bg-yellow-50 text-left transition-all">
+        <i class="fa-solid fa-briefcase text-yellow-600 mb-1 block text-lg"></i>
+        <p class="text-sm font-black text-zinc-800">หนังสือรับรองการทำงาน</p>
+        <p class="text-xs text-zinc-400 mt-0.5">ระบุตำแหน่ง วันที่เริ่มงาน (ไม่ระบุเงินเดือน)</p>
+      </button>
+      <button id="cert-type-salary" onclick="certSelect('salary')"
+        class="p-4 rounded-xl border-2 border-zinc-200 text-left transition-all hover:border-yellow-400">
+        <i class="fa-solid fa-money-bill-wave text-zinc-400 mb-1 block text-lg"></i>
+        <p class="text-sm font-black text-zinc-800">หนังสือรับรองเงินเดือน</p>
+        <p class="text-xs text-zinc-400 mt-0.5">ระบุตำแหน่ง + อัตราเงินเดือนปัจจุบัน</p>
+      </button>
+    </div>
+    <div class="mt-4">
+      <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วัตถุประสงค์ (แสดงท้ายหนังสือ — ไม่บังคับ)</label>
+      <input type="text" id="cert-purpose" placeholder="เช่น เพื่อใช้ประกอบการยื่นขอสินเชื่อ"
+        class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+    </div>
+    <button onclick="certPrint()"
+      class="mt-5 w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3.5 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
+      <i class="fa-solid fa-print mr-2"></i> พิมพ์ / บันทึกเป็น PDF
+    </button>
+    <p class="text-[10px] text-zinc-400 text-center mt-2">ในหน้าต่างพิมพ์ เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์</p>
+  </div>
+
+  <div class="bg-zinc-50 rounded-2xl border border-zinc-200 p-4">
+    <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-eye mr-1"></i> ตัวอย่าง</p>
+    <div id="cert-preview" class="bg-white border border-zinc-200 rounded-xl p-6 sm:p-10 text-sm leading-7 text-zinc-800 shadow-inner"></div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        let certType = 'work';
+
+        const COMPANY = {
+            name: 'Lamsang Group',
+            address: 'สำนักงานใหญ่ จังหวัดพิจิตร',
+        };
+
+        function thDateLong(ds) {
+            const d = ds ? new Date(ds + 'T12:00:00+07:00') : newDateTH();
+            return d.toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric', timeZone:'Asia/Bangkok' });
+        }
+
+        function buildCertHtml() {
+            const isSalary = certType === 'salary';
+            const purpose = document.getElementById('cert-purpose')?.value.trim();
+            const salaryTxt = profile.baseSalary
+                ? Number(profile.baseSalary).toLocaleString('th-TH') + ' บาท/เดือน'
+                : '- (ไม่มีข้อมูลในระบบ)';
+            const startTxt = profile.startDate ? thDateLong(profile.startDate) : '-';
+            const title = isSalary ? 'หนังสือรับรองเงินเดือน' : 'หนังสือรับรองการทำงาน';
+            return `
+                <div style="text-align:center;margin-bottom:24px;">
+                    <p style="font-size:1.3em;font-weight:900;letter-spacing:0.05em;">${COMPANY.name}</p>
+                    <p style="font-size:0.85em;color:#71717a;">${COMPANY.address}</p>
+                </div>
+                <p style="text-align:center;font-size:1.15em;font-weight:800;margin-bottom:28px;text-decoration:underline;text-underline-offset:6px;">${title}</p>
+                <p style="text-indent:3em;">
+                    หนังสือฉบับนี้ออกให้เพื่อรับรองว่า <b>${profile.name}</b>
+                    ${profile.idCard ? `เลขประจำตัวประชาชน ${profile.idCard}` : ''}
+                    ${profile.employeeCode ? `รหัสพนักงาน ${profile.employeeCode}` : ''}
+                    เป็นพนักงานของ ${COMPANY.name} จริง
+                    โดยปฏิบัติงานในตำแหน่ง <b>${profile.position || '-'}</b>
+                    สังกัด${profile.branch || 'สำนักงานใหญ่'}
+                    ตั้งแต่วันที่ ${startTxt} จนถึงปัจจุบัน
+                    ${isSalary ? `ได้รับอัตราเงินเดือนปัจจุบัน <b>${salaryTxt}</b>` : ''}
+                </p>
+                ${purpose ? `<p style="text-indent:3em;margin-top:12px;">หนังสือรับรองฉบับนี้ออกให้เพื่อ${purpose}</p>` : ''}
+                <p style="text-indent:3em;margin-top:12px;">ออกให้ ณ วันที่ ${thDateLong()}</p>
+                <div style="margin-top:64px;text-align:right;padding-right:32px;">
+                    <p>ลงชื่อ ........................................................</p>
+                    <p style="margin-top:8px;">( ........................................................ )</p>
+                    <p style="margin-top:4px;">ผู้มีอำนาจลงนาม / ฝ่ายทรัพยากรบุคคล</p>
+                </div>`;
+        }
+
+        function renderPreview() {
+            const el = document.getElementById('cert-preview');
+            if (el) el.innerHTML = buildCertHtml();
+        }
+
+        window.certSelect = (type) => {
+            certType = type;
+            const w = document.getElementById('cert-type-work');
+            const s = document.getElementById('cert-type-salary');
+            const on  = ['border-yellow-500','bg-yellow-50'];
+            const off = ['border-zinc-200'];
+            if (w && s) {
+                if (type === 'work') {
+                    w.classList.add(...on); w.classList.remove(...off);
+                    s.classList.remove(...on); s.classList.add(...off);
+                } else {
+                    s.classList.add(...on); s.classList.remove(...off);
+                    w.classList.remove(...on); w.classList.add(...off);
+                }
+            }
+            renderPreview();
+        };
+
+        window.certPrint = () => {
+            const titleTxt = certType === 'salary' ? 'หนังสือรับรองเงินเดือน' : 'หนังสือรับรองการทำงาน';
+            // สร้างผ่าน DOM แล้วเปิดในแท็บใหม่ผ่าน Blob URL — ไม่มี template ฝังในซอร์ส
+            const css = '@page { size: A4; margin: 25mm 20mm; } body { font-family: Sarabun, TH Sarabun New, Tahoma, sans-serif; font-size: 16px; line-height: 1.9; color: #18181b; }';
+            const html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>'
+                + titleTxt + ' - ' + (profile.name || '') + '</title><style>' + css
+                + '</style></head><body>' + buildCertHtml() + '</body></html>';
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const win = window.open(url, '_blank');
+            if (!win) { showToast('เบราว์เซอร์บล็อกป๊อปอัป — กรุณาอนุญาตก่อน', 'error'); URL.revokeObjectURL(url); return; }
+            setTimeout(() => { try { win.focus(); win.print(); } catch(_) {} }, 800);
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        };
+
+        document.getElementById('cert-purpose')?.addEventListener('input', renderPreview);
+        renderPreview();
+
+        return () => { ['certSelect','certPrint'].forEach(k => delete window[k]); };
+    }
+};
+
+// ================================================================
+// PAGE: team-calendar — Manager/Admin ปฏิทินทีม (ใครลาวันไหน)
+// ================================================================
+PAGES['team-calendar'] = {
+    title: 'ปฏิทินทีม',
+    html: `
+<style>
+.tc-cell { min-height: 92px; border-radius: 0.75rem; padding: 6px; background: #fff; border: 1px solid #f4f4f5; }
+.tc-cell.tc-today { border-color: #eab308; border-width: 2px; }
+.tc-cell.tc-hol { background: #fef2f2; }
+.tc-cell.tc-empty { background: transparent; border: none; }
+.tc-chip { display:flex; align-items:center; gap:3px; font-size:9px; font-weight:800; padding:1px 5px; border-radius:6px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width: 640px) { .tc-cell { min-height: 64px; padding: 3px; } .tc-chip { font-size:8px; } }
+</style>
+<div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <h2 class="text-lg sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ปฏิทินทีม</h2>
+      <p class="text-xs sm:text-sm text-zinc-400 font-medium mt-0.5">ภาพรวมการลาและวันหยุดของทั้งทีมในแต่ละเดือน</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <select id="tc-branch" onchange="tcRender()" class="border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+        <option value="">ทุกสาขา</option>
+      </select>
+      <button onclick="tcPrev()" class="w-9 h-9 rounded-full bg-zinc-100 hover:bg-yellow-400 flex items-center justify-center"><i class="fa-solid fa-chevron-left text-sm"></i></button>
+      <h3 class="font-black text-zinc-800 w-36 text-center text-sm" id="tc-month-title">-</h3>
+      <button onclick="tcNext()" class="w-9 h-9 rounded-full bg-zinc-100 hover:bg-yellow-400 flex items-center justify-center"><i class="fa-solid fa-chevron-right text-sm"></i></button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-6">
+    <div class="grid grid-cols-7 text-center text-[10px] font-black text-zinc-400 uppercase mb-2">
+      <div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>
+    </div>
+    <div id="tc-grid" class="grid grid-cols-7 gap-1.5">
+      <div class="col-span-7 text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
+    </div>
+    <div class="mt-4 pt-4 border-t border-zinc-100 flex flex-wrap gap-x-4 gap-y-2 justify-center text-[11px] font-bold text-zinc-500">
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-400"></div> ลาป่วย</div>
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-blue-400"></div> ลากิจ</div>
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-green-400"></div> ลาพักร้อน</div>
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-zinc-400"></div> ลาอื่นๆ</div>
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-amber-300"></div> รออนุมัติ</div>
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-100 border border-red-200"></div> วันหยุดนักขัตฤกษ์</div>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
+        const { collection, getDocs, query, where }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
+
+        const now = newDateTH();
+        let tcYear = now.getFullYear(), tcMonth = now.getMonth();
+
+        // โหลดพนักงาน + คำขอลา (pending + approved)
+        const [empSnap, lvSnap] = await Promise.all([
+            getDocs(col('users')),
+            getDocs(col('leave_requests')),
+        ]);
+        const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(e => e.name && e.status !== 'resigned');
+        const empMap = Object.fromEntries(employees.map(e => [e.uid, e]));
+        const leaves = lvSnap.docs.map(d => d.data()).filter(l => l.status === 'approved' || l.status === 'pending');
+
+        // populate branch filter
+        const branches = [...new Set(employees.map(e=>e.branch).filter(Boolean))].sort();
+        const brSel = document.getElementById('tc-branch');
+        if (brSel) branches.forEach(b => {
+            const o = document.createElement('option'); o.value = b; o.textContent = b; brSel.appendChild(o);
+        });
+
+        const typeColor = {
+            sick: 'bg-red-100 text-red-700', personal: 'bg-blue-100 text-blue-700',
+            vacation: 'bg-green-100 text-green-700', maternity: 'bg-pink-100 text-pink-700',
+            ordain: 'bg-orange-100 text-orange-700', military: 'bg-slate-100 text-slate-600',
+        };
+
+        window.tcRender = () => {
+            const grid = document.getElementById('tc-grid');
+            const title = document.getElementById('tc-month-title');
+            if (!grid) return;
+            const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+            if (title) title.textContent = months[tcMonth] + ' ' + (tcYear + 543);
+
+            const br = document.getElementById('tc-branch')?.value || '';
+            const uidsInBranch = br ? new Set(employees.filter(e=>e.branch===br).map(e=>e.uid)) : null;
+
+            // index: date → [{name, type, status}]
+            const dayMap = {};
+            leaves.forEach(l => {
+                if (!l.uid || !l.startDate || !l.endDate) return;
+                if (uidsInBranch && !uidsInBranch.has(l.uid)) return;
+                let d = parseDateTH(l.startDate);
+                const end = parseDateTH(l.endDate);
+                while (d <= end) {
+                    const ds = dateToTHStr(d);
+                    if (!dayMap[ds]) dayMap[ds] = [];
+                    const emp = empMap[l.uid];
+                    const nick = emp?.nickname || (l.employeeName||'').split(' ')[0];
+                    dayMap[ds].push({ name: nick, type: l.type, status: l.status });
+                    const nx = new Date(d); nx.setDate(nx.getDate()+1); d = nx;
+                }
+            });
+
+            const firstDay = new Date(tcYear, tcMonth, 1).getDay();
+            const daysInMonth = new Date(tcYear, tcMonth + 1, 0).getDate();
+            const todayStr = todayTH();
+            let html = '';
+            for (let i = 0; i < firstDay; i++) html += '<div class="tc-cell tc-empty"></div>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const ds = `${tcYear}-${String(tcMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const isHol = isPublicHoliday(ds);
+                const holName = isHol ? (getHolidayName(ds)||'หยุด') : '';
+                const items = dayMap[ds] || [];
+                let cls = 'tc-cell';
+                if (ds === todayStr) cls += ' tc-today';
+                if (isHol) cls += ' tc-hol';
+                const maxShow = 4;
+                const chips = items.slice(0, maxShow).map(it => {
+                    const c = it.status === 'pending' ? 'bg-amber-100 text-amber-700' : (typeColor[it.type] || 'bg-zinc-100 text-zinc-600');
+                    const mark = it.status === 'pending' ? '?' : '';
+                    return `<div class="tc-chip ${c}" title="${it.name}">${it.name}${mark}</div>`;
+                }).join('');
+                const more = items.length > maxShow ? `<div class="tc-chip bg-zinc-100 text-zinc-500">+${items.length-maxShow} คน</div>` : '';
+                html += `<div class="${cls}">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-black ${isHol?'text-red-600':'text-zinc-700'}">${d}</span>
+                        ${isHol ? `<span class="text-[8px] font-bold text-red-400 text-right leading-tight max-w-[70%] truncate" title="${holName}">${holName}</span>` : ''}
+                    </div>
+                    ${chips}${more}
+                </div>`;
+            }
+            grid.innerHTML = html;
+        };
+
+        window.tcPrev = () => { tcMonth--; if (tcMonth < 0) { tcMonth = 11; tcYear--; } tcRender(); };
+        window.tcNext = () => { tcMonth++; if (tcMonth > 11) { tcMonth = 0; tcYear++; } tcRender(); };
+
+        tcRender();
+
+        return () => { ['tcRender','tcPrev','tcNext'].forEach(k => delete window[k]); };
+    }
+};
+
+// ================================================================
+// PAGE: review-admin — Manager/Admin ประเมินผลงานพนักงาน
+// ================================================================
+const REVIEW_DEFAULT_CRITERIA = [
+    'คุณภาพงาน', 'ความรับผิดชอบ & ตรงต่อเวลา', 'การทำงานร่วมกับผู้อื่น', 'ความคิดริเริ่ม & การแก้ปัญหา', 'การปฏิบัติตามระเบียบ',
+];
+
+PAGES['review-admin'] = {
+    title: 'ประเมินผลงาน',
+    html: `
+<div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ประเมินผลงาน</h2>
+      <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้างรอบประเมินและให้คะแนนพนักงาน</p>
+    </div>
+    <div class="flex gap-2">
+      <select id="rv-cycle" onchange="rvLoadCycle()" class="border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+        <option value="">— เลือกรอบประเมิน —</option>
+      </select>
+      <button onclick="rvNewCycle()" class="bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-4 py-2 rounded-xl text-xs uppercase">
+        <i class="fa-solid fa-plus mr-1"></i> รอบใหม่
+      </button>
+    </div>
+  </div>
+  <div id="rv-emp-list" class="space-y-3">
+    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-ranking-star text-5xl mb-3"></i><p class="font-bold text-sm">เลือกหรือสร้างรอบประเมินเพื่อเริ่มต้น</p></div>
+  </div>
+</div>
+
+<!-- Score modal -->
+<div id="rv-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="rvCloseModal()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <div class="bg-zinc-900 px-7 py-5">
+      <h3 class="font-black text-white text-lg" id="rv-modal-title">ประเมิน</h3>
+      <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest" id="rv-modal-sub">-</p>
+    </div>
+    <div class="p-7 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div id="rv-criteria"></div>
+      <div>
+        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ความเห็นเพิ่มเติม</label>
+        <textarea id="rv-comment" rows="3" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:border-yellow-500 focus:outline-none resize-none" placeholder="จุดเด่น สิ่งที่ควรพัฒนา..."></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="rvCloseModal()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm">ยกเลิก</button>
+        <button id="rv-save-btn" onclick="rvSave()" class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm">บันทึกผลประเมิน</button>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
+        const { collection, doc, getDocs, addDoc, setDoc, query, orderBy }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
+
+        let cycles = [], currentCycle = null, reviews = {}, scoringUid = null, tempScores = {};
+
+        const empSnap = await getDocs(col('users'));
+        const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() }))
+            .filter(e => e.name && e.status !== 'resigned')
+            .sort((a,b) => a.name.localeCompare(b.name,'th'));
+
+        async function loadCycles() {
+            const snap = await getDocs(query(col('review_cycles'), orderBy('createdAt','desc')));
+            cycles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const sel = document.getElementById('rv-cycle');
+            if (sel) {
+                sel.innerHTML = '<option value="">— เลือกรอบประเมิน —</option>';
+                cycles.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = c.id; o.textContent = c.name;
+                    sel.appendChild(o);
+                });
+                if (cycles.length) { sel.value = cycles[0].id; }
+            }
+        }
+        await loadCycles();
+
+        window.rvNewCycle = async () => {
+            const now = newDateTH();
+            const defaultName = `ประเมินผลงาน ${now.getMonth() < 6 ? 'ครึ่งปีแรก' : 'ครึ่งปีหลัง'} ${now.getFullYear()+543}`;
+            const name = prompt('ชื่อรอบประเมิน', defaultName);
+            if (!name) return;
+            try {
+                await addDoc(col('review_cycles'), {
+                    name: name.trim(), year: now.getFullYear(),
+                    criteria: REVIEW_DEFAULT_CRITERIA,
+                    status: 'open',
+                    createdAt: new Date().toISOString(), createdBy: profile.name,
+                });
+                showToast('✅ สร้างรอบประเมินแล้ว', 'success');
+                await loadCycles();
+                rvLoadCycle();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+        };
+
+        window.rvLoadCycle = async () => {
+            const cid = document.getElementById('rv-cycle')?.value;
+            currentCycle = cycles.find(c => c.id === cid) || null;
+            const el = document.getElementById('rv-emp-list');
+            if (!el) return;
+            if (!currentCycle) {
+                el.innerHTML = `<div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-ranking-star text-5xl mb-3"></i><p class="font-bold text-sm">เลือกหรือสร้างรอบประเมินเพื่อเริ่มต้น</p></div>`;
+                return;
+            }
+            el.innerHTML = `<div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>`;
+            // โหลดผลประเมินของรอบนี้
+            const snap = await getDocs(col('reviews'));
+            reviews = {};
+            snap.forEach(d => {
+                const r = d.data();
+                if (r.cycleId === currentCycle.id) reviews[r.uid] = r;
+            });
+            renderEmpList();
+        };
+
+        function renderEmpList() {
+            const el = document.getElementById('rv-emp-list');
+            if (!el || !currentCycle) return;
+            const doneCount = employees.filter(e => reviews[e.uid]).length;
+            const header = `<div class="bg-zinc-900 rounded-2xl p-4 flex items-center justify-between text-white mb-1">
+                <p class="font-black text-sm">${currentCycle.name}</p>
+                <p class="text-xs font-bold text-yellow-400">ประเมินแล้ว ${doneCount}/${employees.length} คน</p>
+            </div>`;
+            el.innerHTML = header + employees.map(e => {
+                const rv = reviews[e.uid];
+                const avatar = e.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name)}&background=f4f4f5&color=27272a&bold=true`;
+                const scoreBadge = rv
+                    ? `<div class="text-right mr-3">
+                         <p class="font-black text-lg ${rv.avg >= 4 ? 'text-green-600' : rv.avg >= 3 ? 'text-yellow-600' : 'text-red-500'}">${rv.avg.toFixed(1)}</p>
+                         <p class="text-[9px] text-zinc-400 font-bold uppercase">คะแนนเฉลี่ย</p>
+                       </div>`
+                    : '';
+                return `<div class="bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-3">
+                    <img src="${avatar}" onerror="handleImgError(this)" data-name="${e.name}" class="w-11 h-11 rounded-2xl object-cover border border-zinc-200 shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-black text-zinc-800 text-sm truncate">${e.name}</p>
+                        <p class="text-[10px] text-zinc-400 font-bold">${e.position || ''} · ${e.branch || ''}</p>
+                    </div>
+                    ${scoreBadge}
+                    <button onclick="rvOpenScore('${e.uid}')"
+                        class="${rv ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600' : 'bg-yellow-500 hover:bg-yellow-400 text-zinc-900'} font-black px-4 py-2 rounded-xl text-xs uppercase shrink-0">
+                        ${rv ? '<i class="fa-solid fa-pen mr-1"></i>แก้ไข' : '<i class="fa-solid fa-star mr-1"></i>ประเมิน'}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        window.rvOpenScore = (uid) => {
+            const emp = employees.find(e => e.uid === uid);
+            if (!emp || !currentCycle) return;
+            scoringUid = uid;
+            const existing = reviews[uid];
+            tempScores = existing ? { ...existing.scores } : {};
+            document.getElementById('rv-modal-title').textContent = 'ประเมิน: ' + emp.name;
+            document.getElementById('rv-modal-sub').textContent = currentCycle.name;
+            document.getElementById('rv-comment').value = existing?.comment || '';
+            renderCriteria();
+            document.getElementById('rv-modal')?.classList.remove('hidden');
+        };
+
+        function renderCriteria() {
+            const el = document.getElementById('rv-criteria');
+            if (!el || !currentCycle) return;
+            const criteria = currentCycle.criteria || REVIEW_DEFAULT_CRITERIA;
+            el.innerHTML = criteria.map((c, i) => {
+                const cur = tempScores[i] || 0;
+                const stars = [1,2,3,4,5].map(n => `
+                    <button onclick="rvSetScore(${i},${n})"
+                        class="w-9 h-9 rounded-lg text-lg transition-all ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}">
+                        <i class="fa-solid fa-star"></i>
+                    </button>`).join('');
+                return `<div class="py-2 border-b border-zinc-100 last:border-0">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <p class="text-sm font-bold text-zinc-700">${i+1}. ${c}</p>
+                        <div class="flex">${stars}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        window.rvSetScore = (i, n) => { tempScores[i] = n; renderCriteria(); };
+
+        window.rvCloseModal = () => {
+            document.getElementById('rv-modal')?.classList.add('hidden');
+            scoringUid = null; tempScores = {};
+        };
+
+        window.rvSave = async () => {
+            if (!scoringUid || !currentCycle) return;
+            const criteria = currentCycle.criteria || REVIEW_DEFAULT_CRITERIA;
+            const missing = criteria.findIndex((_, i) => !tempScores[i]);
+            if (missing !== -1) { showToast(`กรุณาให้คะแนนข้อ ${missing+1}`, 'error'); return; }
+            const emp = employees.find(e => e.uid === scoringUid);
+            const vals = criteria.map((_, i) => tempScores[i]);
+            const avg = Math.round(vals.reduce((s,v)=>s+v,0) / vals.length * 100) / 100;
+            const btn = document.getElementById('rv-save-btn');
+            btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+            try {
+                await setDoc(doc(db,'artifacts',APP_ID,'public','data','reviews', `${currentCycle.id}_${scoringUid}`), {
+                    cycleId: currentCycle.id, cycleName: currentCycle.name,
+                    uid: scoringUid, employeeName: emp?.name || '', employeeCode: emp?.employeeCode || '',
+                    branch: emp?.branch || '', position: emp?.position || '',
+                    criteria, scores: { ...tempScores }, avg,
+                    comment: document.getElementById('rv-comment')?.value.trim() || '',
+                    reviewedBy: profile.name, reviewedAt: new Date().toISOString(),
+                });
+                showToast('✅ บันทึกผลประเมินแล้ว', 'success');
+                rvCloseModal();
+                rvLoadCycle();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'บันทึกผลประเมิน'; }
+        };
+
+        if (cycles.length) rvLoadCycle();
+
+        return () => {
+            ['rvNewCycle','rvLoadCycle','rvOpenScore','rvSetScore','rvCloseModal','rvSave'].forEach(k => delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: my-review — พนักงานดูผลประเมินของตัวเอง
+// ================================================================
+PAGES['my-review'] = {
+    title: 'ผลประเมินของฉัน',
+    html: `
+<div class="p-6 lg:p-8 max-w-3xl mx-auto">
+  <div class="mb-8">
+    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ผลประเมินของฉัน</h2>
+    <p class="text-sm text-zinc-400 font-medium mt-0.5">ผลการประเมินผลงานในแต่ละรอบ</p>
+  </div>
+  <div id="mr-list" class="space-y-4">
+    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl"></i></div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const snap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','reviews'));
+        const myReviews = snap.docs.map(d => d.data())
+            .filter(r => r.uid === user.uid)
+            .sort((a,b) => (b.reviewedAt||'').localeCompare(a.reviewedAt||''));
+
+        const el = document.getElementById('mr-list');
+        if (el) {
+            if (!myReviews.length) {
+                el.innerHTML = `<div class="text-center py-16 text-zinc-300">
+                    <i class="fa-regular fa-folder-open text-5xl mb-3"></i>
+                    <p class="font-bold text-sm">ยังไม่มีผลประเมิน</p>
+                </div>`;
+            } else {
+                el.innerHTML = myReviews.map(r => {
+                    const criteria = r.criteria || REVIEW_DEFAULT_CRITERIA;
+                    const rows = criteria.map((c, i) => {
+                        const sc = r.scores?.[i] || 0;
+                        const stars = [1,2,3,4,5].map(n =>
+                            `<i class="fa-solid fa-star ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
+                        return `<div class="flex items-center justify-between py-1.5 border-b border-zinc-50 last:border-0">
+                            <span class="text-xs font-bold text-zinc-600">${c}</span>
+                            <span class="text-sm">${stars}</span>
+                        </div>`;
+                    }).join('');
+                    const avgColor = r.avg >= 4 ? 'text-green-600' : r.avg >= 3 ? 'text-yellow-600' : 'text-red-500';
+                    return `<div class="bg-white rounded-2xl border border-zinc-200 p-6">
+                        <div class="flex items-center justify-between mb-4 pb-4 border-b border-zinc-100">
+                            <div>
+                                <p class="font-black text-zinc-800">${r.cycleName || 'รอบประเมิน'}</p>
+                                <p class="text-[10px] text-zinc-400 font-bold">ประเมินโดย ${r.reviewedBy || '-'} · ${r.reviewedAt ? new Date(r.reviewedAt).toLocaleDateString('th-TH',{timeZone:'Asia/Bangkok'}) : ''}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-3xl font-black ${avgColor}">${(r.avg||0).toFixed(1)}</p>
+                                <p class="text-[9px] text-zinc-400 font-bold uppercase">เต็ม 5.0</p>
+                            </div>
+                        </div>
+                        ${rows}
+                        ${r.comment ? `<div class="mt-4 bg-zinc-50 rounded-xl p-4 border border-zinc-100">
+                            <p class="text-[10px] font-black text-zinc-400 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจากหัวหน้า</p>
+                            <p class="text-sm text-zinc-700">${r.comment}</p>
+                        </div>` : ''}
+                    </div>`;
+                }).join('');
+            }
+        }
+        return () => {};
+    }
+};
+
+// ================================================================
+// PAGE: shift-admin — Admin จัดการกะงาน (templates + assign รายวัน)
+// ================================================================
+PAGES['shift-admin'] = {
+    title: 'จัดการกะงาน',
+    html: `
+<div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <div class="mb-8">
+    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">จัดการกะงาน</h2>
+    <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้างกะงานและกำหนดกะให้พนักงานแต่ละวันในสัปดาห์</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Shift templates -->
+    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
+      <h3 class="font-black text-zinc-800 mb-4 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-layer-group text-yellow-500 mr-2"></i> กะงานทั้งหมด
+      </h3>
+      <div id="sh-list" class="space-y-2 mb-4">
+        <div class="text-center py-6 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
+      </div>
+      <div class="border-t border-zinc-100 pt-4 space-y-3">
+        <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest">เพิ่มกะใหม่</p>
+        <input type="text" id="sh-name" placeholder="ชื่อกะ เช่น กะเช้า / กะบ่าย / กะดึก"
+          class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-[9px] font-black text-zinc-400 uppercase mb-1">เข้า</label>
+            <input type="time" id="sh-start" value="08:00" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-sm focus:border-yellow-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-[9px] font-black text-zinc-400 uppercase mb-1">ออก</label>
+            <input type="time" id="sh-end" value="17:00" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-sm focus:border-yellow-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-[9px] font-black text-zinc-400 uppercase mb-1">พัก (นาที)</label>
+            <input type="number" id="sh-break" value="60" min="0" step="15" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-sm focus:border-yellow-500 focus:outline-none">
+          </div>
+        </div>
+        <button onclick="shAdd()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-2.5 rounded-xl text-xs uppercase">
+          <i class="fa-solid fa-plus mr-1"></i> เพิ่มกะ
+        </button>
+      </div>
+    </div>
+
+    <!-- Assign per employee -->
+    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
+      <h3 class="font-black text-zinc-800 mb-4 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-user-clock text-yellow-500 mr-2"></i> กำหนดกะให้พนักงาน
+      </h3>
+      <select id="sh-emp" onchange="shLoadEmp()" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none mb-4">
+        <option value="">— เลือกพนักงาน —</option>
+      </select>
+      <div id="sh-assign" class="space-y-2">
+        <p class="text-center py-8 text-zinc-300 text-sm font-bold">เลือกพนักงานเพื่อกำหนดกะ</p>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin') { navigateTo('home'); return; }
+        const { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
+
+        let shifts = [];
+        let selEmpSched = null;
+
+        const empSnap = await getDocs(col('users'));
+        const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() }))
+            .filter(e => e.name && e.status !== 'resigned')
+            .sort((a,b) => a.name.localeCompare(b.name,'th'));
+        const empSel = document.getElementById('sh-emp');
+        if (empSel) employees.forEach(e => {
+            const o = document.createElement('option');
+            o.value = e.uid; o.textContent = `${e.name}${e.employeeCode?` (${e.employeeCode})`:''}`;
+            empSel.appendChild(o);
+        });
+
+        async function loadShifts() {
+            const snap = await getDocs(col('shifts'));
+            shifts = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a,b) => (a.start||'').localeCompare(b.start||''));
+            renderShifts();
+        }
+
+        function renderShifts() {
+            const el = document.getElementById('sh-list');
+            if (!el) return;
+            if (!shifts.length) {
+                el.innerHTML = '<p class="text-center py-4 text-zinc-300 text-sm font-bold">ยังไม่มีกะงาน</p>';
+                return;
+            }
+            el.innerHTML = shifts.map(s => `
+                <div class="flex items-center justify-between bg-zinc-50 rounded-xl px-4 py-3 border border-zinc-100">
+                    <div>
+                        <p class="font-black text-zinc-800 text-sm">${s.name}</p>
+                        <p class="text-[10px] text-zinc-400 font-bold">${s.start} – ${s.end} · พัก ${s.breakMinutes ?? 60} นาที</p>
+                    </div>
+                    <button onclick="shDelete('${s.id}')" class="text-red-400 hover:text-red-600 px-2"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>`).join('');
+        }
+
+        window.shAdd = async () => {
+            const name = document.getElementById('sh-name')?.value.trim();
+            const start = document.getElementById('sh-start')?.value;
+            const end = document.getElementById('sh-end')?.value;
+            const brk = parseInt(document.getElementById('sh-break')?.value) || 0;
+            if (!name || !start || !end) { showToast('กรุณากรอกชื่อกะและเวลาให้ครบ', 'error'); return; }
+            try {
+                await addDoc(col('shifts'), { name, start, end, breakMinutes: brk, createdAt: new Date().toISOString() });
+                document.getElementById('sh-name').value = '';
+                showToast('✅ เพิ่มกะแล้ว', 'success');
+                await loadShifts();
+                if (document.getElementById('sh-emp')?.value) shLoadEmp();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+        };
+
+        window.shDelete = async (id) => {
+            const s = shifts.find(x => x.id === id);
+            if (!s || !confirm(`ลบกะ "${s.name}"? พนักงานที่ใช้กะนี้จะกลับไปใช้ตารางปกติ`)) return;
+            try {
+                await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','shifts', id));
+                showToast('ลบกะแล้ว', 'info');
+                await loadShifts();
+                if (document.getElementById('sh-emp')?.value) shLoadEmp();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+        };
+
+        const DOW_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+
+        window.shLoadEmp = async () => {
+            const uid = document.getElementById('sh-emp')?.value;
+            const el = document.getElementById('sh-assign');
+            if (!el) return;
+            if (!uid) {
+                el.innerHTML = '<p class="text-center py-8 text-zinc-300 text-sm font-bold">เลือกพนักงานเพื่อกำหนดกะ</p>';
+                return;
+            }
+            el.innerHTML = '<div class="text-center py-6 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+            const snap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', uid));
+            selEmpSched = snap.exists() ? snap.data() : {};
+            const shiftByDay = selEmpSched.shiftByDay || {};
+            const workDaySet = new Set(selEmpSched.workDays || [1,2,3,4,5]);
+            const opts = (cur) => `<option value="">ตารางปกติ (${selEmpSched.workStart||'08:00'}–${selEmpSched.workEnd||'17:00'})</option>` +
+                shifts.map(s => `<option value="${s.id}" ${cur===s.id?'selected':''}>${s.name} (${s.start}–${s.end})</option>`).join('');
+            el.innerHTML = DOW_FULL.map((d, i) => `
+                <div class="flex items-center gap-3 ${!workDaySet.has(i)?'opacity-40':''}">
+                    <span class="w-16 text-xs font-black ${!workDaySet.has(i)?'text-zinc-400':'text-zinc-700'}">${d}${!workDaySet.has(i)?' (หยุด)':''}</span>
+                    <select id="sh-day-${i}" class="flex-1 border-2 border-zinc-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:border-yellow-500 focus:outline-none" ${!workDaySet.has(i)?'disabled':''}>
+                        ${opts(shiftByDay[i] || '')}
+                    </select>
+                </div>`).join('') + `
+                <button onclick="shSaveAssign()" class="w-full mt-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-2.5 rounded-xl text-xs uppercase">
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการกำหนดกะ
+                </button>`;
+        };
+
+        window.shSaveAssign = async () => {
+            const uid = document.getElementById('sh-emp')?.value;
+            if (!uid) return;
+            const shiftByDay = {};
+            for (let i = 0; i <= 6; i++) {
+                const v = document.getElementById('sh-day-'+i)?.value;
+                if (v) shiftByDay[i] = v;
+            }
+            try {
+                await setDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', uid),
+                    { shiftByDay }, { merge: true });
+                showToast('✅ บันทึกกะของพนักงานแล้ว', 'success');
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+        };
+
+        await loadShifts();
+
+        return () => {
+            ['shAdd','shDelete','shLoadEmp','shSaveAssign'].forEach(k => delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: branch-locations — Admin ตั้งพิกัด GPS + รัศมีต่อสาขา
+// ================================================================
+PAGES['branch-locations'] = {
+    title: 'พิกัดสาขา & GPS',
+    html: `
+<div class="p-6 lg:p-8 max-w-4xl mx-auto">
+  <div class="mb-8">
+    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">พิกัดสาขา & GPS</h2>
+    <p class="text-sm text-zinc-400 font-medium mt-0.5">กำหนดตำแหน่งและรัศมีที่อนุญาตให้ลงเวลาของแต่ละสาขา</p>
+  </div>
+  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-800 font-medium">
+    <i class="fa-solid fa-circle-info mr-1"></i>
+    สาขาที่ไม่ได้ตั้งพิกัด จะใช้พิกัดสำนักงานใหญ่เริ่มต้น (16.41328, 100.16661 · รัศมี 100 ม.)
+    — หาพิกัดได้จาก Google Maps: คลิกขวาบนแผนที่ → คัดลอกตัวเลขพิกัด
+  </div>
+  <div id="bl-list" class="space-y-4">
+    <div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin') { navigateTo('home'); return; }
+        const { collection, doc, getDocs, setDoc, deleteDoc }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        // รวมชื่อสาขาจาก users + ที่เคยตั้งค่าไว้
+        const empSnap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','users'));
+        const branches = [...new Set(empSnap.docs.map(d=>d.data().branch).filter(Boolean))].sort();
+        const locMap = await loadBranchLocations(true);
+        Object.keys(locMap).forEach(b => { if (!branches.includes(b)) branches.push(b); });
+
+        function render() {
+            const el = document.getElementById('bl-list');
+            if (!el) return;
+            if (!branches.length) {
+                el.innerHTML = '<div class="text-center py-12 text-zinc-300 font-bold text-sm">ยังไม่มีสาขาในระบบ</div>';
+                return;
+            }
+            el.innerHTML = branches.map((b, i) => {
+                const loc = locMap[b] || {};
+                const hasLoc = loc.lat != null && loc.lng != null;
+                return `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl ${hasLoc?'bg-green-100 text-green-600':'bg-zinc-100 text-zinc-400'} flex items-center justify-center">
+                        <i class="fa-solid fa-building"></i>
+                      </div>
+                      <div>
+                        <p class="font-black text-zinc-800">${b}</p>
+                        <p class="text-[10px] font-bold ${hasLoc?'text-green-600':'text-zinc-400'} uppercase">
+                          ${hasLoc ? '✓ ตั้งพิกัดแล้ว' : 'ใช้พิกัดเริ่มต้น (สำนักงานใหญ่)'}
+                        </p>
+                      </div>
+                    </div>
+                    ${hasLoc ? `<a href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank" class="text-xs font-bold text-yellow-600 hover:text-yellow-700"><i class="fa-solid fa-map-location-dot mr-1"></i>ดูแผนที่</a>` : ''}
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="sm:col-span-2">
+                      <label class="block text-[10px] font-black text-zinc-500 uppercase mb-1">พิกัด (lat, lng) — วางจาก Google Maps ได้เลย</label>
+                      <input type="text" id="bl-coord-${i}" value="${hasLoc ? loc.lat+', '+loc.lng : ''}" placeholder="16.4132778, 100.1666111"
+                        class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-mono focus:border-yellow-500 focus:outline-none">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-black text-zinc-500 uppercase mb-1">รัศมี (เมตร)</label>
+                      <input type="number" id="bl-radius-${i}" value="${loc.radius || 100}" min="20" step="10"
+                        class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-mono focus:border-yellow-500 focus:outline-none">
+                    </div>
+                    <div class="flex items-end gap-2">
+                      <button onclick="blSave(${i})" class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-2 rounded-xl text-xs uppercase">บันทึก</button>
+                      ${hasLoc ? `<button onclick="blClear(${i})" title="ลบพิกัด" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    </div>
+                  </div>
+                  <button onclick="blUseHere(${i})" class="mt-2 text-[10px] font-bold text-zinc-400 hover:text-yellow-600">
+                    <i class="fa-solid fa-location-crosshairs mr-1"></i> ใช้ตำแหน่งปัจจุบันของฉัน
+                  </button>
+                </div>`;
+            }).join('');
+        }
+
+        window.blSave = async (i) => {
+            const b = branches[i];
+            const raw = document.getElementById('bl-coord-'+i)?.value.trim();
+            const radius = parseInt(document.getElementById('bl-radius-'+i)?.value) || 100;
+            const m = raw ? raw.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/) : null;
+            if (!m) { showToast('รูปแบบพิกัดไม่ถูกต้อง — ใส่เป็น lat, lng เช่น 16.41328, 100.16661', 'error'); return; }
+            const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { showToast('ค่าพิกัดอยู่นอกช่วงที่ถูกต้อง', 'error'); return; }
+            try {
+                await setDoc(doc(db,'artifacts',APP_ID,'public','data','branch_locations', b), { lat, lng, radius, updatedAt: new Date().toISOString(), updatedBy: profile.name });
+                locMap[b] = { lat, lng, radius };
+                _branchLocCache = locMap;
+                showToast('✅ บันทึกพิกัด '+b+' แล้ว', 'success');
+                render();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+        };
+
+        window.blClear = async (i) => {
+            const b = branches[i];
+            if (!confirm('ลบพิกัดของ "'+b+'" และกลับไปใช้ค่าเริ่มต้น?')) return;
+            try {
+                await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','branch_locations', b));
+                delete locMap[b];
+                _branchLocCache = locMap;
+                showToast('ลบพิกัดแล้ว', 'info');
+                render();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+        };
+
+        window.blUseHere = (i) => {
+            if (!navigator.geolocation) { showToast('เบราว์เซอร์ไม่รองรับ GPS', 'error'); return; }
+            showToast('กำลังขอตำแหน่ง...', 'info');
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    const el = document.getElementById('bl-coord-'+i);
+                    if (el) el.value = pos.coords.latitude.toFixed(7) + ', ' + pos.coords.longitude.toFixed(7);
+                    showToast('ใส่พิกัดปัจจุบันแล้ว — กดบันทึกเพื่อยืนยัน', 'success');
+                },
+                err => showToast('ขอตำแหน่งไม่สำเร็จ: '+err.message, 'error'),
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
+        };
+
+        render();
+
+        return () => { ['blSave','blClear','blUseHere'].forEach(k => delete window[k]); };
     }
 };
 
