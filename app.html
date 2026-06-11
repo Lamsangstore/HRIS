@@ -882,6 +882,8 @@
                 { id: 'leave',         icon: 'fa-calendar-check',        label: 'การลา & วันหยุด',        show: true },
                 { id: 'leave-mgmt',    icon: 'fa-clipboard-list',        label: 'อนุมัติการลา',           show: isManager },
                 { id: 'time-approve',  icon: 'fa-user-clock',            label: 'อนุมัติเวลา',            show: isManager },
+                { id: 'staff-attendance', icon: 'fa-clock-rotate-left',  label: 'ประวัติเวลา (ทีม)',      show: isManager },
+                { id: 'staff-leaves',  icon: 'fa-calendar-days',         label: 'ประวัติการลา (ทีม)',     show: isManager },
                 { id: 'profile',       icon: 'fa-id-badge',              label: 'โปรไฟล์ของฉัน',          show: true },
                 { id: 'payslip',       icon: 'fa-file-invoice',          label: 'สลิปเงินเดือน',          show: true },
                 { id: 'ot-claim',      icon: 'fa-business-time',         label: 'เบิก OT & Commission',   show: true },
@@ -2112,8 +2114,8 @@
                             <h3 class="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2 mt-2">Current Time</h3>
                             <div class="text-3xl sm:text-4xl font-black text-zinc-900 my-3 sm:my-4 tracking-wide tabular-nums" id="current-time-display">--:--:--</div>
                             <div class="text-sm font-medium text-zinc-500 mb-4 sm:mb-6" id="current-date-display">กำลังโหลด...</div>
-                            <div class="bg-zinc-50 rounded-xl p-3 mb-5 sm:mb-8 text-xs font-bold flex items-center justify-center text-zinc-600 border border-zinc-100">
-                                <i class="fa-solid fa-location-dot text-yellow-500 mr-2 text-lg"></i>
+                            <div class="bg-zinc-50 rounded-xl p-3 mb-5 sm:mb-8 text-xs font-bold flex items-center justify-center text-zinc-600 border border-zinc-100 cursor-pointer hover:bg-zinc-100" onclick="requestLocation(true)" title="แตะเพื่อขอตำแหน่ง GPS ใหม่">
+                                <i class="fa-solid fa-location-dot text-yellow-500 mr-2 text-lg" id="loc-icon"></i>
                                 <span id="location-status">กำลังโหลดตำแหน่ง...</span>
                             </div>
                             <div class="flex flex-col space-y-3">
@@ -2206,7 +2208,105 @@
                     return map;
                 }
 
-                document.getElementById('location-status').textContent = profile.branch || 'Lamsang Group';
+                // ── GPS Location ────────────────────────────────────
+                let currentPosition = null;     // {lat, lng, accuracy, ts}
+                let locWatchId = null;
+
+                function setLocStatus(text, color) {
+                    const el = document.getElementById('location-status');
+                    const ic = document.getElementById('loc-icon');
+                    if (el) el.textContent = text;
+                    if (ic) ic.className = `fa-solid fa-location-dot mr-2 text-lg ${color||'text-yellow-500'}`;
+                }
+
+                function fmtCoord(lat, lng) {
+                    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                }
+
+                window.requestLocation = (forceUI) => {
+                    if (!navigator.geolocation) {
+                        setLocStatus('เบราว์เซอร์ไม่รองรับ GPS', 'text-red-500');
+                        return;
+                    }
+                    if (!window.isSecureContext && location.hostname !== 'localhost') {
+                        setLocStatus('ต้องใช้ผ่าน HTTPS เพื่อรับ GPS', 'text-orange-500');
+                        return;
+                    }
+                    if (forceUI) setLocStatus('กำลังขอตำแหน่ง...', 'text-zinc-400');
+
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            currentPosition = {
+                                lat: pos.coords.latitude,
+                                lng: pos.coords.longitude,
+                                accuracy: pos.coords.accuracy,
+                                ts: Date.now(),
+                            };
+                            const accNote = pos.coords.accuracy > 100 ? ' (ความแม่นยำต่ำ)' : '';
+                            setLocStatus(`${profile.branch || 'ตำแหน่ง'} · ${fmtCoord(currentPosition.lat, currentPosition.lng)}${accNote}`, 'text-green-600');
+
+                            // เริ่ม watch ไว้ refresh ตำแหน่งต่อ
+                            if (locWatchId == null) {
+                                locWatchId = navigator.geolocation.watchPosition(
+                                    (p) => {
+                                        currentPosition = {
+                                            lat: p.coords.latitude,
+                                            lng: p.coords.longitude,
+                                            accuracy: p.coords.accuracy,
+                                            ts: Date.now(),
+                                        };
+                                    },
+                                    () => {},
+                                    { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 }
+                                );
+                            }
+                        },
+                        (err) => {
+                            currentPosition = null;
+                            if (err.code === err.PERMISSION_DENIED) {
+                                setLocStatus(`${profile.branch || 'Lamsang Group'} · GPS ถูกปฏิเสธ`, 'text-red-500');
+                            } else if (err.code === err.POSITION_UNAVAILABLE) {
+                                setLocStatus(`${profile.branch || 'Lamsang Group'} · หา GPS ไม่พบ`, 'text-orange-500');
+                            } else if (err.code === err.TIMEOUT) {
+                                setLocStatus(`${profile.branch || 'Lamsang Group'} · ขอ GPS หมดเวลา`, 'text-orange-500');
+                            } else {
+                                setLocStatus(`${profile.branch || 'Lamsang Group'} · ไม่ได้ตำแหน่ง`, 'text-orange-500');
+                            }
+                        },
+                        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+                    );
+                };
+
+                // ขอตำแหน่งครั้งแรก
+                requestLocation();
+
+                // เรียกแบบ promise พร้อม timeout — ใช้ก่อนคล็อก
+                function getFreshLocation(timeoutMs = 8000) {
+                    return new Promise((resolve) => {
+                        // ถ้ามี cache สดอยู่ (< 30s) ใช้เลย
+                        if (currentPosition && (Date.now() - currentPosition.ts) < 30000) {
+                            return resolve(currentPosition);
+                        }
+                        if (!navigator.geolocation) return resolve(null);
+                        let done = false;
+                        const t = setTimeout(() => { if (!done) { done = true; resolve(currentPosition || null); } }, timeoutMs);
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                if (done) return;
+                                done = true; clearTimeout(t);
+                                currentPosition = {
+                                    lat: pos.coords.latitude,
+                                    lng: pos.coords.longitude,
+                                    accuracy: pos.coords.accuracy,
+                                    ts: Date.now(),
+                                };
+                                resolve(currentPosition);
+                            },
+                            () => { if (done) return; done = true; clearTimeout(t); resolve(currentPosition || null); },
+                            { enableHighAccuracy: true, maximumAge: 10000, timeout: timeoutMs }
+                        );
+                    });
+                }
 
                 // Clock
                 function updateClock() {
@@ -2285,6 +2385,13 @@
                         toShow.forEach(log => {
                             const time  = new Date(log.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
                             const isIn  = log.type === 'clock_in';
+                            const mapLink = (log.lat != null && log.lng != null)
+                                ? `<a href="https://www.google.com/maps?q=${log.lat},${log.lng}" target="_blank" class="text-[10px] font-bold text-yellow-600 hover:text-yellow-700 inline-flex items-center gap-1 mt-0.5">
+                                       <i class="fa-solid fa-map-location-dot"></i> ดูตำแหน่ง${log.accuracy ? ` (±${Math.round(log.accuracy)} ม.)` : ''}
+                                   </a>`
+                                : log.locationDenied
+                                    ? `<p class="text-[10px] font-bold text-red-400 mt-0.5"><i class="fa-solid fa-location-crosshairs mr-1"></i>ไม่ได้แชร์ตำแหน่ง</p>`
+                                    : '';
                             html += `<div class="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm hover:border-yellow-300 transition-all">
                                 <div class="flex items-center">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3 ${isIn ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}">
@@ -2293,6 +2400,7 @@
                                     <div>
                                         <p class="font-black text-zinc-800 text-sm">${isIn ? 'เข้างาน' : 'ออกงาน'}</p>
                                         <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">${log.branch}</p>
+                                        ${mapLink}
                                     </div>
                                 </div>
                                 <div class="text-lg font-black ${isIn ? 'text-green-600' : 'text-red-500'} font-mono">${time}</div>
@@ -2365,44 +2473,51 @@
                     renderLogs();
                 });
 
-                window.clockIn = async () => {
-                    const btn = document.getElementById('btn-clock-in');
+                async function doClock(type) {
+                    const btnId = type === 'clock_in' ? 'btn-clock-in' : 'btn-clock-out';
+                    const btn = document.getElementById(btnId);
                     if (btn) btn.disabled = true;
+                    const origHtml = btn ? btn.innerHTML : '';
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-3"></i> กำลังระบุตำแหน่ง...';
                     try {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), {
-                            uid: user.uid, name: profile.name, type: 'clock_in',
+                        const pos = await getFreshLocation(8000);
+                        const payload = {
+                            uid: user.uid, name: profile.name, type,
                             timestamp: new Date().toISOString(),
                             localDate: todayTH(),
-                            branch: profile.branch || 'Lamsang Group'
-                        });
-                        showToast('✅ บันทึกเวลาเข้างานแล้ว', 'success');
+                            branch: profile.branch || 'Lamsang Group',
+                        };
+                        if (pos) {
+                            payload.lat = pos.lat;
+                            payload.lng = pos.lng;
+                            payload.accuracy = pos.accuracy;
+                        } else {
+                            payload.locationDenied = true;
+                        }
+                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), payload);
+                        const okMsg = type === 'clock_in' ? '✅ บันทึกเวลาเข้างานแล้ว' : '✅ บันทึกเวลาออกงานแล้ว';
+                        const noteMsg = pos ? '' : ' (ไม่มี GPS)';
+                        showToast(okMsg + noteMsg, pos ? 'success' : 'info');
                     } catch (e) { alert(e.message); }
-                    finally { if (btn) btn.disabled = false; }
-                };
-                window.clockOut = async () => {
-                    const btn = document.getElementById('btn-clock-out');
-                    if (btn) btn.disabled = true;
-                    try {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), {
-                            uid: user.uid, name: profile.name, type: 'clock_out',
-                            timestamp: new Date().toISOString(),
-                            localDate: todayTH(),
-                            branch: profile.branch || 'Lamsang Group'
-                        });
-                        showToast('✅ บันทึกเวลาออกงานแล้ว', 'success');
-                    } catch (e) { alert(e.message); }
-                    finally { if (btn) btn.disabled = false; }
-                };
+                    finally { if (btn) { btn.disabled = false; btn.innerHTML = origHtml; } }
+                }
+                window.clockIn  = () => doClock('clock_in');
+                window.clockOut = () => doClock('clock_out');
 
                 renderCalendar();
 
-                // cleanup: unsubscribe listener + stop clock
+                // cleanup: unsubscribe listener + stop clock + stop GPS watcher
                 return () => {
                     unsubscribe();
                     clearInterval(clockInterval);
+                    if (locWatchId != null && navigator.geolocation) {
+                        navigator.geolocation.clearWatch(locWatchId);
+                        locWatchId = null;
+                    }
                     delete window.clockIn;
                     delete window.clockOut;
                     delete window.selectCalDate;
+                    delete window.requestLocation;
                 };
             }
         };
@@ -6270,6 +6385,731 @@ PAGES['time-approve'] = {
         return () => {
             unsub();
             ['taFilter','taOpenAction','taCloseAction','taConfirm'].forEach(k=>delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: staff-attendance — Admin/Manager ดูประวัติเข้า-ออกงานของพนักงานทุกคน
+// ================================================================
+PAGES['staff-attendance'] = {
+    title: 'ประวัติเวลา (ทีม)',
+    html: `
+<style>
+.sa-row:hover { background:#fafafa; }
+.sa-chip { font-size:10px; font-weight:800; padding:2px 8px; border-radius:9999px; }
+</style>
+<div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <h2 class="text-lg sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ประวัติการลงเวลาของทีม</h2>
+      <p class="text-xs sm:text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบประวัติเข้า-ออกงานของพนักงานทุกคนย้อนหลัง</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">พนักงาน</label>
+      <select id="sa-emp" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <option value="">— ทุกคน —</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">สาขา</label>
+      <select id="sa-branch" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <option value="">— ทุกสาขา —</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">วันที่เริ่ม</label>
+      <input type="date" id="sa-from" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">วันที่สิ้นสุด</label>
+      <input type="date" id="sa-to" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+    </div>
+    <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap gap-2 justify-end">
+      <button onclick="saSetRange('today')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">วันนี้</button>
+      <button onclick="saSetRange('week')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">7 วันล่าสุด</button>
+      <button onclick="saSetRange('month')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">เดือนนี้</button>
+      <button onclick="saSetRange('lastMonth')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">เดือนก่อน</button>
+      <button onclick="saLoad()" class="text-xs font-black bg-zinc-900 hover:bg-zinc-800 text-yellow-400 px-4 py-1.5 rounded-lg">
+        <i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหา
+      </button>
+      <button onclick="saExport()" class="text-xs font-black bg-yellow-500 hover:bg-yellow-400 text-zinc-900 px-4 py-1.5 rounded-lg">
+        <i class="fa-solid fa-file-arrow-down mr-1"></i> Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-zinc-800" id="sa-stat-emp">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">พนักงานที่มีบันทึก</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-green-600" id="sa-stat-days">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">รวมวันทำงาน</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-yellow-600" id="sa-stat-hours">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">รวมชั่วโมงทำงาน</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-red-500" id="sa-stat-incomplete">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">วันที่ไม่ครบ (เข้า/ออก)</p>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
+      <p class="font-black text-zinc-700 text-sm uppercase tracking-widest"><i class="fa-solid fa-list-ul text-yellow-500 mr-2"></i> ผลลัพธ์</p>
+      <span class="text-xs font-bold text-zinc-500" id="sa-count">-</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest">
+          <tr>
+            <th class="px-4 py-2 text-left font-black">วันที่</th>
+            <th class="px-4 py-2 text-left font-black">พนักงาน</th>
+            <th class="px-4 py-2 text-left font-black">รหัส</th>
+            <th class="px-4 py-2 text-left font-black">สาขา</th>
+            <th class="px-4 py-2 text-center font-black">เข้างาน</th>
+            <th class="px-4 py-2 text-center font-black">ออกงาน</th>
+            <th class="px-4 py-2 text-right font-black">ชั่วโมง</th>
+            <th class="px-4 py-2 text-center font-black">สถานะ</th>
+          </tr>
+        </thead>
+        <tbody id="sa-tbody">
+          <tr><td colspan="8" class="text-center py-16 text-zinc-300"><i class="fa-regular fa-clock text-4xl mb-3 block"></i><span class="font-bold text-sm">เลือกช่วงวันที่แล้วกด "ค้นหา"</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
+        const { collection, getDocs, query, where, orderBy }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
+
+        // โหลดพนักงาน + schedule + leave (approved)
+        const [empSnap, schedSnap, leaveSnap] = await Promise.all([
+            getDocs(col('users')),
+            getDocs(col('work_schedules')),
+            getDocs(query(col('leave_requests'), where('status','==','approved'))),
+        ]);
+        const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(e => e.name);
+        employees.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+        const empMap = Object.fromEntries(employees.map(e => [e.uid, e]));
+
+        const schedMap = {};
+        schedSnap.forEach(d => schedMap[d.id] = d.data());
+        const allApprovedLeaves = leaveSnap.docs.map(d => d.data());
+
+        // populate selects
+        const empSel = document.getElementById('sa-emp');
+        if (empSel) {
+            employees.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.uid;
+                opt.textContent = `${e.name}${e.employeeCode?` (${e.employeeCode})`:''}`;
+                empSel.appendChild(opt);
+            });
+        }
+        const branches = [...new Set(employees.map(e=>e.branch).filter(Boolean))].sort();
+        const brSel = document.getElementById('sa-branch');
+        if (brSel) {
+            branches.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b; opt.textContent = b;
+                brSel.appendChild(opt);
+            });
+        }
+
+        // default range = this month
+        window.saSetRange = (mode) => {
+            const now = newDateTH();
+            let from, to;
+            if (mode === 'today') { from = to = dateToTHStr(now); }
+            else if (mode === 'week') {
+                const d = new Date(now); d.setDate(d.getDate() - 6);
+                from = dateToTHStr(d); to = dateToTHStr(now);
+            } else if (mode === 'lastMonth') {
+                const y = now.getFullYear(), m = now.getMonth() - 1;
+                const first = new Date(y, m, 1);
+                const last  = new Date(y, m + 1, 0);
+                from = dateToTHStr(first); to = dateToTHStr(last);
+            } else { // month
+                const first = new Date(now.getFullYear(), now.getMonth(), 1);
+                const last  = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                from = dateToTHStr(first); to = dateToTHStr(last);
+            }
+            const fEl = document.getElementById('sa-from'); if (fEl) fEl.value = from;
+            const tEl = document.getElementById('sa-to');   if (tEl) tEl.value = to;
+        };
+        saSetRange('month');
+
+        let lastRows = [];
+
+        window.saLoad = async () => {
+            const from = document.getElementById('sa-from')?.value;
+            const to   = document.getElementById('sa-to')?.value;
+            const uid  = document.getElementById('sa-emp')?.value;
+            const br   = document.getElementById('sa-branch')?.value;
+            if (!from || !to) { showToast('กรุณาเลือกช่วงวันที่', 'error'); return; }
+            if (from > to)    { showToast('วันที่เริ่มต้องไม่หลังวันที่สิ้นสุด', 'error'); return; }
+
+            const tbody = document.getElementById('sa-tbody');
+            if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></td></tr>`;
+
+            try {
+                // query ตาม date range อย่างเดียว (เลี่ยง composite index)
+                // แล้ว filter uid/branch ฝั่ง client
+                const qRef = query(col('time_logs'),
+                    where('localDate','>=',from),
+                    where('localDate','<=',to));
+                const logSnap = await getDocs(qRef);
+                let logs = logSnap.docs.map(d => d.data());
+
+                if (uid) logs = logs.filter(l => l.uid === uid);
+                if (br) {
+                    logs = logs.filter(l => {
+                        const emp = empMap[l.uid];
+                        return emp && emp.branch === br;
+                    });
+                }
+
+                // group logs by uid+localDate
+                const groups = {};
+                logs.forEach(l => {
+                    if (!l.uid || !l.localDate) return;
+                    const k = l.uid + '|' + l.localDate;
+                    if (!groups[k]) groups[k] = { ins: [], outs: [], branch: l.branch || '' };
+                    if (l.type === 'clock_in')  groups[k].ins.push(l);
+                    if (l.type === 'clock_out') groups[k].outs.push(l);
+                });
+
+                // ขอบเขตพนักงาน (ตาม filter)
+                let empsInScope = employees;
+                if (uid) empsInScope = empsInScope.filter(e => e.uid === uid);
+                if (br)  empsInScope = empsInScope.filter(e => e.branch === br);
+                empsInScope = empsInScope.filter(e => e.status !== 'resigned');
+
+                // สร้าง list วันในช่วง
+                const days = [];
+                {
+                    let d = parseDateTH(from);
+                    const endD = parseDateTH(to);
+                    const todayStr = todayTH();
+                    while (d <= endD) {
+                        const ds = dateToTHStr(d);
+                        if (ds <= todayStr) days.push(ds); // ไม่ generate วันอนาคต
+                        const nx = new Date(d); nx.setDate(nx.getDate()+1); d = nx;
+                    }
+                }
+
+                // index วันลา: uid → date → leave
+                const leaveByUid = {};
+                allApprovedLeaves.forEach(l => {
+                    if (!l.uid || !l.startDate || !l.endDate) return;
+                    if (l.endDate < from || l.startDate > to) return;
+                    if (!leaveByUid[l.uid]) leaveByUid[l.uid] = {};
+                    let d = parseDateTH(l.startDate);
+                    const e = parseDateTH(l.endDate);
+                    while (d <= e) {
+                        leaveByUid[l.uid][dateToTHStr(d)] = l;
+                        const nx = new Date(d); nx.setDate(nx.getDate()+1); d = nx;
+                    }
+                });
+
+                const DOW_TH = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+                const rows = [];
+                empsInScope.forEach(emp => {
+                    const sched = schedMap[emp.uid] || null;
+                    const workDaySet = new Set((sched && sched.workDays) ? sched.workDays : [1,2,3,4,5]);
+                    const personalHolSet = new Set((sched && Array.isArray(sched.holidays)) ? sched.holidays : []);
+                    const empLeaves = leaveByUid[emp.uid] || {};
+
+                    days.forEach(ds => {
+                        const dow  = parseDateTH(ds).getDay();
+                        const isPubHol  = isPublicHoliday(ds);
+                        const isPersHol = personalHolSet.has(ds);
+                        const isWorkDay = workDaySet.has(dow) && !isPubHol && !isPersHol;
+                        const leave = empLeaves[ds];
+
+                        const g = groups[emp.uid + '|' + ds];
+                        let inFirst, outLast;
+                        if (g) {
+                            g.ins.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+                            g.outs.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+                            inFirst = g.ins[0];
+                            outLast = g.outs[g.outs.length-1];
+                        }
+
+                        let hours = 0, isLate = false;
+                        if (inFirst && outLast) {
+                            const ms = new Date(outLast.timestamp) - new Date(inFirst.timestamp);
+                            const brk = sched && sched.breakMinutes ? sched.breakMinutes : 60;
+                            hours = Math.max(0, ms/3600000 - brk/60);
+                        }
+                        if (inFirst && sched && sched.workStart && isWorkDay) {
+                            const inT = new Date(inFirst.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+                            isLate = inT > sched.workStart;
+                        }
+
+                        // กำหนดสถานะ
+                        let status, statusCls;
+                        const hasLog = !!(inFirst || outLast);
+                        if (!hasLog) {
+                            if (leave) {
+                                const t = getLeaveTypeInfo(leave.type);
+                                status = 'ลา' + (t.label.replace(/^ลา/,'') || '');
+                                statusCls = 'bg-blue-100 text-blue-700';
+                            } else if (isPubHol) {
+                                status = 'วันหยุดนักขัตฤกษ์';
+                                statusCls = 'bg-red-100 text-red-700';
+                            } else if (!isWorkDay) {
+                                status = 'วันหยุด';
+                                statusCls = 'bg-purple-100 text-purple-700';
+                            } else {
+                                status = 'ขาดงาน';
+                                statusCls = 'bg-red-200 text-red-800';
+                            }
+                        } else if (!inFirst || !outLast) {
+                            status = 'ไม่ครบ';
+                            statusCls = 'bg-orange-100 text-orange-700';
+                        } else if (!isWorkDay) {
+                            status = 'วันโอที';
+                            statusCls = 'bg-amber-100 text-amber-700';
+                        } else if (isLate) {
+                            status = 'สาย';
+                            statusCls = 'bg-orange-100 text-orange-700';
+                        } else {
+                            status = 'ปกติ';
+                            statusCls = 'bg-green-100 text-green-700';
+                        }
+
+                        // ข้าม "วันหยุด" / "วันหยุดนักขัตฤกษ์" ที่ไม่มีบันทึก (ลดความรก)
+                        if (!hasLog && !leave && !isWorkDay) return;
+
+                        const branchVal = emp.branch || (g && g.branch) || '';
+                        rows.push({
+                            date: ds,
+                            dow: DOW_TH[dow],
+                            uid: emp.uid,
+                            name: emp.name,
+                            code: emp.employeeCode || '',
+                            branch: branchVal,
+                            photoURL: emp.photoURL || '',
+                            inTime: inFirst ? new Date(inFirst.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : '',
+                            outTime: outLast ? new Date(outLast.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : '',
+                            inLat:  inFirst && inFirst.lat != null ? inFirst.lat : null,
+                            inLng:  inFirst && inFirst.lng != null ? inFirst.lng : null,
+                            inAcc:  inFirst && inFirst.accuracy != null ? inFirst.accuracy : null,
+                            outLat: outLast && outLast.lat != null ? outLast.lat : null,
+                            outLng: outLast && outLast.lng != null ? outLast.lng : null,
+                            outAcc: outLast && outLast.accuracy != null ? outLast.accuracy : null,
+                            hours,
+                            complete: !!(inFirst && outLast),
+                            isLate,
+                            isOT: hasLog && !isWorkDay,
+                            isAbsent: !hasLog && !leave && isWorkDay,
+                            isLeave: !hasLog && !!leave,
+                            status,
+                            statusCls,
+                        });
+                    });
+                });
+
+                rows.sort((a,b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name,'th'));
+
+                lastRows = rows;
+                renderRows(rows);
+            } catch (e) {
+                console.error('saLoad:', e);
+                if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-red-400 text-sm font-bold">โหลดข้อมูลไม่ได้: ${e.message}</td></tr>`;
+            }
+        };
+
+        function renderRows(rows) {
+            const tbody = document.getElementById('sa-tbody');
+            const cnt = document.getElementById('sa-count');
+            if (cnt) cnt.textContent = rows.length + ' รายการ';
+
+            // stats
+            const empSet = new Set(rows.filter(r=>r.complete||!r.isAbsent).map(r=>r.uid));
+            const workDays = rows.filter(r=>r.complete).length;
+            const totalHours = rows.reduce((s,r)=>s+r.hours,0);
+            const absentCount = rows.filter(r=>r.isAbsent).length;
+            const setT = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+            setT('sa-stat-emp', new Set(rows.map(r=>r.uid)).size);
+            setT('sa-stat-days', workDays);
+            setT('sa-stat-hours', totalHours.toFixed(1));
+            setT('sa-stat-incomplete', absentCount);
+
+            if (!tbody) return;
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-zinc-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><span class="font-bold text-sm">ไม่พบประวัติในช่วงนี้</span></td></tr>`;
+                return;
+            }
+            const pin = (lat, lng, acc) => {
+                if (lat == null || lng == null) return '';
+                const accTxt = acc ? ` title="ความแม่นยำ ±${Math.round(acc)} ม."` : '';
+                return ` <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="text-yellow-600 hover:text-yellow-700 ml-1"${accTxt}><i class="fa-solid fa-map-pin"></i></a>`;
+            };
+            tbody.innerHTML = rows.map(r => {
+                const dateLabel = new Date(r.date+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
+                const avatar = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
+                const rowBg = r.isAbsent ? 'bg-red-50/60' : r.isOT ? 'bg-amber-50/60' : r.isLeave ? 'bg-blue-50/40' : '';
+                return `<tr class="sa-row border-b border-zinc-100 ${rowBg}">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="font-bold text-zinc-700 text-xs">${dateLabel}</div>
+                        <div class="text-[10px] font-black text-zinc-400 uppercase">${r.dow}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <img src="${avatar}" onerror="handleImgError(this)" data-name="${r.name}" class="w-7 h-7 rounded-full object-cover border border-zinc-200">
+                            <span class="font-bold text-zinc-800 text-xs">${r.name}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-zinc-500 text-xs font-bold">${r.code||'-'}</td>
+                    <td class="px-4 py-3 text-zinc-500 text-xs">${r.branch||'-'}</td>
+                    <td class="px-4 py-3 text-center font-mono text-green-700 font-black whitespace-nowrap">${r.inTime||'—'}${pin(r.inLat,r.inLng,r.inAcc)}</td>
+                    <td class="px-4 py-3 text-center font-mono text-red-600 font-black whitespace-nowrap">${r.outTime||'—'}${pin(r.outLat,r.outLng,r.outAcc)}</td>
+                    <td class="px-4 py-3 text-right font-bold text-zinc-700">${r.hours?r.hours.toFixed(2):'-'}</td>
+                    <td class="px-4 py-3 text-center"><span class="sa-chip ${r.statusCls}">${r.status}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.saExport = () => {
+            if (!lastRows.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
+            const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','ClockOut','Hours','Status'];
+            const lines = [header.join(',')];
+            const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
+            lastRows.forEach(r => {
+                lines.push([r.date, r.dow, r.code||'', esc(r.name), esc(r.branch), r.inTime, r.outTime, r.hours.toFixed(2), esc(r.status)].join(','));
+            });
+            const blob = new Blob(['﻿'+lines.join('\n')], { type:'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `attendance_${document.getElementById('sa-from').value}_${document.getElementById('sa-to').value}.csv`;
+            a.click(); URL.revokeObjectURL(url);
+        };
+
+        // โหลดอัตโนมัติครั้งแรก
+        saLoad();
+
+        return () => {
+            ['saSetRange','saLoad','saExport'].forEach(k => delete window[k]);
+        };
+    }
+};
+
+// ================================================================
+// PAGE: staff-leaves — Admin/Manager ดูประวัติการลาของพนักงานทุกคน
+// ================================================================
+PAGES['staff-leaves'] = {
+    title: 'ประวัติการลา (ทีม)',
+    html: `
+<div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <h2 class="text-lg sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ประวัติการลาของทีม</h2>
+      <p class="text-xs sm:text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบประวัติการลาของพนักงานทุกคน</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">พนักงาน</label>
+      <select id="sl-emp" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <option value="">— ทุกคน —</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">สาขา</label>
+      <select id="sl-branch" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <option value="">— ทุกสาขา —</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ประเภท</label>
+      <select id="sl-type" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <option value="">— ทุกประเภท —</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">สถานะ</label>
+      <select id="sl-status" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <option value="">— ทุกสถานะ —</option>
+        <option value="pending">รอการอนุมัติ</option>
+        <option value="approved">อนุมัติแล้ว</option>
+        <option value="rejected">ไม่อนุมัติ</option>
+        <option value="cancelled">ยกเลิก</option>
+      </select>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ตั้งแต่</label>
+        <input type="date" id="sl-from" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-yellow-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ถึง</label>
+        <input type="date" id="sl-to" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-yellow-500 focus:outline-none">
+      </div>
+    </div>
+    <div class="sm:col-span-2 lg:col-span-5 flex flex-wrap gap-2 justify-end">
+      <button onclick="slSetRange('year')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">ปีนี้</button>
+      <button onclick="slSetRange('quarter')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">3 เดือนล่าสุด</button>
+      <button onclick="slSetRange('month')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">เดือนนี้</button>
+      <button onclick="slClearRange()" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">ทั้งหมด</button>
+      <button onclick="slApply()" class="text-xs font-black bg-zinc-900 hover:bg-zinc-800 text-yellow-400 px-4 py-1.5 rounded-lg">
+        <i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหา
+      </button>
+      <button onclick="slExport()" class="text-xs font-black bg-yellow-500 hover:bg-yellow-400 text-zinc-900 px-4 py-1.5 rounded-lg">
+        <i class="fa-solid fa-file-arrow-down mr-1"></i> Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-zinc-800" id="sl-stat-total">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">คำขอทั้งหมด</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-yellow-600" id="sl-stat-pending">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">รออนุมัติ</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-green-600" id="sl-stat-approved">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">อนุมัติแล้ว</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+      <p class="text-2xl font-black text-yellow-700" id="sl-stat-hours">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">ชั่วโมงลา (อนุมัติ)</p>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="sl-list" class="space-y-3">
+    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+  </div>
+</div>`,
+
+    init: async (user, profile, db, APP_ID) => {
+        if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
+        const { collection, getDocs, query, orderBy }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
+
+        // load employees + schedules
+        const [empSnap, schedSnap] = await Promise.all([ getDocs(col('users')), getDocs(col('work_schedules')) ]);
+        const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(e => e.name);
+        employees.sort((a,b)=>a.name.localeCompare(b.name,'th'));
+        const empMap = Object.fromEntries(employees.map(e => [e.uid, e]));
+        const schedMap = {};
+        schedSnap.forEach(d => schedMap[d.id] = d.data());
+
+        // populate selects
+        const empSel = document.getElementById('sl-emp');
+        if (empSel) employees.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e.uid;
+            opt.textContent = `${e.name}${e.employeeCode?` (${e.employeeCode})`:''}`;
+            empSel.appendChild(opt);
+        });
+        const branches = [...new Set(employees.map(e=>e.branch).filter(Boolean))].sort();
+        const brSel = document.getElementById('sl-branch');
+        if (brSel) branches.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b; opt.textContent = b;
+            brSel.appendChild(opt);
+        });
+        const tSel = document.getElementById('sl-type');
+        if (tSel) LEAVE_TYPES.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id; opt.textContent = t.label;
+            tSel.appendChild(opt);
+        });
+
+        // โหลด leave requests ทั้งหมด
+        let allReqs = [];
+        try {
+            const snap = await getDocs(query(col('leave_requests'), orderBy('createdAt','desc')));
+            allReqs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (e) {
+            console.error('load leaves:', e);
+            showToast('โหลดข้อมูลไม่ได้: '+e.message, 'error');
+        }
+
+        window.slSetRange = (mode) => {
+            const now = newDateTH();
+            let from, to;
+            if (mode === 'year') {
+                from = `${now.getFullYear()}-01-01`;
+                to   = `${now.getFullYear()}-12-31`;
+            } else if (mode === 'quarter') {
+                const d = new Date(now); d.setMonth(d.getMonth() - 2);
+                from = dateToTHStr(new Date(d.getFullYear(), d.getMonth(), 1));
+                to   = dateToTHStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+            } else {
+                from = dateToTHStr(new Date(now.getFullYear(), now.getMonth(), 1));
+                to   = dateToTHStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+            }
+            const fEl = document.getElementById('sl-from'); if (fEl) fEl.value = from;
+            const tEl = document.getElementById('sl-to');   if (tEl) tEl.value = to;
+        };
+        window.slClearRange = () => {
+            const fEl = document.getElementById('sl-from'); if (fEl) fEl.value = '';
+            const tEl = document.getElementById('sl-to');   if (tEl) tEl.value = '';
+        };
+        // default = year
+        slSetRange('year');
+
+        let filtered = [];
+
+        window.slApply = () => {
+            const uid    = document.getElementById('sl-emp')?.value;
+            const br     = document.getElementById('sl-branch')?.value;
+            const type   = document.getElementById('sl-type')?.value;
+            const status = document.getElementById('sl-status')?.value;
+            const from   = document.getElementById('sl-from')?.value;
+            const to     = document.getElementById('sl-to')?.value;
+
+            filtered = allReqs.filter(r => {
+                if (uid && r.uid !== uid) return false;
+                if (br && r.branch !== br) return false;
+                if (type && r.type !== type) return false;
+                if (status && r.status !== status) return false;
+                // ช่วงวันที่ — ทับซ้อนกับ [from..to]
+                if (from && r.endDate   && r.endDate   < from) return false;
+                if (to   && r.startDate && r.startDate > to)   return false;
+                return true;
+            });
+
+            renderStats(filtered);
+            renderList(filtered);
+        };
+
+        function fmtDate(ds) {
+            if (!ds) return '-';
+            const d = ds.length === 10 ? new Date(ds+'T12:00:00+07:00') : new Date(ds);
+            return d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
+        }
+
+        function renderStats(list) {
+            const setT = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+            setT('sl-stat-total', list.length);
+            setT('sl-stat-pending', list.filter(r=>r.status==='pending').length);
+            setT('sl-stat-approved', list.filter(r=>r.status==='approved').length);
+            const totalHrs = list.filter(r=>r.status==='approved').reduce((s,r)=>s+(r.totalHours||0),0);
+            setT('sl-stat-hours', totalHrs.toFixed(1));
+        }
+
+        function renderList(list) {
+            const el = document.getElementById('sl-list');
+            if (!el) return;
+            if (!list.length) {
+                el.innerHTML = `<div class="text-center py-16 text-zinc-300 bg-white rounded-2xl border border-zinc-200">
+                    <i class="fa-regular fa-folder-open text-5xl mb-3"></i>
+                    <p class="font-bold text-sm">ไม่พบประวัติการลา</p>
+                </div>`; return;
+            }
+            el.innerHTML = list.map(r => {
+                const t  = getLeaveTypeInfo(r.type);
+                const st = STATUS_MAP[r.status] || STATUS_MAP.pending;
+                const cv = colorVariants(t.color);
+                const dateRange = r.startDate === r.endDate ? fmtDate(r.startDate) : `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}`;
+                const timeRange = r.isHourly ? ` เวลา ${r.startTime}–${r.endTime}` : ' (เต็มวัน)';
+                const sched = schedMap[r.uid] || null;
+                const hrsDisplay = hoursToDisplay(r.totalHours, sched);
+                const avatar = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.employeeName||'?')}&background=f4f4f5&color=27272a&bold=true`;
+                return `
+                <div class="bg-white rounded-2xl border border-zinc-200 p-4 lg:p-5">
+                  <div class="flex flex-col lg:flex-row gap-3">
+                    <div class="flex items-center gap-3 lg:w-56 shrink-0">
+                      <img src="${avatar}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-10 h-10 rounded-2xl object-cover border border-zinc-200">
+                      <div class="min-w-0">
+                        <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName||'-'}</p>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p>
+                        <p class="text-[10px] text-zinc-400">${r.branch||''}</p>
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span class="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full ${cv.badge}">
+                          <i class="fa-solid ${t.icon}"></i> ${t.label}
+                        </span>
+                        <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.badge}">
+                          <i class="fa-solid ${st.icon} mr-1"></i>${st.label}
+                        </span>
+                        <span class="ml-auto font-black text-zinc-800 text-sm">${hrsDisplay}</span>
+                      </div>
+                      <p class="text-sm font-bold text-zinc-600">${dateRange}${timeRange}</p>
+                      <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${r.reason||''}</p>
+                      ${r.attachment ? `<a href="${r.attachment}" target="_blank" class="text-xs text-yellow-600 hover:text-yellow-700 font-bold mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> ดูเอกสารแนบ</a>` : ''}
+                      ${r.approverNote ? `<p class="text-xs text-zinc-500 mt-1 bg-zinc-50 px-3 py-1.5 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-zinc-400"></i>${r.approverNote}</p>` : ''}
+                    </div>
+                    <div class="shrink-0 text-right text-xs lg:w-40">
+                      ${(r.status==='approved'||r.status==='rejected') ? `
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.status==='approved'?'อนุมัติโดย':'ดำเนินการโดย'}</p>
+                        <p class="font-bold text-zinc-600 text-xs">${r.approvedBy||'-'}</p>
+                        <p class="text-[10px] text-zinc-400">${r.approvedAt?fmtDate(r.approvedAt):''}</p>
+                      ` : r.status==='cancelled' ? `
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">ยกเลิกโดย</p>
+                        <p class="font-bold text-zinc-600 text-xs">${r.cancelledBy||r.employeeName||'-'}</p>
+                        <p class="text-[10px] text-zinc-400">${r.cancelledAt?fmtDate(r.cancelledAt):''}</p>
+                      ` : `
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">ขอเมื่อ</p>
+                        <p class="font-bold text-zinc-600 text-xs">${r.createdAt?fmtDate(r.createdAt):'-'}</p>
+                      `}
+                    </div>
+                  </div>
+                </div>`;
+            }).join('');
+        }
+
+        window.slExport = () => {
+            if (!filtered.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
+            const header = ['EmployeeCode','Name','Branch','Type','StartDate','EndDate','Hours','Status','Reason','ApprovedBy','ApprovedAt'];
+            const lines = [header.join(',')];
+            const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
+            filtered.forEach(r => {
+                lines.push([
+                    r.employeeCode||'',
+                    esc(r.employeeName),
+                    esc(r.branch),
+                    esc(r.typeName||r.type),
+                    r.startDate||'',
+                    r.endDate||'',
+                    r.totalHours||0,
+                    r.status||'',
+                    esc(r.reason),
+                    esc(r.approvedBy),
+                    r.approvedAt||''
+                ].join(','));
+            });
+            const blob = new Blob(['﻿'+lines.join('\n')], { type:'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `leaves_${(document.getElementById('sl-from').value||'all')}_${(document.getElementById('sl-to').value||'all')}.csv`;
+            a.click(); URL.revokeObjectURL(url);
+        };
+
+        // โหลดครั้งแรก
+        slApply();
+
+        return () => {
+            ['slSetRange','slClearRange','slApply','slExport'].forEach(k => delete window[k]);
         };
     }
 };
