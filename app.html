@@ -7983,9 +7983,66 @@ PAGES['team-calendar'] = {
 // ================================================================
 // PAGE: review-admin — Manager/Admin ประเมินผลงานพนักงาน
 // ================================================================
-const REVIEW_DEFAULT_CRITERIA = [
-    'คุณภาพงาน', 'ความรับผิดชอบ & ตรงต่อเวลา', 'การทำงานร่วมกับผู้อื่น', 'ความคิดริเริ่ม & การแก้ปัญหา', 'การปฏิบัติตามระเบียบ',
+// โครงสร้างหัวข้อประเมิน 4 มิติ (มิติบริหารแสดงเฉพาะหัวหน้างาน)
+const REVIEW_DIMENSIONS = [
+    {
+        id: 'performance',
+        name: 'ผลงานและความสำเร็จของงาน',
+        nameEn: 'Performance & Deliverables',
+        color: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+        items: [
+            { id: 'quality',   name: 'คุณภาพของงาน',                desc: 'ความถูกต้อง แม่นยำ ประณีต และเรียบร้อยของงานที่ได้รับมอบหมาย' },
+            { id: 'quantity',  name: 'ปริมาณงานและความตรงต่อเวลา',  desc: 'ส่งมอบงานได้ตามจำนวนและเสร็จทันกำหนด (Deadline)' },
+            { id: 'goals',     name: 'การบรรลุเป้าหมาย',             desc: 'ผลงานจริงเทียบกับ KPIs/OKRs ที่ตกลงกันไว้' },
+        ]
+    },
+    {
+        id: 'skills',
+        name: 'ทักษะและความเชี่ยวชาญในหน้าที่',
+        nameEn: 'Job Knowledge & Skills',
+        color: 'bg-blue-50 border-blue-200 text-blue-800',
+        items: [
+            { id: 'knowledge',     name: 'ความรู้ในงานที่ทำ',                       desc: 'เข้าใจกระบวนการ ระบบงาน เครื่องมือ หรือเทคโนโลยีที่ต้องใช้' },
+            { id: 'problemSolving', name: 'ทักษะการแก้ปัญหาและการตัดสินใจ',         desc: 'รับมือปัญหาเฉพาะหน้า วิเคราะห์สาเหตุ และหาทางแก้ได้อย่างมีประสิทธิภาพ' },
+            { id: 'improvement',    name: 'การปรับปรุงและพัฒนากระบวนการทำงาน',     desc: 'คิดค้นวิธีทำงานใหม่ที่ช่วยลดเวลา ลดต้นทุน หรือเพิ่มประสิทธิภาพ' },
+        ]
+    },
+    {
+        id: 'behavior',
+        name: 'พฤติกรรมและการทำงานร่วมกับผู้อื่น',
+        nameEn: 'Core Values & Collaboration',
+        color: 'bg-green-50 border-green-200 text-green-800',
+        items: [
+            { id: 'teamwork',      name: 'การทำงานเป็นทีมและความร่วมมือ',  desc: 'สนับสนุนเพื่อนร่วมทีม ประสานงานข้ามแผนก เปิดใจรับฟัง' },
+            { id: 'communication', name: 'การสื่อสาร',                    desc: 'ชัดเจนในการถ่ายทอดข้อมูล พูด เขียน ประสานงานไม่ทำให้เข้าใจผิด' },
+            { id: 'discipline',    name: 'ความรับผิดชอบและวินัยในการทำงาน', desc: 'ตรงต่อเวลา ปฏิบัติตามกฎ ใส่ใจหน้าที่โดยไม่ต้องให้ควบคุมตลอด' },
+            { id: 'attitude',      name: 'ทัศนคติและความยืดหยุ่น',         desc: 'เปิดรับสิ่งใหม่ พร้อมเรียนรู้ รับมือกับภาวะกดดันได้ดี' },
+        ]
+    },
+    {
+        id: 'management',
+        name: 'ทักษะการบริหารจัดการ',
+        nameEn: 'Management Skills',
+        color: 'bg-purple-50 border-purple-200 text-purple-800',
+        managerOnly: true,
+        items: [
+            { id: 'leadership',  name: 'ความเป็นผู้นำ',                          desc: 'สร้างแรงจูงใจ ผลักดัน และนำทีมไปสู่เป้าหมาย' },
+            { id: 'delegation',  name: 'การบริหารจัดการและกระจายงาน',           desc: 'วางแผนงาน จัดลำดับความสำคัญ มอบหมายงานตามศักยภาพ' },
+            { id: 'development', name: 'การพัฒนาผู้ใต้บังคับบัญชา',              desc: 'สอนงาน (Coaching) ให้ Feedback สนับสนุนทีมเติบโต' },
+        ]
+    },
 ];
+
+// auto-detect ว่าพนักงานคนนี้มีหน้าที่บริหาร/หัวหน้างานหรือไม่
+function isManagerialEmp(emp) {
+    if (!emp) return false;
+    if (emp.role === 'manager' || emp.role === 'admin') return true;
+    const p = (emp.position || '').toLowerCase();
+    return /หัวหน้า|ผู้จัดการ|ผู้บริหาร|ผู้อำนวยการ|manager|supervisor|director|lead|chief|head/.test(p);
+}
+
+// เก็บไว้เพื่อ backward compat กับ review เก่าที่ใช้ flat criteria
+const REVIEW_DEFAULT_CRITERIA = REVIEW_DIMENSIONS.flatMap(dim => dim.items.map(it => it.name));
 
 PAGES['review-admin'] = {
     title: 'ประเมินผลงาน',
@@ -8030,6 +8087,21 @@ PAGES['review-admin'] = {
       </div>
     </div>
   </div>
+</div>
+
+<!-- Detail (read-only) modal -->
+<div id="rv-detail-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="rvCloseDetail()"></div>
+  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden">
+    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+      <div>
+        <h3 class="font-black text-white text-lg" id="rv-detail-title">รายละเอียดผลประเมิน</h3>
+        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest" id="rv-detail-sub">-</p>
+      </div>
+      <button onclick="rvCloseDetail()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div class="p-6 max-h-[75vh] overflow-y-auto" id="rv-detail-body"></div>
+  </div>
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
@@ -8038,7 +8110,7 @@ PAGES['review-admin'] = {
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
 
-        let cycles = [], currentCycle = null, reviews = {}, scoringUid = null, tempScores = {};
+        let cycles = [], currentCycle = null, reviews = {}, selfReviews = {}, scoringUid = null, tempScores = {}, isManagerialOverride = null;
 
         const empSnap = await getDocs(col('users'));
         const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() }))
@@ -8069,7 +8141,8 @@ PAGES['review-admin'] = {
             try {
                 await addDoc(col('review_cycles'), {
                     name: name.trim(), year: now.getFullYear(),
-                    criteria: REVIEW_DEFAULT_CRITERIA,
+                    dimensions: REVIEW_DIMENSIONS,        // โครงสร้าง 4 มิติ
+                    criteria: REVIEW_DEFAULT_CRITERIA,    // backward compat
                     status: 'open',
                     createdAt: new Date().toISOString(), createdBy: profile.name,
                 });
@@ -8089,12 +8162,15 @@ PAGES['review-admin'] = {
                 return;
             }
             el.innerHTML = `<div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>`;
-            // โหลดผลประเมินของรอบนี้
+            // โหลดผลประเมินของรอบนี้ (manager + self)
             const snap = await getDocs(col('reviews'));
             reviews = {};
+            selfReviews = {};
             snap.forEach(d => {
                 const r = d.data();
-                if (r.cycleId === currentCycle.id) reviews[r.uid] = r;
+                if (r.cycleId !== currentCycle.id) return;
+                if (r.kind === 'self') selfReviews[r.uid] = r;
+                else reviews[r.uid] = r;
             });
             renderEmpList();
         };
@@ -8103,32 +8179,152 @@ PAGES['review-admin'] = {
             const el = document.getElementById('rv-emp-list');
             if (!el || !currentCycle) return;
             const doneCount = employees.filter(e => reviews[e.uid]).length;
-            const header = `<div class="bg-zinc-900 rounded-2xl p-4 flex items-center justify-between text-white mb-1">
+            const selfCount = employees.filter(e => selfReviews[e.uid]).length;
+            const header = `<div class="bg-zinc-900 rounded-2xl p-4 flex items-center justify-between text-white mb-1 flex-wrap gap-2">
                 <p class="font-black text-sm">${currentCycle.name}</p>
-                <p class="text-xs font-bold text-yellow-400">ประเมินแล้ว ${doneCount}/${employees.length} คน</p>
+                <div class="flex gap-3 text-xs font-bold">
+                    <span class="text-yellow-400"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมินแล้ว ${doneCount}/${employees.length}</span>
+                    <span class="text-blue-300"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเองแล้ว ${selfCount}/${employees.length}</span>
+                </div>
             </div>`;
             el.innerHTML = header + employees.map(e => {
                 const rv = reviews[e.uid];
+                const sv = selfReviews[e.uid];
                 const avatar = e.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name)}&background=f4f4f5&color=27272a&bold=true`;
-                const scoreBadge = rv
-                    ? `<div class="text-right mr-3">
-                         <p class="font-black text-lg ${rv.avg >= 4 ? 'text-green-600' : rv.avg >= 3 ? 'text-yellow-600' : 'text-red-500'}">${rv.avg.toFixed(1)}</p>
-                         <p class="text-[9px] text-zinc-400 font-bold uppercase">คะแนนเฉลี่ย</p>
-                       </div>`
+                const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
+                const scoreBadge = `<div class="flex gap-3 mr-2 shrink-0">
+                    ${rv ? `<div class="text-right">
+                         <p class="font-black text-lg ${scoreColor(rv.avg)}">${rv.avg.toFixed(1)}</p>
+                         <p class="text-[9px] text-zinc-400 font-bold uppercase">หัวหน้า</p>
+                       </div>` : ''}
+                    ${sv ? `<div class="text-right">
+                         <p class="font-black text-lg ${scoreColor(sv.avg)}">${sv.avg.toFixed(1)}</p>
+                         <p class="text-[9px] text-zinc-400 font-bold uppercase">ตัวเอง</p>
+                       </div>` : ''}
+                </div>`;
+                const detailBtn = (rv || sv)
+                    ? `<button onclick="rvOpenDetail('${e.uid}')" title="ดูรายละเอียด"
+                          class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-black w-9 h-9 rounded-xl text-sm shrink-0">
+                          <i class="fa-solid fa-eye"></i>
+                       </button>`
                     : '';
-                return `<div class="bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-3">
+                return `<div class="bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-2">
                     <img src="${avatar}" onerror="handleImgError(this)" data-name="${e.name}" class="w-11 h-11 rounded-2xl object-cover border border-zinc-200 shrink-0">
                     <div class="flex-1 min-w-0">
                         <p class="font-black text-zinc-800 text-sm truncate">${e.name}</p>
                         <p class="text-[10px] text-zinc-400 font-bold">${e.position || ''} · ${e.branch || ''}</p>
                     </div>
                     ${scoreBadge}
+                    ${detailBtn}
                     <button onclick="rvOpenScore('${e.uid}')"
-                        class="${rv ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600' : 'bg-yellow-500 hover:bg-yellow-400 text-zinc-900'} font-black px-4 py-2 rounded-xl text-xs uppercase shrink-0">
+                        class="${rv ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600' : 'bg-yellow-500 hover:bg-yellow-400 text-zinc-900'} font-black px-3 py-2 rounded-xl text-xs uppercase shrink-0">
                         ${rv ? '<i class="fa-solid fa-pen mr-1"></i>แก้ไข' : '<i class="fa-solid fa-star mr-1"></i>ประเมิน'}
                     </button>
                 </div>`;
             }).join('');
+        }
+
+        // ── Detail modal: เปรียบเทียบคะแนนหัวหน้า vs ประเมินตัวเอง ──
+        window.rvOpenDetail = (uid) => {
+            const emp = employees.find(e => e.uid === uid);
+            const rv = reviews[uid];
+            const sv = selfReviews[uid];
+            if (!emp || (!rv && !sv)) return;
+            const tEl = document.getElementById('rv-detail-title');
+            const sEl = document.getElementById('rv-detail-sub');
+            const bEl = document.getElementById('rv-detail-body');
+            if (tEl) tEl.textContent = 'รายละเอียดผลประเมิน: ' + emp.name;
+            if (sEl) sEl.textContent = currentCycle.name + (emp.position ? ' · ' + emp.position : '');
+
+            const starsRow = (sc) => [1,2,3,4,5].map(n =>
+                `<i class="fa-solid fa-star text-xs ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
+            const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
+
+            // ใช้ dimensions จาก review ที่มี หรือ default
+            const dims = (rv && rv.dimensions) || (sv && sv.dimensions) || REVIEW_DIMENSIONS;
+
+            const summaryHtml = `<div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
+                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมิน</p>
+                    ${rv ? `<p class="text-3xl font-black ${scoreColor(rv.avg)}">${rv.avg.toFixed(1)}</p>
+                             <p class="text-[10px] text-zinc-500 mt-1">โดย ${rv.reviewedBy||'-'}</p>` : `<p class="text-sm font-bold text-zinc-400 py-3">— ยังไม่ประเมิน —</p>`}
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
+                    <p class="text-[10px] font-black text-blue-700 uppercase mb-1"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเอง</p>
+                    ${sv ? `<p class="text-3xl font-black ${scoreColor(sv.avg)}">${sv.avg.toFixed(1)}</p>
+                             <p class="text-[10px] text-zinc-500 mt-1">${sv.reviewedAt ? new Date(sv.reviewedAt).toLocaleDateString('th-TH',{timeZone:'Asia/Bangkok'}) : ''}</p>` : `<p class="text-sm font-bold text-zinc-400 py-3">— ยังไม่ประเมินตัวเอง —</p>`}
+                </div>
+            </div>`;
+
+            const dimsHtml = dims.map((dim, dIdx) => {
+                const items = dim.items.map(it => {
+                    const key = dim.id + '.' + it.id;
+                    const mScore = rv?.scores?.[key] || 0;
+                    const sScore = sv?.scores?.[key] || 0;
+                    const diff = (mScore && sScore) ? (mScore - sScore) : 0;
+                    const diffBadge = (mScore && sScore && diff !== 0)
+                        ? `<span class="text-[9px] font-black px-1.5 py-0.5 rounded ${diff > 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${diff > 0 ? '+' : ''}${diff}</span>`
+                        : '';
+                    return `<div class="py-2 border-b border-zinc-50 last:border-0">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-zinc-800">${it.name}</p>
+                                <p class="text-[10px] text-zinc-400 leading-snug">${it.desc||''}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="flex items-center gap-2 justify-end">
+                                    ${rv ? `<span class="text-[9px] font-bold text-yellow-700 w-12 text-right">หัวหน้า:</span><span>${starsRow(mScore)}</span>` : ''}
+                                </div>
+                                <div class="flex items-center gap-2 justify-end mt-0.5">
+                                    ${sv ? `<span class="text-[9px] font-bold text-blue-700 w-12 text-right">ตัวเอง:</span><span>${starsRow(sScore)}</span>` : ''}
+                                </div>
+                                ${diffBadge ? `<div class="mt-1">${diffBadge}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+                const mDimAvg = rv?.dimAvg?.[dim.id];
+                const sDimAvg = sv?.dimAvg?.[dim.id];
+                const dimSummary = (mDimAvg != null || sDimAvg != null)
+                    ? `<div class="flex gap-2 text-[10px] font-black shrink-0">
+                          ${mDimAvg != null ? `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg">หัวหน้า ${mDimAvg.toFixed(1)}</span>` : ''}
+                          ${sDimAvg != null ? `<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">ตัวเอง ${sDimAvg.toFixed(1)}</span>` : ''}
+                      </div>`
+                    : '';
+                return `<div class="mb-3">
+                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'}">
+                        <div>
+                            <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
+                            <p class="text-[10px] font-bold opacity-70">${dim.nameEn||''}</p>
+                        </div>
+                        ${dimSummary}
+                    </div>
+                    ${items}
+                </div>`;
+            }).join('');
+
+            const commentsHtml = `${rv?.comment ? `<div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจากหัวหน้า</p>
+                    <p class="text-sm text-zinc-700">${rv.comment}</p>
+                </div>` : ''}
+                ${sv?.comment ? `<div class="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p class="text-[10px] font-black text-blue-700 uppercase mb-1"><i class="fa-solid fa-comment-dots mr-1"></i>ความเห็นจากพนักงาน</p>
+                    <p class="text-sm text-zinc-700">${sv.comment}</p>
+                </div>` : ''}`;
+
+            if (bEl) bEl.innerHTML = summaryHtml + dimsHtml + commentsHtml;
+            document.getElementById('rv-detail-modal')?.classList.remove('hidden');
+        };
+
+        window.rvCloseDetail = () => {
+            document.getElementById('rv-detail-modal')?.classList.add('hidden');
+        };
+
+        // คืนรายการมิติที่ต้องประเมินจริงสำหรับพนักงานคนนี้
+        function effectiveDimensions(emp) {
+            const dims = (currentCycle && currentCycle.dimensions) || REVIEW_DIMENSIONS;
+            const showMgr = isManagerialOverride != null ? isManagerialOverride : isManagerialEmp(emp);
+            return dims.filter(d => !d.managerOnly || showMgr);
         }
 
         window.rvOpenScore = (uid) => {
@@ -8136,9 +8332,11 @@ PAGES['review-admin'] = {
             if (!emp || !currentCycle) return;
             scoringUid = uid;
             const existing = reviews[uid];
-            tempScores = existing ? { ...existing.scores } : {};
+            tempScores = existing && existing.scores ? { ...existing.scores } : {};
+            isManagerialOverride = existing && typeof existing.isManagerial === 'boolean'
+                ? existing.isManagerial : null;
             document.getElementById('rv-modal-title').textContent = 'ประเมิน: ' + emp.name;
-            document.getElementById('rv-modal-sub').textContent = currentCycle.name;
+            document.getElementById('rv-modal-sub').textContent = currentCycle.name + (emp.position ? ' · ' + emp.position : '');
             document.getElementById('rv-comment').value = existing?.comment || '';
             renderCriteria();
             document.getElementById('rv-modal')?.classList.remove('hidden');
@@ -8147,38 +8345,85 @@ PAGES['review-admin'] = {
         function renderCriteria() {
             const el = document.getElementById('rv-criteria');
             if (!el || !currentCycle) return;
-            const criteria = currentCycle.criteria || REVIEW_DEFAULT_CRITERIA;
-            el.innerHTML = criteria.map((c, i) => {
-                const cur = tempScores[i] || 0;
-                const stars = [1,2,3,4,5].map(n => `
-                    <button onclick="rvSetScore(${i},${n})"
-                        class="w-9 h-9 rounded-lg text-lg transition-all ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}">
-                        <i class="fa-solid fa-star"></i>
-                    </button>`).join('');
-                return `<div class="py-2 border-b border-zinc-100 last:border-0">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <p class="text-sm font-bold text-zinc-700">${i+1}. ${c}</p>
-                        <div class="flex">${stars}</div>
+            const emp = employees.find(e => e.uid === scoringUid);
+            const allDims = (currentCycle.dimensions) || REVIEW_DIMENSIONS;
+            const showMgr = isManagerialOverride != null ? isManagerialOverride : isManagerialEmp(emp);
+
+            const dimsHtml = allDims.map((dim, dIdx) => {
+                // ถ้าเป็นมิติบริหารและไม่ต้องประเมิน → ซ่อน body แต่ยังโชว์ header + toggle
+                const visible = !dim.managerOnly || showMgr;
+                const itemsHtml = dim.items.map(it => {
+                    const key = dim.id + '.' + it.id;
+                    const cur = tempScores[key] || 0;
+                    const stars = [1,2,3,4,5].map(n => `
+                        <button onclick="rvSetScore('${key}',${n})"
+                            class="w-8 h-8 rounded-lg text-base transition-all ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>`).join('');
+                    return `<div class="py-2.5 border-b border-zinc-100 last:border-0">
+                        <div class="flex items-start justify-between gap-3 flex-wrap">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-zinc-800">${it.name}</p>
+                                <p class="text-[11px] text-zinc-400 mt-0.5 leading-snug">${it.desc}</p>
+                            </div>
+                            <div class="flex shrink-0">${stars}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                const mgrToggle = dim.managerOnly
+                    ? `<label class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 cursor-pointer">
+                         <input type="checkbox" ${showMgr?'checked':''} onchange="rvToggleManagerial(this.checked)" class="accent-yellow-500">
+                         ประเมินมิตินี้
+                       </label>`
+                    : '';
+
+                return `<div class="mb-4 ${!visible ? 'opacity-60' : ''}">
+                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color}">
+                        <div>
+                            <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
+                            <p class="text-[10px] font-bold opacity-70">${dim.nameEn}${dim.managerOnly ? ' · เฉพาะหัวหน้างาน' : ''}</p>
+                        </div>
+                        ${mgrToggle}
                     </div>
+                    ${visible ? itemsHtml : '<p class="text-center py-3 text-[11px] text-zinc-400">ไม่ประเมินมิตินี้สำหรับพนักงานคนนี้</p>'}
                 </div>`;
             }).join('');
+
+            el.innerHTML = dimsHtml;
         }
 
-        window.rvSetScore = (i, n) => { tempScores[i] = n; renderCriteria(); };
+        window.rvSetScore = (key, n) => { tempScores[key] = n; renderCriteria(); };
+        window.rvToggleManagerial = (checked) => { isManagerialOverride = checked; renderCriteria(); };
 
         window.rvCloseModal = () => {
             document.getElementById('rv-modal')?.classList.add('hidden');
-            scoringUid = null; tempScores = {};
+            scoringUid = null; tempScores = {}; isManagerialOverride = null;
         };
 
         window.rvSave = async () => {
             if (!scoringUid || !currentCycle) return;
-            const criteria = currentCycle.criteria || REVIEW_DEFAULT_CRITERIA;
-            const missing = criteria.findIndex((_, i) => !tempScores[i]);
-            if (missing !== -1) { showToast(`กรุณาให้คะแนนข้อ ${missing+1}`, 'error'); return; }
             const emp = employees.find(e => e.uid === scoringUid);
-            const vals = criteria.map((_, i) => tempScores[i]);
-            const avg = Math.round(vals.reduce((s,v)=>s+v,0) / vals.length * 100) / 100;
+            const dims = effectiveDimensions(emp);
+            // เช็คครบทุกข้อในมิติที่ต้องประเมิน
+            const missing = [];
+            dims.forEach(dim => dim.items.forEach(it => {
+                const key = dim.id + '.' + it.id;
+                if (!tempScores[key]) missing.push(it.name);
+            }));
+            if (missing.length) { showToast(`ยังขาดคะแนน: ${missing[0]}${missing.length>1?` (+${missing.length-1} ข้อ)`:''}`, 'error'); return; }
+
+            // คำนวณคะแนนต่อมิติ + เฉลี่ยรวม
+            const dimAvg = {};
+            const allVals = [];
+            dims.forEach(dim => {
+                const vals = dim.items.map(it => tempScores[dim.id + '.' + it.id] || 0);
+                dimAvg[dim.id] = Math.round(vals.reduce((s,v)=>s+v,0) / vals.length * 100) / 100;
+                allVals.push(...vals);
+            });
+            const avg = Math.round(allVals.reduce((s,v)=>s+v,0) / allVals.length * 100) / 100;
+            const isManagerial = isManagerialOverride != null ? isManagerialOverride : isManagerialEmp(emp);
+
             const btn = document.getElementById('rv-save-btn');
             btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
             try {
@@ -8186,7 +8431,11 @@ PAGES['review-admin'] = {
                     cycleId: currentCycle.id, cycleName: currentCycle.name,
                     uid: scoringUid, employeeName: emp?.name || '', employeeCode: emp?.employeeCode || '',
                     branch: emp?.branch || '', position: emp?.position || '',
-                    criteria, scores: { ...tempScores }, avg,
+                    dimensions: dims,           // มิติที่ใช้ประเมินจริง
+                    scores: { ...tempScores },  // คะแนนรายข้อ (key = dimId.itemId)
+                    dimAvg,                     // คะแนนเฉลี่ยต่อมิติ
+                    avg,                        // คะแนนเฉลี่ยรวม
+                    isManagerial,
                     comment: document.getElementById('rv-comment')?.value.trim() || '',
                     reviewedBy: profile.name, reviewedAt: new Date().toISOString(),
                 });
@@ -8200,7 +8449,7 @@ PAGES['review-admin'] = {
         if (cycles.length) rvLoadCycle();
 
         return () => {
-            ['rvNewCycle','rvLoadCycle','rvOpenScore','rvSetScore','rvCloseModal','rvSave'].forEach(k => delete window[k]);
+            ['rvNewCycle','rvLoadCycle','rvOpenScore','rvSetScore','rvToggleManagerial','rvCloseModal','rvSave','rvOpenDetail','rvCloseDetail'].forEach(k => delete window[k]);
         };
     }
 };
@@ -8211,22 +8460,201 @@ PAGES['review-admin'] = {
 PAGES['my-review'] = {
     title: 'ผลประเมินของฉัน',
     html: `
+<style>
+.mr-tab { transition: all .2s; }
+.mr-tab.active { background:#18181b; color:#eab308; }
+</style>
 <div class="p-6 lg:p-8 max-w-3xl mx-auto">
-  <div class="mb-8">
+  <div class="mb-6">
     <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ผลประเมินของฉัน</h2>
-    <p class="text-sm text-zinc-400 font-medium mt-0.5">ผลการประเมินผลงานในแต่ละรอบ</p>
+    <p class="text-sm text-zinc-400 font-medium mt-0.5">ผลประเมินจากหัวหน้า และการประเมินตัวเอง</p>
   </div>
-  <div id="mr-list" class="space-y-4">
-    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl"></i></div>
+
+  <div class="flex gap-2 mb-6 bg-zinc-100 p-1 rounded-xl w-fit">
+    <button class="mr-tab active text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg" onclick="mrSetTab('received')">ผลจากหัวหน้า</button>
+    <button class="mr-tab text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg text-zinc-500" onclick="mrSetTab('self')">ประเมินตัวเอง</button>
+  </div>
+
+  <div id="mr-tab-received">
+    <div id="mr-list" class="space-y-4">
+      <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl"></i></div>
+    </div>
+  </div>
+
+  <div id="mr-tab-self" class="hidden">
+    <div class="bg-white rounded-2xl border border-zinc-200 p-5 mb-4 flex items-center gap-3">
+      <label class="text-xs font-black text-zinc-500 uppercase whitespace-nowrap">รอบประเมิน</label>
+      <select id="mr-self-cycle" onchange="mrLoadSelfCycle()" class="flex-1 border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+        <option value="">— เลือกรอบประเมิน —</option>
+      </select>
+    </div>
+    <div id="mr-self-body">
+      <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-square-poll-vertical text-5xl mb-3"></i><p class="font-bold text-sm">เลือกรอบประเมินเพื่อประเมินตัวเอง</p></div>
+    </div>
   </div>
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
-        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const snap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','reviews'));
+        const { collection, doc, getDocs, getDoc, setDoc, query, orderBy }
+            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
+
+        // โหลด review ทั้งหมด (manager + self) ของฉัน
+        const snap = await getDocs(col('reviews'));
         const myReviews = snap.docs.map(d => d.data())
-            .filter(r => r.uid === user.uid)
+            .filter(r => r.uid === user.uid && r.kind !== 'self')
             .sort((a,b) => (b.reviewedAt||'').localeCompare(a.reviewedAt||''));
+        const mySelfReviews = {};
+        snap.docs.forEach(d => {
+            const r = d.data();
+            if (r.uid === user.uid && r.kind === 'self') mySelfReviews[r.cycleId] = r;
+        });
+
+        // โหลด cycles สำหรับประเมินตัวเอง
+        const cyclesSnap = await getDocs(query(col('review_cycles'), orderBy('createdAt','desc')));
+        const cycles = cyclesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const cycleSel = document.getElementById('mr-self-cycle');
+        if (cycleSel) cycles.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.id; o.textContent = c.name;
+            cycleSel.appendChild(o);
+        });
+
+        window.mrSetTab = (tab) => {
+            document.getElementById('mr-tab-received')?.classList.toggle('hidden', tab !== 'received');
+            document.getElementById('mr-tab-self')?.classList.toggle('hidden', tab !== 'self');
+            document.querySelectorAll('.mr-tab').forEach((b, i) => {
+                const isActive = (i === 0 && tab === 'received') || (i === 1 && tab === 'self');
+                b.classList.toggle('active', isActive);
+                b.classList.toggle('text-zinc-500', !isActive);
+            });
+        };
+
+        // ── ประเมินตัวเอง ────────────────────────────────────────
+        let selfTemp = {}, selfMgrOverride = null, selfCurCycle = null;
+
+        function selfDims(cycle) {
+            const dims = (cycle && cycle.dimensions) || REVIEW_DIMENSIONS;
+            const showMgr = selfMgrOverride != null ? selfMgrOverride : isManagerialEmp(profile);
+            return dims.filter(d => !d.managerOnly || showMgr);
+        }
+
+        window.mrLoadSelfCycle = () => {
+            const cid = document.getElementById('mr-self-cycle')?.value;
+            selfCurCycle = cycles.find(c => c.id === cid) || null;
+            const body = document.getElementById('mr-self-body');
+            if (!body) return;
+            if (!selfCurCycle) {
+                body.innerHTML = '<div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-square-poll-vertical text-5xl mb-3"></i><p class="font-bold text-sm">เลือกรอบประเมินเพื่อประเมินตัวเอง</p></div>';
+                return;
+            }
+            const existing = mySelfReviews[selfCurCycle.id];
+            selfTemp = existing && existing.scores ? { ...existing.scores } : {};
+            selfMgrOverride = existing && typeof existing.isManagerial === 'boolean' ? existing.isManagerial : null;
+            renderSelf();
+        };
+
+        function renderSelf() {
+            const body = document.getElementById('mr-self-body');
+            if (!body || !selfCurCycle) return;
+            const allDims = (selfCurCycle.dimensions) || REVIEW_DIMENSIONS;
+            const showMgr = selfMgrOverride != null ? selfMgrOverride : isManagerialEmp(profile);
+            const existing = mySelfReviews[selfCurCycle.id];
+
+            const dimsHtml = allDims.map((dim, dIdx) => {
+                const visible = !dim.managerOnly || showMgr;
+                const itemsHtml = dim.items.map(it => {
+                    const key = dim.id + '.' + it.id;
+                    const cur = selfTemp[key] || 0;
+                    const stars = [1,2,3,4,5].map(n => `
+                        <button onclick="mrSelfSetScore('${key}',${n})"
+                            class="w-8 h-8 rounded-lg text-base transition-all ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>`).join('');
+                    return `<div class="py-2.5 border-b border-zinc-100 last:border-0">
+                        <div class="flex items-start justify-between gap-3 flex-wrap">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-zinc-800">${it.name}</p>
+                                <p class="text-[11px] text-zinc-400 mt-0.5 leading-snug">${it.desc}</p>
+                            </div>
+                            <div class="flex shrink-0">${stars}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+                const mgrToggle = dim.managerOnly
+                    ? `<label class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 cursor-pointer">
+                         <input type="checkbox" ${showMgr?'checked':''} onchange="mrSelfToggleMgr(this.checked)" class="accent-yellow-500">
+                         ประเมินมิตินี้
+                       </label>`
+                    : '';
+                return `<div class="mb-4 ${!visible ? 'opacity-60' : ''}">
+                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'}">
+                        <div>
+                            <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
+                            <p class="text-[10px] font-bold opacity-70">${dim.nameEn}${dim.managerOnly ? ' · เฉพาะหัวหน้างาน' : ''}</p>
+                        </div>
+                        ${mgrToggle}
+                    </div>
+                    ${visible ? itemsHtml : '<p class="text-center py-3 text-[11px] text-zinc-400">ไม่ประเมินมิตินี้</p>'}
+                </div>`;
+            }).join('');
+
+            body.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
+                ${existing ? `<div class="bg-green-50 border border-green-200 rounded-xl px-4 py-2 mb-4 text-xs font-bold text-green-700">
+                    <i class="fa-solid fa-circle-check mr-1"></i> คุณเคยส่งการประเมินตัวเองในรอบนี้แล้ว — แก้ไขแล้วบันทึกใหม่ได้
+                </div>` : `<p class="text-xs text-zinc-400 font-medium mb-4">ให้คะแนนตัวเองตามตรง 1-5 ดาว เพื่อเปรียบเทียบกับมุมมองของหัวหน้า</p>`}
+                ${dimsHtml}
+                <div class="mt-4">
+                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ความเห็นเพิ่มเติม (จุดแข็ง / สิ่งที่อยากพัฒนา)</label>
+                    <textarea id="mr-self-comment" rows="3" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:border-yellow-500 focus:outline-none resize-none">${existing?.comment || ''}</textarea>
+                </div>
+                <button onclick="mrSelfSave()" id="mr-self-save"
+                    class="w-full mt-4 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-3 rounded-xl text-sm uppercase">
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการประเมินตัวเอง
+                </button>
+            </div>`;
+        }
+
+        window.mrSelfSetScore = (key, n) => { selfTemp[key] = n; renderSelf(); };
+        window.mrSelfToggleMgr = (checked) => { selfMgrOverride = checked; renderSelf(); };
+
+        window.mrSelfSave = async () => {
+            if (!selfCurCycle) return;
+            const dims = selfDims(selfCurCycle);
+            const missing = [];
+            dims.forEach(dim => dim.items.forEach(it => {
+                const key = dim.id + '.' + it.id;
+                if (!selfTemp[key]) missing.push(it.name);
+            }));
+            if (missing.length) { showToast(`ยังขาดคะแนน: ${missing[0]}${missing.length>1?` (+${missing.length-1} ข้อ)`:''}`, 'error'); return; }
+            const dimAvg = {};
+            const allVals = [];
+            dims.forEach(dim => {
+                const vals = dim.items.map(it => selfTemp[dim.id + '.' + it.id] || 0);
+                dimAvg[dim.id] = Math.round(vals.reduce((s,v)=>s+v,0) / vals.length * 100) / 100;
+                allVals.push(...vals);
+            });
+            const avg = Math.round(allVals.reduce((s,v)=>s+v,0) / allVals.length * 100) / 100;
+            const isManagerial = selfMgrOverride != null ? selfMgrOverride : isManagerialEmp(profile);
+            const btn = document.getElementById('mr-self-save');
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังบันทึก...';
+            try {
+                const payload = {
+                    cycleId: selfCurCycle.id, cycleName: selfCurCycle.name,
+                    uid: user.uid, employeeName: profile.name, employeeCode: profile.employeeCode || '',
+                    branch: profile.branch || '', position: profile.position || '',
+                    dimensions: dims, scores: { ...selfTemp }, dimAvg, avg, isManagerial,
+                    comment: document.getElementById('mr-self-comment')?.value.trim() || '',
+                    kind: 'self',
+                    reviewedBy: profile.name, reviewedAt: new Date().toISOString(),
+                };
+                await setDoc(doc(db,'artifacts',APP_ID,'public','data','reviews', `${selfCurCycle.id}_${user.uid}_self`), payload);
+                mySelfReviews[selfCurCycle.id] = payload;
+                showToast('✅ บันทึกการประเมินตัวเองแล้ว', 'success');
+                renderSelf();
+            } catch(e) { showToast('❌ '+e.message, 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการประเมินตัวเอง'; }
+        };
 
         const el = document.getElementById('mr-list');
         if (el) {
@@ -8237,16 +8665,47 @@ PAGES['my-review'] = {
                 </div>`;
             } else {
                 el.innerHTML = myReviews.map(r => {
-                    const criteria = r.criteria || REVIEW_DEFAULT_CRITERIA;
-                    const rows = criteria.map((c, i) => {
-                        const sc = r.scores?.[i] || 0;
-                        const stars = [1,2,3,4,5].map(n =>
-                            `<i class="fa-solid fa-star ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
-                        return `<div class="flex items-center justify-between py-1.5 border-b border-zinc-50 last:border-0">
-                            <span class="text-xs font-bold text-zinc-600">${c}</span>
-                            <span class="text-sm">${stars}</span>
-                        </div>`;
-                    }).join('');
+                    const starRow = (sc) => [1,2,3,4,5].map(n =>
+                        `<i class="fa-solid fa-star ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
+
+                    // ใช้ dimensions ใหม่ถ้ามี; ถ้าเป็น review เก่า fallback ไป criteria แบบเดิม
+                    let body = '';
+                    if (Array.isArray(r.dimensions) && r.dimensions.length) {
+                        body = r.dimensions.map((dim, dIdx) => {
+                            const dAvg = r.dimAvg && r.dimAvg[dim.id] != null ? r.dimAvg[dim.id] : null;
+                            const items = dim.items.map(it => {
+                                const key = dim.id + '.' + it.id;
+                                const sc = (r.scores && r.scores[key]) || 0;
+                                return `<div class="flex items-start justify-between gap-3 py-1.5 border-b border-zinc-50 last:border-0">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-bold text-zinc-700">${it.name}</p>
+                                        <p class="text-[10px] text-zinc-400 leading-snug">${it.desc||''}</p>
+                                    </div>
+                                    <span class="text-sm shrink-0">${starRow(sc)}</span>
+                                </div>`;
+                            }).join('');
+                            return `<div class="mt-4">
+                                <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'}">
+                                    <div>
+                                        <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
+                                        <p class="text-[10px] font-bold opacity-70">${dim.nameEn||''}</p>
+                                    </div>
+                                    ${dAvg != null ? `<p class="text-lg font-black">${dAvg.toFixed(1)}</p>` : ''}
+                                </div>
+                                ${items}
+                            </div>`;
+                        }).join('');
+                    } else {
+                        const criteria = r.criteria || REVIEW_DEFAULT_CRITERIA;
+                        body = criteria.map((c, i) => {
+                            const sc = r.scores?.[i] || 0;
+                            return `<div class="flex items-center justify-between py-1.5 border-b border-zinc-50 last:border-0">
+                                <span class="text-xs font-bold text-zinc-600">${c}</span>
+                                <span class="text-sm">${starRow(sc)}</span>
+                            </div>`;
+                        }).join('');
+                    }
+
                     const avgColor = r.avg >= 4 ? 'text-green-600' : r.avg >= 3 ? 'text-yellow-600' : 'text-red-500';
                     return `<div class="bg-white rounded-2xl border border-zinc-200 p-6">
                         <div class="flex items-center justify-between mb-4 pb-4 border-b border-zinc-100">
@@ -8259,7 +8718,7 @@ PAGES['my-review'] = {
                                 <p class="text-[9px] text-zinc-400 font-bold uppercase">เต็ม 5.0</p>
                             </div>
                         </div>
-                        ${rows}
+                        ${body}
                         ${r.comment ? `<div class="mt-4 bg-zinc-50 rounded-xl p-4 border border-zinc-100">
                             <p class="text-[10px] font-black text-zinc-400 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจากหัวหน้า</p>
                             <p class="text-sm text-zinc-700">${r.comment}</p>
@@ -8268,7 +8727,9 @@ PAGES['my-review'] = {
                 }).join('');
             }
         }
-        return () => {};
+        return () => {
+            ['mrSetTab','mrLoadSelfCycle','mrSelfSetScore','mrSelfToggleMgr','mrSelfSave'].forEach(k => delete window[k]);
+        };
     }
 };
 
