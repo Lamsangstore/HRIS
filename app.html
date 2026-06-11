@@ -1767,6 +1767,20 @@
             cancelled: { label: 'ยกเลิก',        badge: 'bg-zinc-100 text-zinc-600 border border-zinc-200',       icon: 'fa-ban'          },
         };
 
+        // ── ตำแหน่งสำนักงาน + รัศมี geofence (ใช้ร่วมทุกหน้า) ─────────
+        const OFFICE_LAT = 16.4132778;     // 16°24'47.8"N
+        const OFFICE_LNG = 100.1666111;    // 100°09'59.8"E
+        const OFFICE_RADIUS_M = 100;
+
+        function distanceMeters(lat1, lng1, lat2, lng2) {
+            const R = 6371000;
+            const toRad = d => d * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
         // ================================================================
         // PAGE DEFINITIONS
         // แต่ละหน้าเป็น object { title, html, init }
@@ -2209,6 +2223,20 @@
                 }
 
                 // ── GPS Location ────────────────────────────────────
+                // ตำแหน่งสำนักงาน (16°24'47.8"N 100°09'59.8"E) + รัศมีที่อนุญาต
+                const OFFICE_LAT = 16.4132778;
+                const OFFICE_LNG = 100.1666111;
+                const OFFICE_RADIUS_M = 100;
+
+                function distanceMeters(lat1, lng1, lat2, lng2) {
+                    const R = 6371000;
+                    const toRad = d => d * Math.PI / 180;
+                    const dLat = toRad(lat2 - lat1);
+                    const dLng = toRad(lng2 - lng1);
+                    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+                    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                }
+
                 let currentPosition = null;     // {lat, lng, accuracy, ts}
                 let locWatchId = null;
 
@@ -2221,6 +2249,20 @@
 
                 function fmtCoord(lat, lng) {
                     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                }
+
+                function updateLocStatusFromPosition() {
+                    if (!currentPosition) return;
+                    const d = distanceMeters(currentPosition.lat, currentPosition.lng, OFFICE_LAT, OFFICE_LNG);
+                    const acc = currentPosition.accuracy;
+                    const inOffice = d <= OFFICE_RADIUS_M;
+                    const distTxt = d < 1000 ? `${Math.round(d)} ม.` : `${(d/1000).toFixed(2)} กม.`;
+                    const accTxt = acc > 100 ? ` (±${Math.round(acc)}ม.)` : '';
+                    if (inOffice) {
+                        setLocStatus(`✓ อยู่ในออฟฟิศ · ห่าง ${distTxt}${accTxt}`, 'text-green-600');
+                    } else {
+                        setLocStatus(`⚠ นอกออฟฟิศ · ห่าง ${distTxt}${accTxt}`, 'text-orange-500');
+                    }
                 }
 
                 window.requestLocation = (forceUI) => {
@@ -2242,8 +2284,7 @@
                                 accuracy: pos.coords.accuracy,
                                 ts: Date.now(),
                             };
-                            const accNote = pos.coords.accuracy > 100 ? ' (ความแม่นยำต่ำ)' : '';
-                            setLocStatus(`${profile.branch || 'ตำแหน่ง'} · ${fmtCoord(currentPosition.lat, currentPosition.lng)}${accNote}`, 'text-green-600');
+                            updateLocStatusFromPosition();
 
                             // เริ่ม watch ไว้ refresh ตำแหน่งต่อ
                             if (locWatchId == null) {
@@ -2255,6 +2296,7 @@
                                             accuracy: p.coords.accuracy,
                                             ts: Date.now(),
                                         };
+                                        updateLocStatusFromPosition();
                                     },
                                     () => {},
                                     { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 }
@@ -2385,25 +2427,47 @@
                         toShow.forEach(log => {
                             const time  = new Date(log.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
                             const isIn  = log.type === 'clock_in';
-                            const mapLink = (log.lat != null && log.lng != null)
-                                ? `<a href="https://www.google.com/maps?q=${log.lat},${log.lng}" target="_blank" class="text-[10px] font-bold text-yellow-600 hover:text-yellow-700 inline-flex items-center gap-1 mt-0.5">
-                                       <i class="fa-solid fa-map-location-dot"></i> ดูตำแหน่ง${log.accuracy ? ` (±${Math.round(log.accuracy)} ม.)` : ''}
-                                   </a>`
-                                : log.locationDenied
-                                    ? `<p class="text-[10px] font-bold text-red-400 mt-0.5"><i class="fa-solid fa-location-crosshairs mr-1"></i>ไม่ได้แชร์ตำแหน่ง</p>`
-                                    : '';
-                            html += `<div class="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm hover:border-yellow-300 transition-all">
-                                <div class="flex items-center">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3 ${isIn ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}">
+                            const hasGps = log.lat != null && log.lng != null;
+
+                            // คำนวณระยะ + สถานะ — รองรับ record เก่าที่ยังไม่มี distanceM
+                            let gpsBlock = '';
+                            if (hasGps) {
+                                const dist = (log.distanceM != null)
+                                    ? log.distanceM
+                                    : Math.round(distanceMeters(log.lat, log.lng, OFFICE_LAT, OFFICE_LNG));
+                                const outside = (log.outsideOffice != null) ? log.outsideOffice : (dist > OFFICE_RADIUS_M);
+                                const distTxt = dist < 1000 ? `${dist} ม.` : `${(dist/1000).toFixed(2)} กม.`;
+                                const accTxt  = log.accuracy ? ` <span class="text-zinc-400 font-medium">±${Math.round(log.accuracy)}ม.</span>` : '';
+                                const cls   = outside ? 'text-red-600' : 'text-green-600';
+                                const icon  = outside ? 'fa-triangle-exclamation' : 'fa-circle-check';
+                                const label = outside ? `นอกออฟฟิศ ${distTxt}` : `ในออฟฟิศ ${distTxt}`;
+                                gpsBlock = `
+                                    <div class="mt-1 flex flex-col gap-0.5">
+                                        <span class="text-[10px] font-black inline-flex items-center gap-1 ${cls}">
+                                            <i class="fa-solid ${icon}"></i> ${label}${accTxt}
+                                        </span>
+                                        <a href="https://www.google.com/maps?q=${log.lat},${log.lng}" target="_blank" class="text-[10px] font-bold text-yellow-600 hover:text-yellow-700 inline-flex items-center gap-1">
+                                            <i class="fa-solid fa-map-location-dot"></i> ดูตำแหน่งบน Google Maps
+                                        </a>
+                                    </div>`;
+                            } else if (log.locationDenied) {
+                                gpsBlock = `<p class="text-[10px] font-bold text-red-400 mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-location-crosshairs"></i> ไม่ได้แชร์ตำแหน่ง</p>`;
+                            } else {
+                                gpsBlock = `<p class="text-[10px] font-bold text-zinc-400 mt-1 inline-flex items-center gap-1"><i class="fa-regular fa-circle-question"></i> ไม่มีข้อมูล GPS</p>`;
+                            }
+
+                            html += `<div class="flex items-start justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm hover:border-yellow-300 transition-all">
+                                <div class="flex items-start">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3 shrink-0 ${isIn ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}">
                                         <i class="fa-solid ${isIn ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket'}"></i>
                                     </div>
-                                    <div>
+                                    <div class="min-w-0">
                                         <p class="font-black text-zinc-800 text-sm">${isIn ? 'เข้างาน' : 'ออกงาน'}</p>
-                                        <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">${log.branch}</p>
-                                        ${mapLink}
+                                        <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">${log.branch||''}</p>
+                                        ${gpsBlock}
                                     </div>
                                 </div>
-                                <div class="text-lg font-black ${isIn ? 'text-green-600' : 'text-red-500'} font-mono">${time}</div>
+                                <div class="text-lg font-black ${isIn ? 'text-green-600' : 'text-red-500'} font-mono shrink-0">${time}</div>
                             </div>`;
                         });
                         // แสดงจำนวน record ทั้งหมดถ้ามากกว่า 2
@@ -2487,17 +2551,42 @@
                             localDate: todayTH(),
                             branch: profile.branch || 'Lamsang Group',
                         };
+                        let outsideOffice = false, distM = null;
                         if (pos) {
+                            distM = distanceMeters(pos.lat, pos.lng, OFFICE_LAT, OFFICE_LNG);
+                            outsideOffice = distM > OFFICE_RADIUS_M;
                             payload.lat = pos.lat;
                             payload.lng = pos.lng;
                             payload.accuracy = pos.accuracy;
+                            payload.distanceM = Math.round(distM);
+                            payload.outsideOffice = outsideOffice;
                         } else {
                             payload.locationDenied = true;
                         }
+
+                        // ถ้าอยู่นอกรัศมี ต้อง confirm ก่อนบันทึก
+                        if (outsideOffice) {
+                            const distTxt = distM < 1000 ? `${Math.round(distM)} ม.` : `${(distM/1000).toFixed(2)} กม.`;
+                            const actionTxt = type === 'clock_in' ? 'เข้างาน' : 'ออกงาน';
+                            const ok = confirm(
+                                `⚠ คุณอยู่นอกพื้นที่สำนักงาน (ห่าง ${distTxt})\n` +
+                                `รัศมีที่อนุญาต: ${OFFICE_RADIUS_M} เมตร\n\n` +
+                                `ต้องการลงเวลา${actionTxt}ต่อหรือไม่?\n` +
+                                `(ระบบจะแจ้งหัวหน้าและบันทึกตำแหน่งของคุณ)`
+                            );
+                            if (!ok) {
+                                if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+                                return;
+                            }
+                        }
+
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), payload);
                         const okMsg = type === 'clock_in' ? '✅ บันทึกเวลาเข้างานแล้ว' : '✅ บันทึกเวลาออกงานแล้ว';
-                        const noteMsg = pos ? '' : ' (ไม่มี GPS)';
-                        showToast(okMsg + noteMsg, pos ? 'success' : 'info');
+                        let noteMsg = '';
+                        let toastType = 'success';
+                        if (!pos) { noteMsg = ' (ไม่มี GPS)'; toastType = 'info'; }
+                        else if (outsideOffice) { noteMsg = ' ⚠ นอกพื้นที่ออฟฟิศ'; toastType = 'info'; }
+                        showToast(okMsg + noteMsg, toastType);
                     } catch (e) { alert(e.message); }
                     finally { if (btn) { btn.disabled = false; btn.innerHTML = origHtml; } }
                 }
@@ -6444,7 +6533,7 @@ PAGES['staff-attendance'] = {
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
     <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
       <p class="text-2xl font-black text-zinc-800" id="sa-stat-emp">-</p>
       <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">พนักงานที่มีบันทึก</p>
@@ -6459,7 +6548,11 @@ PAGES['staff-attendance'] = {
     </div>
     <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
       <p class="text-2xl font-black text-red-500" id="sa-stat-incomplete">-</p>
-      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">วันที่ไม่ครบ (เข้า/ออก)</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">ขาดงาน</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center col-span-2 sm:col-span-1">
+      <p class="text-2xl font-black text-orange-500" id="sa-stat-outside">-</p>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">ลงเวลานอกออฟฟิศ</p>
     </div>
   </div>
 
@@ -6651,7 +6744,7 @@ PAGES['staff-attendance'] = {
                             outLast = g.outs[g.outs.length-1];
                         }
 
-                        let hours = 0, isLate = false;
+                        let hours = 0, isLate = false, isEarlyOut = false;
                         if (inFirst && outLast) {
                             const ms = new Date(outLast.timestamp) - new Date(inFirst.timestamp);
                             const brk = sched && sched.breakMinutes ? sched.breakMinutes : 60;
@@ -6660,6 +6753,10 @@ PAGES['staff-attendance'] = {
                         if (inFirst && sched && sched.workStart && isWorkDay) {
                             const inT = new Date(inFirst.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
                             isLate = inT > sched.workStart;
+                        }
+                        if (outLast && sched && sched.workEnd && isWorkDay) {
+                            const outT = new Date(outLast.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+                            isEarlyOut = outT < sched.workEnd;
                         }
 
                         // กำหนดสถานะ
@@ -6686,9 +6783,15 @@ PAGES['staff-attendance'] = {
                         } else if (!isWorkDay) {
                             status = 'วันโอที';
                             statusCls = 'bg-amber-100 text-amber-700';
+                        } else if (isLate && isEarlyOut) {
+                            status = 'สาย+ออกก่อน';
+                            statusCls = 'bg-red-100 text-red-700';
                         } else if (isLate) {
                             status = 'สาย';
                             statusCls = 'bg-orange-100 text-orange-700';
+                        } else if (isEarlyOut) {
+                            status = 'ออกก่อน';
+                            statusCls = 'bg-pink-100 text-pink-700';
                         } else {
                             status = 'ปกติ';
                             statusCls = 'bg-green-100 text-green-700';
@@ -6711,12 +6814,31 @@ PAGES['staff-attendance'] = {
                             inLat:  inFirst && inFirst.lat != null ? inFirst.lat : null,
                             inLng:  inFirst && inFirst.lng != null ? inFirst.lng : null,
                             inAcc:  inFirst && inFirst.accuracy != null ? inFirst.accuracy : null,
+                            inDist: inFirst && inFirst.lat != null && inFirst.lng != null
+                                ? (inFirst.distanceM != null ? inFirst.distanceM : Math.round(distanceMeters(inFirst.lat, inFirst.lng, OFFICE_LAT, OFFICE_LNG)))
+                                : null,
+                            inOutside: !!(inFirst && inFirst.lat != null && inFirst.lng != null && (
+                                inFirst.outsideOffice != null
+                                    ? inFirst.outsideOffice
+                                    : distanceMeters(inFirst.lat, inFirst.lng, OFFICE_LAT, OFFICE_LNG) > OFFICE_RADIUS_M
+                            )),
+                            inDenied:   !!(inFirst && inFirst.locationDenied),
                             outLat: outLast && outLast.lat != null ? outLast.lat : null,
                             outLng: outLast && outLast.lng != null ? outLast.lng : null,
                             outAcc: outLast && outLast.accuracy != null ? outLast.accuracy : null,
+                            outDist: outLast && outLast.lat != null && outLast.lng != null
+                                ? (outLast.distanceM != null ? outLast.distanceM : Math.round(distanceMeters(outLast.lat, outLast.lng, OFFICE_LAT, OFFICE_LNG)))
+                                : null,
+                            outOutside: !!(outLast && outLast.lat != null && outLast.lng != null && (
+                                outLast.outsideOffice != null
+                                    ? outLast.outsideOffice
+                                    : distanceMeters(outLast.lat, outLast.lng, OFFICE_LAT, OFFICE_LNG) > OFFICE_RADIUS_M
+                            )),
+                            outDenied:  !!(outLast && outLast.locationDenied),
                             hours,
                             complete: !!(inFirst && outLast),
                             isLate,
+                            isEarlyOut,
                             isOT: hasLog && !isWorkDay,
                             isAbsent: !hasLog && !leave && isWorkDay,
                             isLeave: !hasLog && !!leave,
@@ -6747,20 +6869,38 @@ PAGES['staff-attendance'] = {
             const totalHours = rows.reduce((s,r)=>s+r.hours,0);
             const absentCount = rows.filter(r=>r.isAbsent).length;
             const setT = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+            const outsideCount = rows.filter(r => r.inOutside || r.outOutside).length;
             setT('sa-stat-emp', new Set(rows.map(r=>r.uid)).size);
             setT('sa-stat-days', workDays);
             setT('sa-stat-hours', totalHours.toFixed(1));
             setT('sa-stat-incomplete', absentCount);
+            setT('sa-stat-outside', outsideCount);
 
             if (!tbody) return;
             if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-zinc-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><span class="font-bold text-sm">ไม่พบประวัติในช่วงนี้</span></td></tr>`;
                 return;
             }
-            const pin = (lat, lng, acc) => {
-                if (lat == null || lng == null) return '';
-                const accTxt = acc ? ` title="ความแม่นยำ ±${Math.round(acc)} ม."` : '';
-                return ` <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="text-yellow-600 hover:text-yellow-700 ml-1"${accTxt}><i class="fa-solid fa-map-pin"></i></a>`;
+            const timeCell = (time, lat, lng, acc, dist, outside, colorCls) => {
+                if (!time) return '<span class="font-mono font-black text-zinc-300">—</span>';
+                const hasGps = lat != null && lng != null;
+                const distTxt = dist != null
+                    ? (dist < 1000 ? `${Math.round(dist)}ม.` : `${(dist/1000).toFixed(1)}กม.`)
+                    : '';
+                const linkColor = outside ? 'text-red-600 hover:text-red-700' : 'text-yellow-600 hover:text-yellow-700';
+                const linkIcon  = outside ? 'fa-triangle-exclamation' : 'fa-map-location-dot';
+                const linkLabel = outside ? `นอกออฟฟิศ ${distTxt}` : (distTxt ? `ในออฟฟิศ ${distTxt}` : 'ดูแผนที่');
+                const mapLink = hasGps
+                    ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="text-[10px] font-bold inline-flex items-center gap-1 mt-0.5 ${linkColor}" title="ความแม่นยำ ±${acc?Math.round(acc):'?'}ม.">
+                          <i class="fa-solid ${linkIcon}"></i> ${linkLabel}
+                       </a>`
+                    : `<span class="text-[10px] font-bold text-red-400 mt-0.5 inline-flex items-center gap-1">
+                          <i class="fa-solid fa-location-crosshairs"></i> ไม่มี GPS
+                       </span>`;
+                return `<div class="flex flex-col items-center gap-0.5">
+                    <span class="font-mono font-black ${colorCls}">${time}</span>
+                    ${mapLink}
+                </div>`;
             };
             tbody.innerHTML = rows.map(r => {
                 const dateLabel = new Date(r.date+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
@@ -6779,8 +6919,8 @@ PAGES['staff-attendance'] = {
                     </td>
                     <td class="px-4 py-3 text-zinc-500 text-xs font-bold">${r.code||'-'}</td>
                     <td class="px-4 py-3 text-zinc-500 text-xs">${r.branch||'-'}</td>
-                    <td class="px-4 py-3 text-center font-mono text-green-700 font-black whitespace-nowrap">${r.inTime||'—'}${pin(r.inLat,r.inLng,r.inAcc)}</td>
-                    <td class="px-4 py-3 text-center font-mono text-red-600 font-black whitespace-nowrap">${r.outTime||'—'}${pin(r.outLat,r.outLng,r.outAcc)}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">${timeCell(r.inTime, r.inLat, r.inLng, r.inAcc, r.inDist, r.inOutside, 'text-green-700')}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">${timeCell(r.outTime, r.outLat, r.outLng, r.outAcc, r.outDist, r.outOutside, 'text-red-600')}</td>
                     <td class="px-4 py-3 text-right font-bold text-zinc-700">${r.hours?r.hours.toFixed(2):'-'}</td>
                     <td class="px-4 py-3 text-center"><span class="sa-chip ${r.statusCls}">${r.status}</span></td>
                 </tr>`;
@@ -6789,11 +6929,18 @@ PAGES['staff-attendance'] = {
 
         window.saExport = () => {
             if (!lastRows.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
-            const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','ClockOut','Hours','Status'];
+            const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','InLat','InLng','InAcc','InDistM','InOutside','ClockOut','OutLat','OutLng','OutAcc','OutDistM','OutOutside','InMapUrl','OutMapUrl','Hours','Status'];
             const lines = [header.join(',')];
             const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
+            const mapUrl = (lat,lng) => (lat!=null && lng!=null) ? `https://www.google.com/maps?q=${lat},${lng}` : '';
             lastRows.forEach(r => {
-                lines.push([r.date, r.dow, r.code||'', esc(r.name), esc(r.branch), r.inTime, r.outTime, r.hours.toFixed(2), esc(r.status)].join(','));
+                lines.push([
+                    r.date, r.dow, r.code||'', esc(r.name), esc(r.branch),
+                    r.inTime,  r.inLat??'',  r.inLng??'',  r.inAcc!=null?Math.round(r.inAcc):'',  r.inDist??'',  r.inOutside?'YES':'',
+                    r.outTime, r.outLat??'', r.outLng??'', r.outAcc!=null?Math.round(r.outAcc):'', r.outDist??'', r.outOutside?'YES':'',
+                    esc(mapUrl(r.inLat,r.inLng)), esc(mapUrl(r.outLat,r.outLng)),
+                    r.hours.toFixed(2), esc(r.status)
+                ].join(','));
             });
             const blob = new Blob(['﻿'+lines.join('\n')], { type:'text/csv;charset=utf-8;' });
             const url  = URL.createObjectURL(blob);
@@ -6899,6 +7046,9 @@ PAGES['staff-leaves'] = {
     </div>
   </div>
 
+  <!-- Per-employee leave balance (shows only when employee is selected) -->
+  <div id="sl-balance" class="hidden mb-6"></div>
+
   <!-- Results -->
   <div id="sl-list" class="space-y-3">
     <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
@@ -6907,7 +7057,7 @@ PAGES['staff-leaves'] = {
 
     init: async (user, profile, db, APP_ID) => {
         if (profile.role !== 'admin' && profile.role !== 'manager') { navigateTo('home'); return; }
-        const { collection, getDocs, query, orderBy }
+        const { collection, doc, getDoc, getDocs, query, orderBy }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
 
@@ -6976,6 +7126,78 @@ PAGES['staff-leaves'] = {
         slSetRange('year');
 
         let filtered = [];
+        const balanceCache = {};
+
+        async function getEmpBalance(uid) {
+            if (balanceCache[uid]) return balanceCache[uid];
+            try {
+                const snap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','leave_balances',uid));
+                balanceCache[uid] = snap.exists() ? snap.data() : {};
+            } catch { balanceCache[uid] = {}; }
+            return balanceCache[uid];
+        }
+
+        async function renderBalance(uid) {
+            const box = document.getElementById('sl-balance');
+            if (!box) return;
+            if (!uid) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            const emp = empMap[uid];
+            if (!emp) { box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            box.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
+                <div class="flex items-center gap-2 mb-3 text-zinc-400 text-xs">
+                    <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดโควต้าของ ${emp.name}...
+                </div>
+            </div>`;
+
+            const bal = await getEmpBalance(uid);
+            const sched = schedMap[uid] || null;
+            const hpd = sched ? getDayWorkHours(sched) : 8;
+            const trackable = ['sick','personal','vacation','maternity','ordain','military'];
+
+            const cards = trackable.map(tid => {
+                const t   = getLeaveTypeInfo(tid);
+                const cv  = colorVariants(t.color);
+                const b   = bal[tid] || {};
+                const totalH = b.totalHours != null ? b.totalHours : Math.round(t.maxDays * hpd * 100) / 100;
+                const usedH  = b.usedHours  || 0;
+                const remH   = Math.max(0, totalH - usedH);
+                const pct    = totalH > 0 ? Math.min(100, Math.round(usedH/totalH*100)) : 0;
+                const barColor = pct >= 100 ? 'bg-red-400' : pct > 80 ? 'bg-orange-400' : 'bg-green-400';
+                return `<div class="border border-zinc-200 rounded-xl p-3.5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg ${cv.badge}">
+                            <i class="fa-solid ${t.icon} text-xs"></i>
+                        </span>
+                        <span class="font-black text-xs text-zinc-700">${t.label}</span>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-zinc-400 font-bold mb-1">
+                        <span>คงเหลือ</span>
+                        <span class="text-zinc-700">${hoursToDisplay(remH, sched)}</span>
+                    </div>
+                    <div class="w-full bg-zinc-100 rounded-full h-1.5 mb-1.5">
+                        <div class="h-1.5 rounded-full ${barColor} transition-all" style="width:${pct}%"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-zinc-400 font-medium">
+                        <span>ใช้ ${hoursToDisplay(usedH, sched)}</span>
+                        <span>จาก ${hoursToDisplay(totalH, sched)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const avatar = emp.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=f4f4f5&color=27272a&bold=true`;
+            box.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
+                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-zinc-100">
+                    <img src="${avatar}" onerror="handleImgError(this)" data-name="${emp.name}" class="w-10 h-10 rounded-2xl object-cover border border-zinc-200">
+                    <div class="min-w-0 flex-1">
+                        <p class="font-black text-zinc-800 text-sm truncate">${emp.name}</p>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${emp.employeeCode || ''} · ${emp.branch || ''}</p>
+                    </div>
+                    <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest"><i class="fa-solid fa-calendar-check mr-1 text-yellow-500"></i> โควต้าวันลาคงเหลือ</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">${cards}</div>
+            </div>`;
+        }
 
         window.slApply = () => {
             const uid    = document.getElementById('sl-emp')?.value;
@@ -6996,6 +7218,7 @@ PAGES['staff-leaves'] = {
                 return true;
             });
 
+            renderBalance(uid);
             renderStats(filtered);
             renderList(filtered);
         };
