@@ -2335,6 +2335,34 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ตารางประวัติรายวันของพนักงานคนนี้ -->
+                <div class="max-w-6xl mx-auto mt-6">
+                    <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+                        <div class="px-5 py-3 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 flex-wrap gap-2">
+                            <p class="font-black text-zinc-700 text-sm uppercase tracking-widest">
+                                <i class="fa-solid fa-list-ul text-yellow-500 mr-2"></i> ประวัติรายวัน
+                            </p>
+                            <span class="text-xs font-bold text-zinc-500" id="my-attn-count">-</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left font-black">วันที่</th>
+                                        <th class="px-4 py-2 text-center font-black">เข้างาน</th>
+                                        <th class="px-4 py-2 text-center font-black">ออกงาน</th>
+                                        <th class="px-4 py-2 text-right font-black">ชั่วโมง</th>
+                                        <th class="px-4 py-2 text-center font-black">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="my-attn-tbody">
+                                    <tr><td colspan="5" class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>`,
             init: async (user, profile, db, appId) => {
                 const { collection, addDoc, onSnapshot, query, where, getDocs, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
@@ -2664,11 +2692,178 @@
                 };
 
                 document.getElementById('btn-prev-month')?.addEventListener('click', () => {
-                    displayMonth--; if (displayMonth < 0) { displayMonth = 11; displayYear--; } renderCalendar();
+                    displayMonth--; if (displayMonth < 0) { displayMonth = 11; displayYear--; } renderCalendar(); renderMyAttn();
                 });
                 document.getElementById('btn-next-month')?.addEventListener('click', () => {
-                    displayMonth++; if (displayMonth > 11) { displayMonth = 0; displayYear++; } renderCalendar();
+                    displayMonth++; if (displayMonth > 11) { displayMonth = 0; displayYear++; } renderCalendar(); renderMyAttn();
                 });
+
+                // โหลด shifts (สำหรับคำนวณ workStart/workEnd ของวัน)
+                let shiftMap = {};
+                try {
+                    const shSnap = await getDocs(collection(db,'artifacts',appId,'public','data','shifts'));
+                    shSnap.forEach(d => shiftMap[d.id] = d.data());
+                } catch {}
+
+                function effTimes(dow) {
+                    const sid = mySchedule && mySchedule.shiftByDay ? mySchedule.shiftByDay[dow] : null;
+                    const sh = sid ? shiftMap[sid] : null;
+                    return {
+                        start: (sh && sh.start) || (mySchedule && mySchedule.workStart) || null,
+                        end:   (sh && sh.end)   || (mySchedule && mySchedule.workEnd)   || null,
+                        breakMinutes: sh && sh.breakMinutes != null ? sh.breakMinutes
+                            : (mySchedule && mySchedule.breakMinutes != null ? mySchedule.breakMinutes : 60),
+                        shiftName: sh ? sh.name : null,
+                    };
+                }
+
+                const LATE_GRACE_MIN = 15;
+                const DOW_TH = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+                const toMin = (hhmm) => {
+                    const [h, m] = String(hhmm||'').split(':').map(Number);
+                    return (h || 0) * 60 + (m || 0);
+                };
+
+                function buildMyAttnRows() {
+                    const workDaySet = new Set((mySchedule && mySchedule.workDays) ? mySchedule.workDays : [1,2,3,4,5]);
+                    const personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
+                    const leaveMap = buildLeaveMap();
+
+                    // group logs by date
+                    const groups = {};
+                    myLogs.forEach(l => {
+                        const ds = l.localDate;
+                        if (!ds) return;
+                        if (!groups[ds]) groups[ds] = { ins: [], outs: [] };
+                        if (l.type === 'clock_in') groups[ds].ins.push(l);
+                        if (l.type === 'clock_out') groups[ds].outs.push(l);
+                    });
+
+                    // เดือนปัจจุบันใน calendar
+                    const todayStr = todayTH();
+                    const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+                    const rows = [];
+                    for (let d = daysInMonth; d >= 1; d--) {
+                        const ds = `${displayYear}-${String(displayMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        if (ds > todayStr) continue;          // ข้ามวันอนาคต
+                        const dow = parseDateTH(ds).getDay();
+                        const isPubHol  = isPublicHoliday(ds);
+                        const isPersHol = personalHolSet.has(ds);
+                        const isWorkDay = workDaySet.has(dow) && !isPubHol && !isPersHol;
+                        const leave = leaveMap[ds];
+
+                        const g = groups[ds];
+                        let inFirst, outLast;
+                        if (g) {
+                            g.ins.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+                            g.outs.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+                            inFirst = g.ins[0];
+                            outLast = g.outs[g.outs.length-1];
+                        }
+
+                        const eff = effTimes(dow);
+                        let hours = 0, isLate = false, isEarlyOut = false, lateMinutes = 0, earlyOutMinutes = 0;
+                        if (inFirst && outLast) {
+                            const ms = new Date(outLast.timestamp) - new Date(inFirst.timestamp);
+                            hours = Math.max(0, ms/3600000 - eff.breakMinutes/60);
+                        }
+                        if (inFirst && eff.start && isWorkDay) {
+                            const inT = new Date(inFirst.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+                            const diff = toMin(inT) - toMin(eff.start);
+                            if (diff > 0) { lateMinutes = diff; isLate = diff > LATE_GRACE_MIN; }
+                        }
+                        if (outLast && eff.end && isWorkDay) {
+                            const outT = new Date(outLast.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+                            const diff = toMin(eff.end) - toMin(outT);
+                            if (diff > 0) { earlyOutMinutes = diff; isEarlyOut = true; }
+                        }
+
+                        let status, statusCls;
+                        const hasLog = !!(inFirst || outLast);
+                        if (!hasLog) {
+                            if (leave) {
+                                const lt = leave.type;
+                                const lname = { sick:'ป่วย', personal:'กิจ', vacation:'พักร้อน', maternity:'คลอด', ordain:'บวช', military:'ทหาร' };
+                                status = 'ลา' + (lname[lt] || ''); statusCls = 'bg-blue-100 text-blue-700';
+                            } else if (isPubHol) { status = 'หยุดนักขัตฤกษ์'; statusCls = 'bg-red-100 text-red-700'; }
+                            else if (!isWorkDay) { status = 'วันหยุด'; statusCls = 'bg-purple-100 text-purple-700'; }
+                            else { status = 'ขาดงาน'; statusCls = 'bg-red-200 text-red-800'; }
+                        } else if (!inFirst || !outLast) {
+                            status = 'ไม่ครบ'; statusCls = 'bg-orange-100 text-orange-700';
+                        } else if (!isWorkDay) {
+                            status = 'วันโอที'; statusCls = 'bg-amber-100 text-amber-700';
+                        } else if (isLate && isEarlyOut) {
+                            status = 'สาย+ออกก่อน'; statusCls = 'bg-red-100 text-red-700';
+                        } else if (isLate) {
+                            status = 'สาย'; statusCls = 'bg-orange-100 text-orange-700';
+                        } else if (isEarlyOut) {
+                            status = 'ออกก่อน'; statusCls = 'bg-pink-100 text-pink-700';
+                        } else {
+                            status = 'ปกติ'; statusCls = 'bg-green-100 text-green-700';
+                        }
+
+                        // ข้ามวันหยุด/หยุดนักขัตฤกษ์ที่ไม่มีบันทึก (ลดความรก)
+                        if (!hasLog && !leave && !isWorkDay) continue;
+
+                        rows.push({
+                            date: ds, dow: DOW_TH[dow], shift: eff.shiftName,
+                            inTime: inFirst ? new Date(inFirst.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : '',
+                            outTime: outLast ? new Date(outLast.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : '',
+                            inLat: inFirst?.lat, inLng: inFirst?.lng,
+                            outLat: outLast?.lat, outLng: outLast?.lng,
+                            hours, lateMinutes, earlyOutMinutes, status, statusCls,
+                            isAbsent: !hasLog && !leave && isWorkDay,
+                            isOT: hasLog && !isWorkDay,
+                            isLeave: !hasLog && !!leave,
+                        });
+                    }
+                    return rows;
+                }
+
+                function renderMyAttn() {
+                    const tbody = document.getElementById('my-attn-tbody');
+                    const cnt = document.getElementById('my-attn-count');
+                    if (!tbody) return;
+                    const rows = buildMyAttnRows();
+                    if (cnt) cnt.textContent = rows.length + ' รายการ';
+                    if (!rows.length) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-zinc-300 font-bold text-sm">ไม่มีประวัติในเดือนนี้</td></tr>';
+                        return;
+                    }
+                    const timeBlock = (time, lat, lng, deltaMin, kind, colorCls) => {
+                        if (!time) return '<span class="font-mono font-black text-zinc-300">—</span>';
+                        let badge = '';
+                        if (deltaMin > 0) {
+                            if (kind === 'late') {
+                                const hard = deltaMin > 15;
+                                badge = `<span class="text-[10px] font-black mt-0.5 px-1.5 py-0.5 rounded ${hard?'bg-orange-100 text-orange-700':'bg-zinc-100 text-zinc-500'}">+${deltaMin} น.${hard?'':' (ผ่อนผัน)'}</span>`;
+                            } else {
+                                badge = `<span class="text-[10px] font-black mt-0.5 px-1.5 py-0.5 rounded bg-pink-100 text-pink-700">ออกก่อน ${deltaMin} น.</span>`;
+                            }
+                        }
+                        const map = (lat != null && lng != null)
+                            ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="text-[10px] font-bold text-yellow-600 hover:text-yellow-700 mt-0.5"><i class="fa-solid fa-map-location-dot mr-1"></i>แผนที่</a>`
+                            : '';
+                        return `<div class="flex flex-col items-center gap-0.5">
+                            <span class="font-mono font-black ${colorCls}">${time}</span>
+                            ${badge}${map}
+                        </div>`;
+                    };
+                    tbody.innerHTML = rows.map(r => {
+                        const dateLabel = new Date(r.date+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
+                        const rowBg = r.isAbsent ? 'bg-red-50/60' : r.isOT ? 'bg-amber-50/60' : r.isLeave ? 'bg-blue-50/40' : '';
+                        return `<tr class="border-b border-zinc-100 ${rowBg}">
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <div class="font-bold text-zinc-700 text-xs">${dateLabel}</div>
+                                <div class="text-[10px] font-black text-zinc-400 uppercase">${r.dow}${r.shift?` · <span class="text-indigo-500">${r.shift}</span>`:''}</div>
+                            </td>
+                            <td class="px-4 py-3 text-center whitespace-nowrap">${timeBlock(r.inTime, r.inLat, r.inLng, r.lateMinutes, 'late', 'text-green-700')}</td>
+                            <td class="px-4 py-3 text-center whitespace-nowrap">${timeBlock(r.outTime, r.outLat, r.outLng, r.earlyOutMinutes, 'early', 'text-red-600')}</td>
+                            <td class="px-4 py-3 text-right font-bold text-zinc-700">${r.hours?r.hours.toFixed(2):'-'}</td>
+                            <td class="px-4 py-3 text-center"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${r.statusCls}">${r.status}</span></td>
+                        </tr>`;
+                    }).join('');
+                }
 
                 const unsubscribe = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), snap => {
                     myLogs = [];
@@ -2682,6 +2877,7 @@
                     myLogs.sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
                     renderCalendar();
                     renderLogs();
+                    renderMyAttn();
                 });
 
                 async function doClock(type) {
@@ -3105,6 +3301,7 @@
                                 <div><label class="input-label">สาขา/แผนก *</label><select id="f-branch" class="input-field cursor-pointer"><option>สำนักงานใหญ่</option><option>สาขาพิจิตร (เนินปอ)</option></select></div>
                                 <div><label class="input-label">ตำแหน่ง</label><input type="text" id="f-position" class="input-field" placeholder="เช่น พนักงานขาย"></div>
                                 <div><label class="input-label">ประเภทพนักงาน</label><select id="f-emp-type" class="input-field cursor-pointer"><option value="Full-time">ประจำ</option><option value="Part-time">พาร์ทไทม์</option><option value="Contract">สัญญาจ้าง</option></select></div>
+                                <div class="md:col-span-2 lg:col-span-2"><label class="input-label">หัวหน้าโดยตรง <span class="text-xs text-zinc-400 font-medium">(สำหรับระบบประเมินผลงาน)</span></label><select id="f-manager-uid" class="input-field cursor-pointer"><option value="">— ไม่ระบุ / ขึ้นตรงกับผู้บริหาร —</option></select></div>
                             </div>
                             <h4 class="section-title"><i class="fa-solid fa-coins"></i>5. เงินเดือนและบัญชี</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
@@ -3191,6 +3388,20 @@
                     snap.forEach(d => {
                         const emp = d.data();
                         allEmployees.push(emp);
+                    });
+                    // populate manager dropdown (managers/admins only, not resigned)
+                    const mSel = document.getElementById('f-manager-uid');
+                    if (mSel) {
+                        const cur = mSel.value;
+                        const mgrs = allEmployees
+                            .filter(e => (e.role === 'manager' || e.role === 'admin') && e.status !== 'resigned' && e.uid)
+                            .sort((a,b) => (a.name||'').localeCompare(b.name||'','th'));
+                        mSel.innerHTML = '<option value="">— ไม่ระบุ / ขึ้นตรงกับผู้บริหาร —</option>'
+                            + mgrs.map(m => `<option value="${m.uid}">${m.name||''}${m.position?` (${m.position})`:''}</option>`).join('');
+                        if (cur) mSel.value = cur;
+                    }
+                    snap.forEach(d => {
+                        const emp = d.data();
                         const avatar = emp.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=f4f4f5&color=27272a&bold=true`;
                         let badge = '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-[10px] font-bold">Active</span>';
                         if (emp.status === 'resigned') badge = '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold">Resigned</span>';
@@ -3248,6 +3459,8 @@
                     document.getElementById('f-branch').value = emp.branch || 'สำนักงานใหญ่';
                     document.getElementById('f-position').value = emp.position || '';
                     document.getElementById('f-emp-type').value = emp.empType || 'Full-time';
+                    const mSel = document.getElementById('f-manager-uid');
+                    if (mSel) mSel.value = emp.managerUid || '';
                     document.getElementById('f-salary-month').value = emp.baseSalary || 0;
                     document.getElementById('f-salary-day').value = emp.dailyWage || 0;
                     document.getElementById('f-salary-hour').value = emp.hourlyWage || 0;
@@ -3334,6 +3547,7 @@
                         phone: v('f-phone'), email, lineId: v('f-line-id'), address: v('f-address'),
                         province: v('f-province'), district: v('f-district'), subdistrict: v('f-subdistrict'), zipcode: v('f-zipcode'),
                         startDate: v('f-start-date'), branch: v('f-branch'), position: v('f-position'), empType: v('f-emp-type'),
+                        managerUid: v('f-manager-uid') || '',
                         baseSalary: Number(v('f-salary-month')||0), dailyWage: Number(v('f-salary-day')||0), hourlyWage: Number(v('f-salary-hour')||0),
                         commRate: Number(v('f-comm-rate')||0), commMin: Number(v('f-comm-min')||0),
                         commission: Number(v('f-comm-rate')||0), paymentMethod: v('f-payment-method'), bankName: v('f-bank-name'), bankAccount: v('f-bank-acc'),
@@ -6812,13 +7026,14 @@ PAGES['staff-attendance'] = {
             <th class="px-4 py-2 text-left font-black">พนักงาน</th>
             <th class="px-4 py-2 text-left font-black">สาขา</th>
             <th class="px-4 py-2 text-center font-black">มาทำงาน</th>
-            <th class="px-4 py-2 text-center font-black">สาย</th>
+            <th class="px-4 py-2 text-center font-black">สาย<br><span class="text-[9px] font-medium normal-case">(>15น.)</span></th>
             <th class="px-4 py-2 text-center font-black">ออกก่อน</th>
             <th class="px-4 py-2 text-center font-black">ไม่ครบ</th>
             <th class="px-4 py-2 text-center font-black">ขาด</th>
             <th class="px-4 py-2 text-center font-black">ลา</th>
             <th class="px-4 py-2 text-center font-black">OT</th>
             <th class="px-4 py-2 text-center font-black">นอกพื้นที่</th>
+            <th class="px-4 py-2 text-right font-black">นาทีสาย<br><span class="text-[9px] font-medium normal-case">(สาย+ออกก่อน)</span></th>
             <th class="px-4 py-2 text-right font-black">รวม ชม.</th>
           </tr>
         </thead>
@@ -7008,19 +7223,34 @@ PAGES['staff-attendance'] = {
 
                         // เวลาอ้างอิงของวันนี้ — ใช้กะรายวันถ้ามี ไม่งั้นใช้ตารางปกติ
                         const eff = effTimes(sched, dow);
+                        const LATE_GRACE_MIN = 15;     // มาช้าได้ไม่เกิน 15 นาทีถึงไม่ติดสถานะ "สาย"
+                        const toMin = (hhmm) => {
+                            const [h, m] = String(hhmm||'').split(':').map(Number);
+                            return (h || 0) * 60 + (m || 0);
+                        };
                         let hours = 0, isLate = false, isEarlyOut = false;
+                        let lateMinutes = 0, earlyOutMinutes = 0;
                         if (inFirst && outLast) {
                             const ms = new Date(outLast.timestamp) - new Date(inFirst.timestamp);
                             hours = Math.max(0, ms/3600000 - eff.breakMinutes/60);
                         }
                         if (inFirst && eff.start && isWorkDay) {
                             const inT = new Date(inFirst.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
-                            isLate = inT > eff.start;
+                            const diff = toMin(inT) - toMin(eff.start);
+                            if (diff > 0) {
+                                lateMinutes = diff;                    // เก็บนาทีสายจริง
+                                isLate = diff > LATE_GRACE_MIN;        // status "สาย" เฉพาะเกิน 15 นาที
+                            }
                         }
                         if (outLast && eff.end && isWorkDay) {
                             const outT = new Date(outLast.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
-                            isEarlyOut = outT < eff.end;
+                            const diff = toMin(eff.end) - toMin(outT);
+                            if (diff > 0) {
+                                earlyOutMinutes = diff;
+                                isEarlyOut = true;
+                            }
                         }
+                        const totalLateMin = lateMinutes + earlyOutMinutes;   // นาทีสาย + ออกก่อน รวม
 
                         // กำหนดสถานะ
                         let status, statusCls;
@@ -7103,6 +7333,9 @@ PAGES['staff-attendance'] = {
                             complete: !!(inFirst && outLast),
                             isLate,
                             isEarlyOut,
+                            lateMinutes,
+                            earlyOutMinutes,
+                            totalLateMin,
                             isOT: hasLog && !isWorkDay,
                             isAbsent: !hasLog && !leave && isWorkDay,
                             isLeave: !hasLog && !!leave,
@@ -7148,7 +7381,7 @@ PAGES['staff-attendance'] = {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-zinc-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><span class="font-bold text-sm">ไม่พบประวัติในช่วงนี้</span></td></tr>`;
                 return;
             }
-            const timeCell = (time, lat, lng, acc, dist, outside, colorCls) => {
+            const timeCell = (time, lat, lng, acc, dist, outside, colorCls, deltaMin, deltaKind) => {
                 if (!time) return '<span class="font-mono font-black text-zinc-300">—</span>';
                 const hasGps = lat != null && lng != null;
                 const distTxt = dist != null
@@ -7164,8 +7397,23 @@ PAGES['staff-attendance'] = {
                     : `<span class="text-[10px] font-bold text-red-400 mt-0.5 inline-flex items-center gap-1">
                           <i class="fa-solid fa-location-crosshairs"></i> ไม่มี GPS
                        </span>`;
+                // ป้ายนาทีสาย/ออกก่อน (แสดงเสมอเมื่อมี — แม้ไม่เกิน grace period)
+                let deltaBadge = '';
+                if (deltaMin > 0) {
+                    if (deltaKind === 'late') {
+                        const isHard = deltaMin > 15;     // เกิน grace
+                        deltaBadge = `<span class="text-[10px] font-black mt-0.5 px-1.5 py-0.5 rounded ${isHard?'bg-orange-100 text-orange-700':'bg-zinc-100 text-zinc-500'}" title="${isHard?'สาย':'สายในช่วง grace'}">
+                            +${deltaMin} นาที${isHard?'':' (ในช่วงผ่อนผัน)'}
+                        </span>`;
+                    } else {
+                        deltaBadge = `<span class="text-[10px] font-black mt-0.5 px-1.5 py-0.5 rounded bg-pink-100 text-pink-700">
+                            ออกก่อน ${deltaMin} นาที
+                        </span>`;
+                    }
+                }
                 return `<div class="flex flex-col items-center gap-0.5">
                     <span class="font-mono font-black ${colorCls}">${time}</span>
+                    ${deltaBadge}
                     ${mapLink}
                 </div>`;
             };
@@ -7186,8 +7434,8 @@ PAGES['staff-attendance'] = {
                     </td>
                     <td class="px-4 py-3 text-zinc-500 text-xs font-bold">${r.code||'-'}</td>
                     <td class="px-4 py-3 text-zinc-500 text-xs">${r.branch||'-'}</td>
-                    <td class="px-4 py-3 text-center whitespace-nowrap">${timeCell(r.inTime, r.inLat, r.inLng, r.inAcc, r.inDist, r.inOutside, 'text-green-700')}</td>
-                    <td class="px-4 py-3 text-center whitespace-nowrap">${timeCell(r.outTime, r.outLat, r.outLng, r.outAcc, r.outDist, r.outOutside, 'text-red-600')}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">${timeCell(r.inTime, r.inLat, r.inLng, r.inAcc, r.inDist, r.inOutside, 'text-green-700', r.lateMinutes, 'late')}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">${timeCell(r.outTime, r.outLat, r.outLng, r.outAcc, r.outDist, r.outOutside, 'text-red-600', r.earlyOutMinutes, 'early')}</td>
                     <td class="px-4 py-3 text-right font-bold text-zinc-700">${r.hours?r.hours.toFixed(2):'-'}</td>
                     <td class="px-4 py-3 text-center"><span class="sa-chip ${r.statusCls}">${r.status}</span></td>
                 </tr>`;
@@ -7202,7 +7450,8 @@ PAGES['staff-attendance'] = {
             rows.forEach(r => {
                 if (!byUid[r.uid]) byUid[r.uid] = {
                     uid: r.uid, name: r.name, code: r.code, branch: r.branch, photoURL: r.photoURL,
-                    present: 0, late: 0, earlyOut: 0, incomplete: 0, absent: 0, leave: 0, ot: 0, outside: 0, hours: 0,
+                    present: 0, late: 0, earlyOut: 0, incomplete: 0, absent: 0, leave: 0, ot: 0, outside: 0,
+                    lateMin: 0, hours: 0,
                 };
                 const s = byUid[r.uid];
                 if (r.isAbsent) s.absent++;
@@ -7212,9 +7461,11 @@ PAGES['staff-attendance'] = {
                 else {
                     s.present++;
                     s.hours += r.hours;
-                    if (r.isLate) s.late++;
+                    if (r.isLate) s.late++;       // นับเฉพาะที่เกิน grace
                     if (r.isEarlyOut) s.earlyOut++;
                 }
+                // สะสมนาทีสาย + นาทีออกก่อน (ทุกแถวที่มี ไม่สนใจ grace)
+                s.lateMin += (r.lateMinutes || 0) + (r.earlyOutMinutes || 0);
                 if (r.inOutside || r.outOutside) s.outside++;
             });
             return Object.values(byUid).sort((a,b)=>a.name.localeCompare(b.name,'th'));
@@ -7225,12 +7476,18 @@ PAGES['staff-attendance'] = {
             if (!tbody) return;
             const sums = buildSummary(rows);
             if (!sums.length) {
-                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-16 text-zinc-300 font-bold text-sm">ไม่พบข้อมูลในช่วงนี้</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-16 text-zinc-300 font-bold text-sm">ไม่พบข้อมูลในช่วงนี้</td></tr>`;
                 return;
             }
             const numCell = (v, cls) => v > 0
                 ? `<td class="px-4 py-3 text-center font-black ${cls}">${v}</td>`
                 : `<td class="px-4 py-3 text-center text-zinc-300">-</td>`;
+            const fmtLateMin = (m) => {
+                if (!m) return '<td class="px-4 py-3 text-right text-zinc-300">-</td>';
+                const h = Math.floor(m / 60), mm = m % 60;
+                const txt = h ? `${h} ชม. ${mm} น.` : `${mm} น.`;
+                return `<td class="px-4 py-3 text-right font-black text-rose-600">${txt}</td>`;
+            };
             tbody.innerHTML = sums.map(s => {
                 const avatar = s.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=f4f4f5&color=27272a&bold=true`;
                 return `<tr class="sa-row border-b border-zinc-100">
@@ -7252,6 +7509,7 @@ PAGES['staff-attendance'] = {
                     ${numCell(s.leave, 'text-blue-600')}
                     ${numCell(s.ot, 'text-amber-600')}
                     ${numCell(s.outside, 'text-red-500')}
+                    ${fmtLateMin(s.lateMin)}
                     <td class="px-4 py-3 text-right font-black text-zinc-800">${s.hours.toFixed(1)}</td>
                 </tr>`;
             }).join('');
@@ -7276,15 +7534,15 @@ PAGES['staff-attendance'] = {
         window.saExport = () => {
             if (!lastRows.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
             if (saView === 'summary') { saExportSummary(); return; }
-            const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','InLat','InLng','InAcc','InDistM','InOutside','ClockOut','OutLat','OutLng','OutAcc','OutDistM','OutOutside','InMapUrl','OutMapUrl','Hours','Status'];
+            const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','InLat','InLng','InAcc','InDistM','InOutside','LateMin','ClockOut','OutLat','OutLng','OutAcc','OutDistM','OutOutside','EarlyOutMin','TotalLateMin','InMapUrl','OutMapUrl','Hours','Status'];
             const lines = [header.join(',')];
             const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
             const mapUrl = (lat,lng) => (lat!=null && lng!=null) ? `https://www.google.com/maps?q=${lat},${lng}` : '';
             lastRows.forEach(r => {
                 lines.push([
                     r.date, r.dow, r.code||'', esc(r.name), esc(r.branch),
-                    r.inTime,  r.inLat??'',  r.inLng??'',  r.inAcc!=null?Math.round(r.inAcc):'',  r.inDist??'',  r.inOutside?'YES':'',
-                    r.outTime, r.outLat??'', r.outLng??'', r.outAcc!=null?Math.round(r.outAcc):'', r.outDist??'', r.outOutside?'YES':'',
+                    r.inTime,  r.inLat??'',  r.inLng??'',  r.inAcc!=null?Math.round(r.inAcc):'',  r.inDist??'',  r.inOutside?'YES':'',  r.lateMinutes||0,
+                    r.outTime, r.outLat??'', r.outLng??'', r.outAcc!=null?Math.round(r.outAcc):'', r.outDist??'', r.outOutside?'YES':'', r.earlyOutMinutes||0, r.totalLateMin||0,
                     esc(mapUrl(r.inLat,r.inLng)), esc(mapUrl(r.outLat,r.outLng)),
                     r.hours.toFixed(2), esc(r.status)
                 ].join(','));
@@ -7298,11 +7556,11 @@ PAGES['staff-attendance'] = {
 
         function saExportSummary() {
             const sums = buildSummary(lastRows);
-            const header = ['EmployeeCode','Name','Branch','PresentDays','Late','EarlyOut','Incomplete','Absent','LeaveDays','OTDays','OutsideOffice','TotalHours'];
+            const header = ['EmployeeCode','Name','Branch','PresentDays','LateDays','EarlyOutDays','Incomplete','Absent','LeaveDays','OTDays','OutsideOffice','TotalLateMin','TotalHours'];
             const esc = s => `"${String(s||'').replace(/"/g,'""')}"`;
             const lines = [header.join(',')];
             sums.forEach(s => {
-                lines.push([s.code||'', esc(s.name), esc(s.branch), s.present, s.late, s.earlyOut, s.incomplete, s.absent, s.leave, s.ot, s.outside, s.hours.toFixed(2)].join(','));
+                lines.push([s.code||'', esc(s.name), esc(s.branch), s.present, s.late, s.earlyOut, s.incomplete, s.absent, s.leave, s.ot, s.outside, s.lateMin, s.hours.toFixed(2)].join(','));
             });
             const blob = new Blob(['﻿'+lines.join('\n')], { type:'text/csv;charset=utf-8;' });
             const url  = URL.createObjectURL(blob);
@@ -8071,11 +8329,11 @@ PAGES['review-admin'] = {
 <div id="rv-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="rvCloseModal()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-    <div class="bg-zinc-900 px-7 py-5">
-      <h3 class="font-black text-white text-lg" id="rv-modal-title">ประเมิน</h3>
-      <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest" id="rv-modal-sub">-</p>
+    <div class="bg-zinc-900 px-5 sm:px-7 py-4 sm:py-5">
+      <h3 class="font-black text-white text-base sm:text-lg" id="rv-modal-title">ประเมิน</h3>
+      <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5" id="rv-modal-sub">-</p>
     </div>
-    <div class="p-7 space-y-4 max-h-[70vh] overflow-y-auto">
+    <div class="p-4 sm:p-7 space-y-4 max-h-[75vh] overflow-y-auto">
       <div id="rv-criteria"></div>
       <div>
         <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ความเห็นเพิ่มเติม</label>
@@ -8093,14 +8351,14 @@ PAGES['review-admin'] = {
 <div id="rv-detail-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="rvCloseDetail()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden">
-    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
-      <div>
-        <h3 class="font-black text-white text-lg" id="rv-detail-title">รายละเอียดผลประเมิน</h3>
-        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest" id="rv-detail-sub">-</p>
+    <div class="bg-zinc-900 px-5 sm:px-7 py-4 sm:py-5 flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h3 class="font-black text-white text-base sm:text-lg" id="rv-detail-title">รายละเอียดผลประเมิน</h3>
+        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5 truncate" id="rv-detail-sub">-</p>
       </div>
-      <button onclick="rvCloseDetail()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="rvCloseDetail()" class="text-zinc-400 hover:text-white shrink-0"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
-    <div class="p-6 max-h-[75vh] overflow-y-auto" id="rv-detail-body"></div>
+    <div class="p-4 sm:p-6 max-h-[75vh] overflow-y-auto" id="rv-detail-body"></div>
   </div>
 </div>`,
 
@@ -8112,10 +8370,31 @@ PAGES['review-admin'] = {
 
         let cycles = [], currentCycle = null, reviews = {}, selfReviews = {}, scoringUid = null, tempScores = {}, isManagerialOverride = null;
 
+        const isAdmin = profile.role === 'admin';
         const empSnap = await getDocs(col('users'));
-        const employees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() }))
+        const allEmployees = empSnap.docs.map(d => ({ uid: d.id, ...d.data() }))
             .filter(e => e.name && e.status !== 'resigned')
             .sort((a,b) => a.name.localeCompare(b.name,'th'));
+
+        // manager เห็น:
+        //   - ลูกทีมตัวเอง (managerUid === ตน)
+        //   - พนักงานที่ยังไม่มีหัวหน้ากำหนดไว้ (managerUid ว่าง) — หลายหัวหน้าประเมินได้
+        //   - ตัวเอง (จะถูกซ่อนตอน render เพราะใช้หน้า "ประเมินตัวเอง" แทน)
+        // admin เห็นทุกคน
+        function canReview(e) {
+            if (isAdmin) return true;
+            return e.managerUid === user.uid || !e.managerUid;
+        }
+        const employees = isAdmin
+            ? allEmployees
+            : allEmployees.filter(e => canReview(e) || e.uid === user.uid);
+
+        // แสดงข้อความถ้า manager ไม่มีพนักงานที่ประเมินได้เลย
+        const noTeamWarn = (!isAdmin && employees.filter(e => e.uid !== user.uid).length === 0)
+            ? `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 text-xs text-amber-800 font-medium">
+                <i class="fa-solid fa-circle-info mr-1"></i>
+                ตอนนี้ไม่มีพนักงานที่คุณประเมินได้ — พนักงานที่ Admin ตั้ง "หัวหน้าโดยตรง" เป็นชื่อคุณ จะมาขึ้นที่นี่ พนักงานที่ไม่ได้กำหนดหัวหน้า หัวหน้าทุกคนประเมินได้
+            </div>` : '';
 
         async function loadCycles() {
             const snap = await getDocs(query(col('review_cycles'), orderBy('createdAt','desc')));
@@ -8163,63 +8442,115 @@ PAGES['review-admin'] = {
             }
             el.innerHTML = `<div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>`;
             // โหลดผลประเมินของรอบนี้ (manager + self)
+            // เก็บเฉพาะของพนักงานในขอบเขต (ตัด review ของหัวหน้าทีมอื่นออก)
+            const visibleUids = new Set(employees.map(e => e.uid));
             const snap = await getDocs(col('reviews'));
+            // reviews: uid → { reviewerUid: review }  — รองรับหลายหัวหน้าประเมินคนเดียวกัน
             reviews = {};
             selfReviews = {};
             snap.forEach(d => {
                 const r = d.data();
                 if (r.cycleId !== currentCycle.id) return;
-                if (r.kind === 'self') selfReviews[r.uid] = r;
-                else reviews[r.uid] = r;
+                if (!visibleUids.has(r.uid)) return;
+                if (r.kind === 'self') {
+                    selfReviews[r.uid] = r;
+                } else {
+                    if (!reviews[r.uid]) reviews[r.uid] = {};
+                    const key = r.reviewerUid || 'legacy';
+                    reviews[r.uid][key] = r;
+                }
             });
             renderEmpList();
         };
 
+        // ── helpers ───────────────────────────────────────────
+        // review ของฉันที่ทำกับพนักงานคนนี้ (รองรับ legacy ที่ไม่มี reviewerUid)
+        function myReviewOf(uid) {
+            const m = reviews[uid];
+            if (!m) return null;
+            if (m[user.uid]) return m[user.uid];
+            // legacy: ถือว่าเป็นของเราถ้าเราเป็นหัวหน้าโดยตรงของคนนี้
+            if (m['legacy']) {
+                const e = employees.find(x => x.uid === uid);
+                if (e && (e.managerUid === user.uid || isAdmin)) return m['legacy'];
+            }
+            return null;
+        }
+        function allReviewsOf(uid) {
+            return reviews[uid] ? Object.values(reviews[uid]) : [];
+        }
+        function avgOfAllReviews(uid) {
+            const arr = allReviewsOf(uid);
+            if (!arr.length) return null;
+            return Math.round(arr.reduce((s,r) => s + (r.avg||0), 0) / arr.length * 100) / 100;
+        }
+
         function renderEmpList() {
             const el = document.getElementById('rv-emp-list');
             if (!el || !currentCycle) return;
-            const doneCount = employees.filter(e => reviews[e.uid]).length;
-            const selfCount = employees.filter(e => selfReviews[e.uid]).length;
+            // กันโชว์ "ตัวเอง" ในรายการที่ manager ประเมิน — manager เห็นได้แต่ห้าม "ประเมินตัวเอง" ผ่านหน้านี้
+            const list = isAdmin ? employees : employees.filter(e => e.uid !== user.uid);
+            // จำนวนคนที่ถูกประเมินแล้ว (อย่างน้อย 1 reviewer)
+            const doneCount = list.filter(e => allReviewsOf(e.uid).length > 0).length;
+            const selfCount = list.filter(e => selfReviews[e.uid]).length;
             const header = `<div class="bg-zinc-900 rounded-2xl p-4 flex items-center justify-between text-white mb-1 flex-wrap gap-2">
                 <p class="font-black text-sm">${currentCycle.name}</p>
                 <div class="flex gap-3 text-xs font-bold">
-                    <span class="text-yellow-400"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมินแล้ว ${doneCount}/${employees.length}</span>
-                    <span class="text-blue-300"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเองแล้ว ${selfCount}/${employees.length}</span>
+                    <span class="text-yellow-400"><i class="fa-solid fa-clipboard-check mr-1"></i>มีหัวหน้าประเมินแล้ว ${doneCount}/${list.length}</span>
+                    <span class="text-blue-300"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเองแล้ว ${selfCount}/${list.length}</span>
                 </div>
-            </div>`;
-            el.innerHTML = header + employees.map(e => {
-                const rv = reviews[e.uid];
+            </div>` + noTeamWarn;
+            if (!list.length) {
+                el.innerHTML = header + `<div class="text-center py-12 text-zinc-300 bg-white rounded-2xl border border-zinc-200">
+                    <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+                    <p class="font-bold text-sm">ไม่มีพนักงานในขอบเขตของคุณ</p>
+                </div>`;
+                return;
+            }
+            el.innerHTML = header + list.map(e => {
+                const myR = myReviewOf(e.uid);
+                const allRs = allReviewsOf(e.uid);
+                const otherRs = allRs.filter(r => (r.reviewerUid || 'legacy') !== (myR ? (myR.reviewerUid || 'legacy') : ''));
                 const sv = selfReviews[e.uid];
+                const isShared = !e.managerUid;     // พนักงานที่ไม่ได้ระบุหัวหน้า — หลายหัวหน้าประเมินได้
                 const avatar = e.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name)}&background=f4f4f5&color=27272a&bold=true`;
                 const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
                 const scoreBadge = `<div class="flex gap-3 mr-2 shrink-0">
-                    ${rv ? `<div class="text-right">
-                         <p class="font-black text-lg ${scoreColor(rv.avg)}">${rv.avg.toFixed(1)}</p>
-                         <p class="text-[9px] text-zinc-400 font-bold uppercase">หัวหน้า</p>
+                    ${myR ? `<div class="text-right">
+                         <p class="font-black text-lg ${scoreColor(myR.avg)}">${myR.avg.toFixed(1)}</p>
+                         <p class="text-[9px] text-zinc-400 font-bold uppercase">${isAdmin && myR.reviewedBy ? myR.reviewedBy.split(' ')[0] : 'คะแนนของคุณ'}</p>
                        </div>` : ''}
                     ${sv ? `<div class="text-right">
                          <p class="font-black text-lg ${scoreColor(sv.avg)}">${sv.avg.toFixed(1)}</p>
                          <p class="text-[9px] text-zinc-400 font-bold uppercase">ตัวเอง</p>
                        </div>` : ''}
                 </div>`;
-                const detailBtn = (rv || sv)
+                const sharedBadge = isShared
+                    ? `<span class="text-[9px] font-black bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">หลายหัวหน้าประเมินได้</span>` : '';
+                const otherCount = otherRs.length;
+                const otherBadge = otherCount > 0
+                    ? `<span class="text-[9px] font-black bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded" title="${otherRs.map(r=>r.reviewedBy||'').join(', ')}">หัวหน้าอื่นประเมินแล้ว ${otherCount}</span>`
+                    : '';
+                const detailBtn = (allRs.length || sv)
                     ? `<button onclick="rvOpenDetail('${e.uid}')" title="ดูรายละเอียด"
                           class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-black w-9 h-9 rounded-xl text-sm shrink-0">
                           <i class="fa-solid fa-eye"></i>
                        </button>`
                     : '';
-                return `<div class="bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-2">
+                const scoreBtn = `<button onclick="rvOpenScore('${e.uid}')"
+                    class="${myR ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600' : 'bg-yellow-500 hover:bg-yellow-400 text-zinc-900'} font-black px-3 py-2 rounded-xl text-xs uppercase shrink-0">
+                    ${myR ? '<i class="fa-solid fa-pen mr-1"></i>แก้ไข' : '<i class="fa-solid fa-star mr-1"></i>ประเมิน'}
+                </button>`;
+                return `<div class="bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-2 flex-wrap">
                     <img src="${avatar}" onerror="handleImgError(this)" data-name="${e.name}" class="w-11 h-11 rounded-2xl object-cover border border-zinc-200 shrink-0">
                     <div class="flex-1 min-w-0">
                         <p class="font-black text-zinc-800 text-sm truncate">${e.name}</p>
                         <p class="text-[10px] text-zinc-400 font-bold">${e.position || ''} · ${e.branch || ''}</p>
+                        <div class="flex gap-1 mt-1 flex-wrap">${sharedBadge}${otherBadge}</div>
                     </div>
                     ${scoreBadge}
                     ${detailBtn}
-                    <button onclick="rvOpenScore('${e.uid}')"
-                        class="${rv ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600' : 'bg-yellow-500 hover:bg-yellow-400 text-zinc-900'} font-black px-3 py-2 rounded-xl text-xs uppercase shrink-0">
-                        ${rv ? '<i class="fa-solid fa-pen mr-1"></i>แก้ไข' : '<i class="fa-solid fa-star mr-1"></i>ประเมิน'}
-                    </button>
+                    ${scoreBtn}
                 </div>`;
             }).join('');
         }
@@ -8227,9 +8558,9 @@ PAGES['review-admin'] = {
         // ── Detail modal: เปรียบเทียบคะแนนหัวหน้า vs ประเมินตัวเอง ──
         window.rvOpenDetail = (uid) => {
             const emp = employees.find(e => e.uid === uid);
-            const rv = reviews[uid];
+            const allRs = allReviewsOf(uid);     // ทุก review จากทุกหัวหน้า
             const sv = selfReviews[uid];
-            if (!emp || (!rv && !sv)) return;
+            if (!emp || (!allRs.length && !sv)) return;
             const tEl = document.getElementById('rv-detail-title');
             const sEl = document.getElementById('rv-detail-sub');
             const bEl = document.getElementById('rv-detail-body');
@@ -8237,17 +8568,22 @@ PAGES['review-admin'] = {
             if (sEl) sEl.textContent = currentCycle.name + (emp.position ? ' · ' + emp.position : '');
 
             const starsRow = (sc) => [1,2,3,4,5].map(n =>
-                `<i class="fa-solid fa-star text-xs ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
+                `<i class="fa-solid fa-star text-base ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
             const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
 
             // ใช้ dimensions จาก review ที่มี หรือ default
-            const dims = (rv && rv.dimensions) || (sv && sv.dimensions) || REVIEW_DIMENSIONS;
+            const dims = (allRs[0] && allRs[0].dimensions) || (sv && sv.dimensions) || REVIEW_DIMENSIONS;
 
-            const summaryHtml = `<div class="grid grid-cols-2 gap-3 mb-5">
+            // คะแนนเฉลี่ยจากทุกหัวหน้า
+            const mgrAvgOverall = allRs.length
+                ? Math.round(allRs.reduce((s,r) => s + (r.avg||0), 0) / allRs.length * 100) / 100
+                : null;
+
+            const summaryHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                 <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
-                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมิน</p>
-                    ${rv ? `<p class="text-3xl font-black ${scoreColor(rv.avg)}">${rv.avg.toFixed(1)}</p>
-                             <p class="text-[10px] text-zinc-500 mt-1">โดย ${rv.reviewedBy||'-'}</p>` : `<p class="text-sm font-bold text-zinc-400 py-3">— ยังไม่ประเมิน —</p>`}
+                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมิน ${allRs.length > 1 ? `(เฉลี่ย ${allRs.length} คน)` : ''}</p>
+                    ${mgrAvgOverall != null ? `<p class="text-3xl font-black ${scoreColor(mgrAvgOverall)}">${mgrAvgOverall.toFixed(1)}</p>
+                             <p class="text-[10px] text-zinc-500 mt-1">${allRs.map(r=>r.reviewedBy||'-').join(' · ')}</p>` : `<p class="text-sm font-bold text-zinc-400 py-3">— ยังไม่ประเมิน —</p>`}
                 </div>
                 <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
                     <p class="text-[10px] font-black text-blue-700 uppercase mb-1"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเอง</p>
@@ -8259,40 +8595,49 @@ PAGES['review-admin'] = {
             const dimsHtml = dims.map((dim, dIdx) => {
                 const items = dim.items.map(it => {
                     const key = dim.id + '.' + it.id;
-                    const mScore = rv?.scores?.[key] || 0;
                     const sScore = sv?.scores?.[key] || 0;
-                    const diff = (mScore && sScore) ? (mScore - sScore) : 0;
-                    const diffBadge = (mScore && sScore && diff !== 0)
-                        ? `<span class="text-[9px] font-black px-1.5 py-0.5 rounded ${diff > 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${diff > 0 ? '+' : ''}${diff}</span>`
-                        : '';
-                    return `<div class="py-2 border-b border-zinc-50 last:border-0">
-                        <div class="flex items-start gap-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-bold text-zinc-800">${it.name}</p>
-                                <p class="text-[10px] text-zinc-400 leading-snug">${it.desc||''}</p>
-                            </div>
-                            <div class="text-right shrink-0">
-                                <div class="flex items-center gap-2 justify-end">
-                                    ${rv ? `<span class="text-[9px] font-bold text-yellow-700 w-12 text-right">หัวหน้า:</span><span>${starsRow(mScore)}</span>` : ''}
-                                </div>
-                                <div class="flex items-center gap-2 justify-end mt-0.5">
-                                    ${sv ? `<span class="text-[9px] font-bold text-blue-700 w-12 text-right">ตัวเอง:</span><span>${starsRow(sScore)}</span>` : ''}
-                                </div>
-                                ${diffBadge ? `<div class="mt-1">${diffBadge}</div>` : ''}
-                            </div>
+                    // คะแนนของแต่ละหัวหน้า
+                    const mgrRows = allRs.map(r => {
+                        const sc = r.scores?.[key] || 0;
+                        if (!sc) return '';
+                        const diff = (sc && sScore) ? (sc - sScore) : null;
+                        const diffBadge = diff > 0
+                            ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-green-100 text-green-700">+${diff}</span>`
+                            : diff < 0
+                                ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-orange-100 text-orange-700">${diff}</span>`
+                                : (diff === 0 ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-zinc-100 text-zinc-500">เท่ากัน</span>` : '');
+                        return `<div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[10px] font-black text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded shrink-0" title="${r.reviewedBy||''}">${(r.reviewedBy||'หัวหน้า').split(' ')[0]}</span>
+                            <span class="flex gap-0.5">${starsRow(sc)}</span>
+                            <span class="text-xs font-black text-yellow-600">${sc}/5</span>
+                            ${diffBadge ? `<span class="ml-1">${diffBadge}</span>` : ''}
+                        </div>`;
+                    }).join('');
+                    return `<div class="py-3 border-b border-zinc-50 last:border-0">
+                        <p class="text-sm font-bold text-zinc-800">${it.name}</p>
+                        <p class="text-[10px] text-zinc-400 leading-snug mb-2">${it.desc||''}</p>
+                        <div class="space-y-1.5">
+                            ${mgrRows}
+                            ${sv ? `<div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[10px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded shrink-0">ตัวเอง</span>
+                                <span class="flex gap-0.5">${starsRow(sScore)}</span>
+                                <span class="text-xs font-black text-blue-600">${sScore}/5</span>
+                            </div>` : ''}
                         </div>
                     </div>`;
                 }).join('');
-                const mDimAvg = rv?.dimAvg?.[dim.id];
+                // คะแนนเฉลี่ยของมิตินี้
+                const mDimAvgs = allRs.map(r => r.dimAvg?.[dim.id]).filter(v => v != null);
+                const mDimAvg = mDimAvgs.length ? Math.round(mDimAvgs.reduce((s,v)=>s+v,0) / mDimAvgs.length * 100) / 100 : null;
                 const sDimAvg = sv?.dimAvg?.[dim.id];
                 const dimSummary = (mDimAvg != null || sDimAvg != null)
-                    ? `<div class="flex gap-2 text-[10px] font-black shrink-0">
+                    ? `<div class="flex gap-2 text-[10px] font-black shrink-0 flex-wrap">
                           ${mDimAvg != null ? `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg">หัวหน้า ${mDimAvg.toFixed(1)}</span>` : ''}
                           ${sDimAvg != null ? `<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">ตัวเอง ${sDimAvg.toFixed(1)}</span>` : ''}
                       </div>`
                     : '';
                 return `<div class="mb-3">
-                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'}">
+                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'} flex-wrap">
                         <div>
                             <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
                             <p class="text-[10px] font-bold opacity-70">${dim.nameEn||''}</p>
@@ -8303,14 +8648,15 @@ PAGES['review-admin'] = {
                 </div>`;
             }).join('');
 
-            const commentsHtml = `${rv?.comment ? `<div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจากหัวหน้า</p>
-                    <p class="text-sm text-zinc-700">${rv.comment}</p>
-                </div>` : ''}
-                ${sv?.comment ? `<div class="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            const mgrCommentsHtml = allRs.filter(r => r.comment).map(r =>
+                `<div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจาก ${r.reviewedBy||'หัวหน้า'}</p>
+                    <p class="text-sm text-zinc-700">${r.comment}</p>
+                </div>`).join('');
+            const commentsHtml = mgrCommentsHtml + (sv?.comment ? `<div class="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p class="text-[10px] font-black text-blue-700 uppercase mb-1"><i class="fa-solid fa-comment-dots mr-1"></i>ความเห็นจากพนักงาน</p>
                     <p class="text-sm text-zinc-700">${sv.comment}</p>
-                </div>` : ''}`;
+                </div>` : '');
 
             if (bEl) bEl.innerHTML = summaryHtml + dimsHtml + commentsHtml;
             document.getElementById('rv-detail-modal')?.classList.remove('hidden');
@@ -8330,8 +8676,18 @@ PAGES['review-admin'] = {
         window.rvOpenScore = (uid) => {
             const emp = employees.find(e => e.uid === uid);
             if (!emp || !currentCycle) return;
+            // ห้ามประเมินตัวเองจากหน้านี้ (ใช้แท็บ "ประเมินตัวเอง" ในผลประเมินของฉันแทน)
+            if (uid === user.uid) {
+                showToast('การประเมินตัวเอง ใช้แท็บ "ประเมินตัวเอง" ในหน้า "ผลประเมินของฉัน"', 'info');
+                return;
+            }
+            // กันหัวหน้าทีมอื่นเปิดประเมินผ่าน console
+            if (!isAdmin && !canReview(emp)) {
+                showToast('คุณไม่ใช่หัวหน้าโดยตรงของพนักงานคนนี้', 'error');
+                return;
+            }
             scoringUid = uid;
-            const existing = reviews[uid];
+            const existing = myReviewOf(uid);
             tempScores = existing && existing.scores ? { ...existing.scores } : {};
             isManagerialOverride = existing && typeof existing.isManagerial === 'boolean'
                 ? existing.isManagerial : null;
@@ -8356,18 +8712,16 @@ PAGES['review-admin'] = {
                     const key = dim.id + '.' + it.id;
                     const cur = tempScores[key] || 0;
                     const stars = [1,2,3,4,5].map(n => `
-                        <button onclick="rvSetScore('${key}',${n})"
-                            class="w-8 h-8 rounded-lg text-base transition-all ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}">
-                            <i class="fa-solid fa-star"></i>
+                        <button type="button" onclick="rvSetScore('${key}',${n})"
+                            class="w-11 h-11 rounded-lg text-2xl transition-all active:scale-95 ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}"
+                            aria-label="ให้ ${n} ดาว">
+                            <i class="fa-solid fa-star pointer-events-none"></i>
                         </button>`).join('');
-                    return `<div class="py-2.5 border-b border-zinc-100 last:border-0">
-                        <div class="flex items-start justify-between gap-3 flex-wrap">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-bold text-zinc-800">${it.name}</p>
-                                <p class="text-[11px] text-zinc-400 mt-0.5 leading-snug">${it.desc}</p>
-                            </div>
-                            <div class="flex shrink-0">${stars}</div>
-                        </div>
+                    const scoreLabel = cur > 0 ? `<span class="text-xs font-black text-yellow-600">(${cur}/5)</span>` : '<span class="text-[10px] text-zinc-300 font-bold">ยังไม่ให้คะแนน</span>';
+                    return `<div class="py-3 border-b border-zinc-100 last:border-0">
+                        <p class="text-sm font-bold text-zinc-800">${it.name}</p>
+                        <p class="text-[11px] text-zinc-400 mt-0.5 mb-2 leading-snug">${it.desc}</p>
+                        <div class="flex items-center gap-1 flex-wrap">${stars}<span class="ml-2">${scoreLabel}</span></div>
                     </div>`;
                 }).join('');
 
@@ -8404,6 +8758,12 @@ PAGES['review-admin'] = {
         window.rvSave = async () => {
             if (!scoringUid || !currentCycle) return;
             const emp = employees.find(e => e.uid === scoringUid);
+            if (!emp) return;
+            // กันการบันทึกผ่าน console สำหรับ manager ที่ไม่มีสิทธิ์ประเมินพนักงานคนนั้น
+            if (!isAdmin && !canReview(emp)) {
+                showToast('คุณไม่ใช่หัวหน้าโดยตรงของพนักงานคนนี้', 'error');
+                return;
+            }
             const dims = effectiveDimensions(emp);
             // เช็คครบทุกข้อในมิติที่ต้องประเมิน
             const missing = [];
@@ -8427,7 +8787,7 @@ PAGES['review-admin'] = {
             const btn = document.getElementById('rv-save-btn');
             btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
             try {
-                await setDoc(doc(db,'artifacts',APP_ID,'public','data','reviews', `${currentCycle.id}_${scoringUid}`), {
+                await setDoc(doc(db,'artifacts',APP_ID,'public','data','reviews', `${currentCycle.id}_${scoringUid}_${user.uid}`), {
                     cycleId: currentCycle.id, cycleName: currentCycle.name,
                     uid: scoringUid, employeeName: emp?.name || '', employeeCode: emp?.employeeCode || '',
                     branch: emp?.branch || '', position: emp?.position || '',
@@ -8437,7 +8797,7 @@ PAGES['review-admin'] = {
                     avg,                        // คะแนนเฉลี่ยรวม
                     isManagerial,
                     comment: document.getElementById('rv-comment')?.value.trim() || '',
-                    reviewedBy: profile.name, reviewedAt: new Date().toISOString(),
+                    reviewedBy: profile.name, reviewerUid: user.uid, reviewedAt: new Date().toISOString(),
                 });
                 showToast('✅ บันทึกผลประเมินแล้ว', 'success');
                 rvCloseModal();
@@ -8567,18 +8927,16 @@ PAGES['my-review'] = {
                     const key = dim.id + '.' + it.id;
                     const cur = selfTemp[key] || 0;
                     const stars = [1,2,3,4,5].map(n => `
-                        <button onclick="mrSelfSetScore('${key}',${n})"
-                            class="w-8 h-8 rounded-lg text-base transition-all ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}">
-                            <i class="fa-solid fa-star"></i>
+                        <button type="button" onclick="mrSelfSetScore('${key}',${n})"
+                            class="w-11 h-11 rounded-lg text-2xl transition-all active:scale-95 ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}"
+                            aria-label="ให้ ${n} ดาว">
+                            <i class="fa-solid fa-star pointer-events-none"></i>
                         </button>`).join('');
-                    return `<div class="py-2.5 border-b border-zinc-100 last:border-0">
-                        <div class="flex items-start justify-between gap-3 flex-wrap">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-bold text-zinc-800">${it.name}</p>
-                                <p class="text-[11px] text-zinc-400 mt-0.5 leading-snug">${it.desc}</p>
-                            </div>
-                            <div class="flex shrink-0">${stars}</div>
-                        </div>
+                    const scoreLabel = cur > 0 ? `<span class="text-xs font-black text-yellow-600">(${cur}/5)</span>` : '<span class="text-[10px] text-zinc-300 font-bold">ยังไม่ให้คะแนน</span>';
+                    return `<div class="py-3 border-b border-zinc-100 last:border-0">
+                        <p class="text-sm font-bold text-zinc-800">${it.name}</p>
+                        <p class="text-[11px] text-zinc-400 mt-0.5 mb-2 leading-snug">${it.desc}</p>
+                        <div class="flex items-center gap-1 flex-wrap">${stars}<span class="ml-2">${scoreLabel}</span></div>
                     </div>`;
                 }).join('');
                 const mgrToggle = dim.managerOnly
@@ -8664,9 +9022,35 @@ PAGES['my-review'] = {
                     <p class="font-bold text-sm">ยังไม่มีผลประเมิน</p>
                 </div>`;
             } else {
-                el.innerHTML = myReviews.map(r => {
+                // กลุ่ม manager reviews ตาม cycleId — ถ้ามีหลายหัวหน้าประเมิน จะเห็นพร้อมกัน
+                const byCycle = {};
+                myReviews.forEach(r => {
+                    if (!byCycle[r.cycleId]) byCycle[r.cycleId] = { cycleName: r.cycleName, list: [] };
+                    byCycle[r.cycleId].list.push(r);
+                });
+
+                el.innerHTML = Object.entries(byCycle).map(([cid, group]) => {
+                    // กั๊ก: ต้องประเมินตัวเองในรอบเดียวกันก่อนถึงจะดูผลของหัวหน้าได้
+                    if (!mySelfReviews[cid]) {
+                        return `<div class="bg-white rounded-2xl border border-amber-200 p-8 text-center">
+                            <div class="w-16 h-16 mx-auto rounded-full bg-amber-50 flex items-center justify-center mb-3">
+                                <i class="fa-solid fa-lock text-2xl text-amber-500"></i>
+                            </div>
+                            <p class="font-black text-zinc-800 text-sm">${group.cycleName || 'รอบประเมิน'}</p>
+                            <p class="text-xs text-zinc-500 mt-1">หัวหน้าประเมินคุณแล้ว <span class="font-black text-amber-700">${group.list.length} คน</span></p>
+                            <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-4 max-w-sm mx-auto">
+                                <p class="text-xs font-bold text-amber-800 mb-1"><i class="fa-solid fa-circle-info mr-1"></i> ต้องประเมินตัวเองก่อน</p>
+                                <p class="text-[11px] text-amber-700 leading-snug">เพื่อให้การประเมินเป็นกลางและตรงจุด คุณต้องประเมินตัวเองในรอบนี้ก่อน ระบบจึงจะเปิดให้ดูผลจากหัวหน้าได้</p>
+                            </div>
+                            <button onclick="mrSetTab('self');document.getElementById('mr-self-cycle').value='${cid}';mrLoadSelfCycle();"
+                                class="mt-4 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black px-5 py-2.5 rounded-xl text-xs uppercase">
+                                <i class="fa-solid fa-pen mr-1"></i> ไปประเมินตัวเอง
+                            </button>
+                        </div>`;
+                    }
+                    return group.list.map(r => {
                     const starRow = (sc) => [1,2,3,4,5].map(n =>
-                        `<i class="fa-solid fa-star ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
+                        `<i class="fa-solid fa-star text-lg ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
 
                     // ใช้ dimensions ใหม่ถ้ามี; ถ้าเป็น review เก่า fallback ไป criteria แบบเดิม
                     let body = '';
@@ -8676,21 +9060,22 @@ PAGES['my-review'] = {
                             const items = dim.items.map(it => {
                                 const key = dim.id + '.' + it.id;
                                 const sc = (r.scores && r.scores[key]) || 0;
-                                return `<div class="flex items-start justify-between gap-3 py-1.5 border-b border-zinc-50 last:border-0">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-xs font-bold text-zinc-700">${it.name}</p>
-                                        <p class="text-[10px] text-zinc-400 leading-snug">${it.desc||''}</p>
+                                return `<div class="py-2.5 border-b border-zinc-50 last:border-0">
+                                    <p class="text-sm font-bold text-zinc-700">${it.name}</p>
+                                    <p class="text-[10px] text-zinc-400 leading-snug mb-1.5">${it.desc||''}</p>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="flex gap-0.5">${starRow(sc)}</span>
+                                        <span class="text-xs font-black text-yellow-600 ml-1">${sc}/5</span>
                                     </div>
-                                    <span class="text-sm shrink-0">${starRow(sc)}</span>
                                 </div>`;
                             }).join('');
                             return `<div class="mt-4">
                                 <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'}">
-                                    <div>
+                                    <div class="min-w-0">
                                         <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
                                         <p class="text-[10px] font-bold opacity-70">${dim.nameEn||''}</p>
                                     </div>
-                                    ${dAvg != null ? `<p class="text-lg font-black">${dAvg.toFixed(1)}</p>` : ''}
+                                    ${dAvg != null ? `<p class="text-lg font-black shrink-0">${dAvg.toFixed(1)}</p>` : ''}
                                 </div>
                                 ${items}
                             </div>`;
@@ -8699,9 +9084,12 @@ PAGES['my-review'] = {
                         const criteria = r.criteria || REVIEW_DEFAULT_CRITERIA;
                         body = criteria.map((c, i) => {
                             const sc = r.scores?.[i] || 0;
-                            return `<div class="flex items-center justify-between py-1.5 border-b border-zinc-50 last:border-0">
-                                <span class="text-xs font-bold text-zinc-600">${c}</span>
-                                <span class="text-sm">${starRow(sc)}</span>
+                            return `<div class="py-2 border-b border-zinc-50 last:border-0">
+                                <p class="text-sm font-bold text-zinc-700 mb-1">${c}</p>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="flex gap-0.5">${starRow(sc)}</span>
+                                    <span class="text-xs font-black text-yellow-600 ml-1">${sc}/5</span>
+                                </div>
                             </div>`;
                         }).join('');
                     }
@@ -8724,7 +9112,8 @@ PAGES['my-review'] = {
                             <p class="text-sm text-zinc-700">${r.comment}</p>
                         </div>` : ''}
                     </div>`;
-                }).join('');
+                    }).join('');  // close group.list.map
+                }).join('');      // close Object.entries.map
             }
         }
         return () => {
