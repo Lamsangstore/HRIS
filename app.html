@@ -4002,33 +4002,43 @@
             }
         }
         await loadMyRequests();
-        // ================================================================
-        // แก้ใน PAGES['leave'].init — ส่วน renderQuota
-        // แทนที่ function renderQuota() เดิม
-        // ================================================================
-        function renderQuota() {
-            const types = ['sick','personal','vacation'];
-            // คำนวณ usedHours จาก myRequests ที่ approved เป็น source of truth
-            // เพื่อให้แสดงถูกต้องแม้ Firestore balance ยังไม่ได้อัปเดต
-            const usedFromReqs = {};
+
+        // รวมชั่วโมงที่ใช้ไปจากใบลาที่อนุมัติแล้ว
+        // ใช้เป็น source of truth คู่กับ Firestore balance เผื่อ balance ยังอัปเดตไม่ทัน
+        function usedHoursFromRequests() {
+            const out = {};
             (myRequests || []).forEach(r => {
                 if (r.status === 'approved' && r.type && r.totalHours > 0) {
-                    usedFromReqs[r.type] = Math.round(((usedFromReqs[r.type] || 0) + r.totalHours) * 100) / 100;
+                    out[r.type] = Math.round(((out[r.type] || 0) + r.totalHours) * 100) / 100;
                 }
             });
+            return out;
+        }
+
+        // โควตาของฉันสำหรับการลาประเภทหนึ่ง — ทุกที่ที่แสดงโควตาต้องเรียกตัวนี้
+        //
+        // เคยพัง: การ์ดโควตาอ่านจาก myBalance (ค่าจริงของพนักงานคนนี้) แต่ปุ่มเลือก
+        // ประเภทลาใน modal อ่าน LEAVE_TYPES.maxDays (ค่า default ในโค้ด) พอ admin
+        // แก้สิทธิ์ให้ใครเป็นพิเศษ สองที่เลยขึ้นไม่ตรงกัน (การ์ดบอก 15 วัน modal บอก 10)
+        // balOverride: ใส่ balance ที่เพิ่งอ่านสดจาก Firestore ได้ (ใช้ตอนเช็คก่อน submit)
+        function myQuotaFor(tid, usedFromReqs, balOverride) {
+            const t   = getLeaveTypeInfo(tid);
+            const bal = (balOverride || myBalance)[tid] || {};
+            const hpd = getDayWorkHours(mySchedule);           // ชม./วัน ของพนักงานคนนี้
+            const max = bal.totalHours ?? (t.maxDays * hpd);   // admin ยังไม่ตั้ง → ใช้ default × hpd
+            const used = Math.max(bal.usedHours || 0, (usedFromReqs || {})[tid] || 0);
+            return { max, used, rem: Math.max(0, max - used) };
+        }
+
+        function renderQuota() {
+            const types = ['sick','personal','vacation'];
+            const usedFromReqs = usedHoursFromRequests();
             let html = '';
             types.forEach(tid => {
-                const t   = getLeaveTypeInfo(tid);
-                const bal = myBalance[tid] || {};
-                const hpd = getDayWorkHours(mySchedule);          // ชม./วัน ของพนักงานคนนี้
-                const max  = bal.totalHours ?? (t.maxDays * hpd); // ถ้า admin ยังไม่ตั้ง ใช้ค่า default × hpd
-                // ใช้ค่าที่มากกว่าระหว่าง Firestore balance กับที่คำนวณจาก requests
-                const usedFirestore = bal.usedHours || 0;
-                const usedCalc      = usedFromReqs[tid] || 0;
-                const used = Math.max(usedFirestore, usedCalc);
-                const rem  = Math.max(0, max - used);
-                const pct  = max > 0 ? Math.min(100, Math.round(used / max * 100)) : 0;
-                const cv   = colorVariants(t.color);
+                const t = getLeaveTypeInfo(tid);
+                const { max, used, rem } = myQuotaFor(tid, usedFromReqs);
+                const pct = max > 0 ? Math.min(100, Math.round(used / max * 100)) : 0;
+                const cv  = colorVariants(t.color);
                 html += `
                 <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-5">
                   <div class="flex items-center gap-3 mb-3">
@@ -4083,14 +4093,25 @@
         function buildLeaveTypeGrid() {
             const el = document.getElementById('leave-type-grid');
             if (!el) return;
+            const usedFromReqs = usedHoursFromRequests();
             el.innerHTML = LEAVE_TYPES.map(t => {
                 const cv = colorVariants(t.color);
+                // โชว์ "คงเหลือ" ไม่ใช่สิทธิ์ทั้งปี — คนกำลังจะกดลาอยากรู้ว่าเหลือเท่าไหร่
+                // และต้องดึงจาก myQuotaFor เท่านั้น ห้ามใช้ t.maxDays ตรงๆ
+                // (ค่านั้นเป็น default ของบริษัท ไม่ใช่สิทธิ์จริงของคนนี้)
+                const sub = t.maxDays
+                    ? (() => {
+                        const { rem } = myQuotaFor(t.id, usedFromReqs);
+                        const cls = rem <= 0 ? 'text-red-500' : 'text-zinc-400';
+                        return `<p class="text-[10px] ${cls} font-medium">เหลือ ${balanceToDisplay(rem, mySchedule)}</p>`;
+                      })()
+                    : '';
                 return `
                 <button onclick="selectLeaveType('${t.id}')" id="lt-${t.id}"
                   class="p-3 rounded-xl border-2 border-zinc-200 hover:border-yellow-400 text-left transition-all group">
                   <i class="fa-solid ${t.icon} text-zinc-400 group-hover:text-yellow-500 mb-1 block transition-colors"></i>
                   <p class="text-xs font-black text-zinc-700 leading-tight">${t.label}</p>
-                  ${t.maxDays ? `<p class="text-[10px] text-zinc-400 font-medium">${t.maxDays} วัน/ปี</p>` : ''}
+                  ${sub}
                 </button>`;
             }).join('');
         }
@@ -4209,6 +4230,9 @@
         window.openLeaveModal  = () => {
             editingId = null;
             setModalMode(false);
+            // สร้างใหม่ทุกครั้งที่เปิด — ยอดคงเหลืออาจเปลี่ยนไปแล้วตั้งแต่โหลดหน้า
+            // (เช่น หัวหน้าเพิ่งอนุมัติใบลาอีกใบระหว่างที่หน้านี้เปิดค้างอยู่)
+            buildLeaveTypeGrid();
             document.getElementById('leave-modal')?.classList.remove('hidden');
         };
         window.closeLeaveModal = () => {
@@ -4278,16 +4302,14 @@
 
             // ตรวจโควต้าก่อน submit
             if (['sick','personal','vacation'].includes(selectedLeaveType)) {
-                const balRef2 = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid);
-                const balSnap2 = await getDoc(balRef2);
+                // อ่าน balance สดอีกรอบ เผื่อมีใบลาใบอื่นถูกอนุมัติระหว่างที่กรอกฟอร์มอยู่
+                // แต่คิดยอดด้วย myQuotaFor ตัวเดียวกับที่หน้าจอใช้ — ไม่งั้นตัวเลขที่เตือน
+                // จะไม่ตรงกับที่ผู้ใช้เห็นบนการ์ด
+                const balSnap2 = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid));
                 const bal2 = balSnap2.exists() ? balSnap2.data() : {};
-                const b2 = bal2[selectedLeaveType] || {};
-                const hpd2 = getDayWorkHours(mySchedule);
-                const totalH2 = b2.totalHours != null ? b2.totalHours : (getLeaveTypeInfo(selectedLeaveType).maxDays * hpd2);
-                const usedH2  = b2.usedHours || 0;
-                const remH2   = totalH2 - usedH2;
+                const { rem: remH2 } = myQuotaFor(selectedLeaveType, usedHoursFromRequests(), bal2);
                 if (hrs > remH2 + 0.01) {
-                    showToast(`❌ โควต้าไม่พอ — คงเหลือ ${balanceToDisplay(Math.max(0,remH2), mySchedule)} แต่ขอลา ${hoursToDisplay(hrs, mySchedule)}`, 'error');
+                    showToast(`❌ โควต้าไม่พอ — คงเหลือ ${balanceToDisplay(remH2, mySchedule)} แต่ขอลา ${hoursToDisplay(hrs, mySchedule)}`, 'error');
                     return;
                 }
             }

@@ -80,7 +80,33 @@ check('ไม่มีการอ่าน users ทั้ง collection ด้
     check('ทุก import path ชี้ไปไฟล์ที่มีอยู่', missing, []);
 }
 
-// ── 7. ไฟล์ rules ต้องมีอยู่และปิดท้ายด้วย deny-all ────────────────────────────
+// ── 7. โควตาวันลาต้องมาจากที่เดียว ────────────────────────────────────────────
+// เคยพัง: การ์ดโควตาอ่านจาก myBalance (สิทธิ์จริงของพนักงานคนนี้) แต่ปุ่มเลือกประเภทลา
+// ใน modal อ่าน LEAVE_TYPES.maxDays (ค่า default ในโค้ด) พอ admin แก้สิทธิ์ให้ใคร
+// เป็นพิเศษ สองที่ขึ้นไม่ตรงกัน (การ์ดบอกสิทธิ์ 15 วัน modal บอก 10 วัน/ปี)
+check('หน้าลามีตัวคำนวณโควตากลาง myQuotaFor', /function myQuotaFor\(/.test(src), true);
+
+// LEAVE_TYPES.maxDays เป็นแค่ค่า default ของบริษัท ไม่ใช่สิทธิ์จริงของพนักงานคนไหน
+// สิทธิ์จริงอยู่ที่ leave_balances/{uid}.<type>.totalHours ซึ่ง admin แก้รายคนได้
+// => ทุกที่ที่เอา maxDays มาใช้ ต้องเช็ค totalHours ก่อนเสมอ
+// ต้องมองทั้งก่อนและหลัง เพราะมีสองรูปแบบที่ถูกต้อง:
+//   อ่าน  → `b.totalHours != null ? b.totalHours : (maxDays * hpd)`  (totalHours อยู่ก่อน)
+//   สร้าง → `setDoc(..., { totalHours: defaultTotal })`              (totalHours อยู่หลัง)
+{
+    const uses = [...src.matchAll(/maxDays\s*\*\s*hpd/g)];
+    check('มีการใช้ maxDays เป็นค่า default อยู่', uses.length > 0, true);
+    const noCheck = uses
+        .filter(m => !src.slice(Math.max(0, m.index - 160), m.index + 160).includes('totalHours'))
+        .map(m => src.slice(m.index - 60, m.index + 20).trim().split('\n').pop());
+    check('ทุกจุดที่ใช้ maxDays อ้างอิงสิทธิ์จริง (totalHours) ด้วย', noCheck, []);
+}
+
+// เคสที่พังจริง: ปุ่มเลือกประเภทลาแสดง "10 วัน/ปี" จากค่า default
+// ทั้งที่พนักงานคนนั้นมีสิทธิ์จริง 15 วัน — การ์ดกับ modal เลยขึ้นไม่ตรงกัน
+check('ปุ่มเลือกประเภทลาไม่แสดงสิทธิ์จากค่า default ตรงๆ',
+      /\$\{t\.maxDays\}\s*วัน\/ปี/.test(src), false);
+
+// ── 8. ไฟล์ rules ต้องมีอยู่และปิดท้ายด้วย deny-all ────────────────────────────
 const RULES = join(ROOT, 'firestore.rules');
 check('มีไฟล์ firestore.rules อยู่ใน repo', existsSync(RULES), true);
 if (existsSync(RULES)) {
