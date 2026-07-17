@@ -24,7 +24,18 @@ const BUILTINS = new Set([
     'await','new','delete','void','in','of','do','else','try','finally','throw','yield','async',
 ]);
 
+// ตัดคอมเมนต์ทิ้งก่อนสแกน — ไม่งั้น "// Check duplicate (...)" หรือ
+// "<!-- Detail (read-only) -->" จะถูกนับว่าเป็นการเรียกฟังก์ชัน
+// false positive ทำให้คนเลิกเชื่อเทสต์ ซึ่งอันตรายกว่าไม่มีเทสต์
+function stripComments(s) {
+    return s
+        .replace(/<!--[\s\S]*?-->/g, ' ')   // คอมเมนต์ HTML ใน template
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')  // /* ... */
+        .replace(/(^|[^:])\/\/.*$/gm, '$1');// // ... (กัน https:// ด้วย)
+}
+
 for (const f of pageFiles) {
+    f.src = stripComments(f.src);
     // ชื่อที่ไฟล์นี้นิยามเอง
     const local = new Set();
     const declRe = /(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*(?:=\s*(?:async\s*)?(?:function|\()|:\s*(?:async\s*)?(?:function|\())|window\.([A-Za-z_$][\w$]*)\s*=)/g;
