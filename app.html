@@ -1082,6 +1082,14 @@
             }
             userProfile = snap.data();
 
+            // พนักงานใหม่ทุกคนถูกสร้างด้วยรหัสเดียวกัน (123456) — ถ้ายังไม่เปลี่ยน
+            // ใครที่เดารหัสได้ก็เข้าดูสลิปเงินเดือน/เลขบัตร ปชช. ของคนนั้นได้
+            // จึงต้องบังคับเปลี่ยนให้จบก่อน ไม่ให้เข้าถึงหน้าไหนเลย
+            if (userProfile.mustChangePassword) {
+                await forcePasswordChange(user);
+                userProfile.mustChangePassword = false;
+            }
+
             // โหลดวันหยุดตามประเพณี (global - ใช้ร่วมกันทุกหน้า)
             await loadPublicHolidays();
 
@@ -1099,6 +1107,85 @@
             // เริ่มตรวจลืมลงเวลาออก (เช็คทันที + ทุก 10 นาที)
             startForgotClockOutWatch(user, userProfile);
         });
+
+        // ── บังคับเปลี่ยนรหัสผ่านครั้งแรก ───────────────────────────
+        // resolve เมื่อเปลี่ยนรหัสสำเร็จเท่านั้น — ปิดไม่ได้ กด ESC ไม่ได้ ข้ามไม่ได้
+        function forcePasswordChange(user) {
+            return new Promise((resolve) => {
+                const el = document.createElement('div');
+                el.className = 'fixed inset-0 z-[9999] bg-zinc-900/90 flex items-center justify-center p-4';
+                el.innerHTML = `
+                  <div class="bg-white rounded-2xl w-full max-w-md p-7 shadow-2xl">
+                    <div class="flex items-center gap-3 mb-1">
+                      <div class="w-11 h-11 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-key text-yellow-600"></i>
+                      </div>
+                      <div>
+                        <h3 class="font-black text-zinc-800 text-lg">ตั้งรหัสผ่านใหม่</h3>
+                        <p class="text-xs text-zinc-400 font-medium">ครั้งแรกที่เข้าใช้งาน ต้องเปลี่ยนรหัสก่อน</p>
+                      </div>
+                    </div>
+                    <p class="text-xs text-zinc-500 font-medium bg-zinc-50 border border-zinc-200 rounded-xl p-3 my-4">
+                      ตอนนี้คุณยังใช้รหัสเริ่มต้นที่ HR ตั้งให้ ซึ่งเหมือนกันทุกคน
+                      ใครเดาได้ก็เปิดดูสลิปเงินเดือนและข้อมูลส่วนตัวของคุณได้ กรุณาตั้งรหัสใหม่ที่คนอื่นเดาไม่ได้
+                    </p>
+                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">รหัสผ่านใหม่</label>
+                    <input type="password" id="fpc-new" autocomplete="new-password"
+                      class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none mb-3">
+                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ยืนยันรหัสผ่านใหม่</label>
+                    <input type="password" id="fpc-conf" autocomplete="new-password"
+                      class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                    <p id="fpc-err" class="text-xs font-bold text-red-500 mt-2 hidden"></p>
+                    <button id="fpc-btn" class="w-full mt-5 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest">
+                      <i class="fa-solid fa-check mr-2"></i> บันทึกรหัสผ่านใหม่
+                    </button>
+                    <button id="fpc-out" class="w-full mt-2 text-zinc-400 hover:text-zinc-600 font-bold py-2 text-xs transition-all">
+                      ออกจากระบบ
+                    </button>
+                  </div>`;
+                document.body.appendChild(el);
+
+                const err = (m) => {
+                    const e = el.querySelector('#fpc-err');
+                    e.textContent = m; e.classList.remove('hidden');
+                };
+
+                el.querySelector('#fpc-out').onclick = () => { signOut(auth); location.href = 'index.html'; };
+
+                el.querySelector('#fpc-btn').onclick = async () => {
+                    const pw = el.querySelector('#fpc-new').value;
+                    const cf = el.querySelector('#fpc-conf').value;
+                    if (pw.length < 6)  return err('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว');
+                    if (pw !== cf)      return err('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+                    if (pw === '123456') return err('ห้ามใช้รหัสเริ่มต้น กรุณาตั้งรหัสอื่น');
+
+                    const btn = el.querySelector('#fpc-btn');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
+                    try {
+                        const { getAuth, updatePassword } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                        const { updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                        await updatePassword(getAuth().currentUser, pw);
+                        await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', user.uid), {
+                            mustChangePassword: false,
+                            passwordChangedAt: new Date().toISOString(),
+                        });
+                        el.remove();
+                        resolve();
+                    } catch (e) {
+                        // เพิ่งล็อกอินมาหมาดๆ ปกติไม่เจอ แต่ถ้าค้าง session ไว้นานจะเจอได้
+                        if (e.code === 'auth/requires-recent-login') {
+                            alert('เซสชันเก่าเกินไป กรุณาล็อกอินใหม่แล้วตั้งรหัสอีกครั้ง');
+                            signOut(auth); location.href = 'index.html'; return;
+                        }
+                        err(e.message);
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> บันทึกรหัสผ่านใหม่';
+                    }
+                };
+                el.querySelector('#fpc-new').focus();
+            });
+        }
 
         // ── เตือนลืมลงเวลาออก ───────────────────────────────────────
         // เลย workEnd + 1 ชม. แล้วมี clock_in วันนี้แต่ไม่มี clock_out → แสดงแบนเนอร์
@@ -1717,18 +1804,36 @@
         // ================================================================
         // LINE MESSAGING API — Push Notification Helper
         // ================================================================
-        const LINE_TOKEN = 'vOFYhnPPGEJ67XWpYOHsKv4gVXeeJYP8z+V2BF83lVd4DjBcCjvfF0MK62FoGXh1KWDXUzPSBwYEes157SbLVqsxju+sD++KMgIBd9AGgpOKd39azdMaqcV7rVvLkr2T7ynFP2+XYv0li89MN8gBrwdB04t89/1O/w1cDnyilFU=';
-        const LINE_PROXY   = 'https://api.line.me/v2/bot/message/push';
+        // token ไม่ฝังในโค้ดแล้ว — อ่านจาก Firestore: app_config/line ฟิลด์ channelAccessToken
+        // (ของเดิมเคย hardcode ไว้ตรงนี้และหลุดขึ้น GitHub public ต้อง rotate ทิ้งแล้ว)
+        //
+        // ข้อจำกัดที่ต้องรู้: เบราว์เซอร์พนักงานเป็นคนยิง LINE เอง เครื่องเขาจึงต้องอ่าน token ได้
+        // rules จึงเปิดให้ผู้ที่ล็อกอินแล้วอ่าน doc นี้ได้ = คนที่เปิด DevTools ยังเห็น token อยู่ดี
+        // นี่แค่ปิดรูที่หลุดสู่สาธารณะ ยังไม่ใช่การแก้ที่ต้นเหตุ
+        // ทางแก้จริงคือย้ายการยิง LINE ไปไว้หลัง Cloud Function แล้วเก็บ token เป็น env ฝั่งเซิร์ฟเวอร์
+        const LINE_PROXY = 'https://api.line.me/v2/bot/message/push';
+
+        let _lineTokenCache = null;
+        async function getLineToken() {
+            if (_lineTokenCache) return _lineTokenCache;
+            const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const snap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'app_config', 'line'));
+            const token = snap.exists() ? (snap.data().channelAccessToken || '') : '';
+            if (!token) throw new Error('ยังไม่ได้ตั้งค่า LINE token — ไปที่ Firestore: app_config/line แล้วใส่ฟิลด์ channelAccessToken');
+            _lineTokenCache = token;
+            return token;
+        }
 
         async function sendLineMessage(lineUserId, messages) {
             if (!lineUserId) throw new Error('ไม่มี LINE User ID');
+            const token = await getLineToken();
             // ใช้ proxy เพื่อหลีกเลี่ยง CORS (LINE API ไม่รองรับ browser request โดยตรง)
             const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(LINE_PROXY);
             const res = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + LINE_TOKEN,
+                    'Authorization': 'Bearer ' + token,
                 },
                 body: JSON.stringify({ to: lineUserId, messages }),
             });
@@ -2892,14 +2997,17 @@
                     }).join('');
                 }
 
-                const unsubscribe = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'), snap => {
+                // ต้อง query แคบที่ uid ตัวเอง ไม่ใช่ดึงทั้ง collection แล้วกรองใน JS
+                // เพราะ security rules ไม่ใช่ตัวกรอง — ถ้าอ่านทั้ง collection แล้วมีสักแถวที่ไม่มีสิทธิ์
+                // Firestore จะปฏิเสธทั้งคำขอ ไม่ใช่คืนเฉพาะแถวที่อ่านได้
+                const unsubscribe = onSnapshot(
+                    query(collection(db, 'artifacts', appId, 'public', 'data', 'time_logs'),
+                          where('uid', '==', user.uid)), snap => {
                     myLogs = [];
                     snap.forEach(d => {
                         const data = d.data();
-                        if (data.uid === user.uid) {
-                            data.localDate = getLocalISO(new Date(data.timestamp));
-                            myLogs.push(data);
-                        }
+                        data.localDate = getLocalISO(new Date(data.timestamp));
+                        myLogs.push(data);
                     });
                     myLogs.sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
                     renderCalendar();
@@ -3282,6 +3390,17 @@
                                 <div><label class="input-label">รหัสพนักงาน *</label><input type="text" id="f-emp-code" required class="input-field" placeholder="LSG-001"></div>
                                 <div><label class="input-label">สิทธิ์ในระบบ *</label><select id="f-sys-role" class="input-field cursor-pointer"><option value="employee">พนักงาน</option><option value="manager">หัวหน้างาน</option><option value="admin">ผู้ดูแลระบบ</option></select></div>
                                 <div><label class="input-label">สถานะพนักงาน</label><select id="f-status" class="input-field cursor-pointer"><option value="active">ทำงานอยู่</option><option value="probation">ทดลองงาน</option><option value="resigned">ลาออก</option></select></div>
+                                <div id="f-must-change-pw-wrap" class="md:col-span-3 hidden">
+                                  <label class="flex items-start gap-3 p-3 bg-zinc-50 border-2 border-zinc-200 rounded-xl cursor-pointer hover:border-yellow-500 transition-all">
+                                    <input type="checkbox" id="f-must-change-pw" class="mt-0.5 w-4 h-4 accent-yellow-500 cursor-pointer">
+                                    <span>
+                                      <span class="block text-sm font-bold text-zinc-700">บังคับตั้งรหัสผ่านใหม่ตอนล็อกอินครั้งถัดไป</span>
+                                      <span class="block text-[11px] text-zinc-400 font-medium mt-0.5">
+                                        ติ๊กช่องนี้ถ้าพนักงานยังใช้รหัสเริ่มต้น (123456) — เขาจะเข้าใช้งานไม่ได้จนกว่าจะตั้งรหัสใหม่
+                                      </span>
+                                    </span>
+                                  </label>
+                                </div>
                                 <div class="md:col-span-3">
                                   <label class="input-label">รูปโปรไฟล์</label>
                                   <div class="flex items-center gap-3">
@@ -3344,7 +3463,26 @@
                                 <div><label class="input-label">หักภาษี ณ ที่จ่าย</label><select id="f-tax" class="input-field cursor-pointer" onchange="document.getElementById('f-tax-custom-wrap').style.display=this.value==='custom'?'block':'none'"><option value="No">ไม่หัก</option><option value="Yes">หักตามขั้นบันได</option><option value="3">หัก 3%</option><option value="custom">กำหนดเอง</option></select></div>
                                 <div id="f-tax-custom-wrap" style="display:none"><label class="input-label">จำนวนภาษี (฿/เดือน)</label><input type="number" id="f-tax-custom" class="input-field" value="0" min="0" step="0.01" placeholder="เช่น 208.34"></div>
                             </div>
-                            <h4 class="section-title"><i class="fa-solid fa-truck-medical"></i>6. ข้อมูลติดต่อฉุกเฉิน</h4>
+
+                            <h4 class="section-title"><i class="fa-solid fa-money-bill-transfer"></i>6. หักอื่นๆ ประจำทุกงวด</h4>
+                            <p class="text-xs text-zinc-400 font-medium -mt-6 mb-5">
+                                รายการที่หักซ้ำทุกงวด เช่น ค่าชุดฟอร์ม เงินกู้ ค่าอาหาร — ระบบจะเติมให้อัตโนมัติตอนสร้างงวดเงินเดือน
+                                และพนักงานจะเห็นหมายเหตุนี้ในสลิป ถ้าเป็นการหักครั้งเดียวไม่ต้องใส่ที่นี่ ให้ไปพิมพ์ในงวดนั้นโดยตรง
+                            </p>
+                            <div class="mb-10">
+                                <div id="f-od-list" class="space-y-3"></div>
+                                <div class="flex items-center justify-between mt-3">
+                                    <button type="button" onclick="empAddOtherDeduct()"
+                                        class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-xl transition-all text-xs uppercase tracking-wider">
+                                        <i class="fa-solid fa-plus mr-2 text-zinc-500"></i> เพิ่มรายการหัก
+                                    </button>
+                                    <p class="text-sm font-bold text-zinc-500">
+                                        รวมหักอื่นๆ <span id="f-od-total" class="font-black text-red-500">฿0.00</span> /งวด
+                                    </p>
+                                </div>
+                            </div>
+
+                            <h4 class="section-title"><i class="fa-solid fa-truck-medical"></i>7. ข้อมูลติดต่อฉุกเฉิน</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div><label class="input-label">ชื่อผู้ติดต่อฉุกเฉิน</label><input type="text" id="f-emergency-name" class="input-field"></div>
                                 <div><label class="input-label">เบอร์ติดต่อฉุกเฉิน</label><input type="tel" id="f-emergency-phone" class="input-field"></div>
@@ -3462,6 +3600,9 @@
                     document.getElementById('f-emp-code').value = emp.employeeCode || '';
                     document.getElementById('f-sys-role').value = emp.role || 'employee';
                     document.getElementById('f-status').value = emp.status || 'active';
+                    // ช่องนี้โผล่เฉพาะตอนแก้ไข — ตอนสร้างใหม่บังคับให้ตั้งรหัสใหม่อยู่แล้วเสมอ
+                    document.getElementById('f-must-change-pw-wrap').classList.remove('hidden');
+                    document.getElementById('f-must-change-pw').checked = emp.mustChangePassword === true;
                     document.getElementById('f-photo-url').value = emp.photoURL || '';
                     document.getElementById('f-title').value = emp.titleTH || 'นาย';
                     document.getElementById('f-fname-th').value = emp.fnameTH || '';
@@ -3500,6 +3641,7 @@
                     document.getElementById('f-tax').value = emp.taxDeduction || 'No';
                     document.getElementById('f-tax-custom-wrap').style.display = emp.taxDeduction==='custom' ? 'block' : 'none';
                     document.getElementById('f-tax-custom').value = emp.taxCustomAmount || 0;
+                    empRenderOtherDeducts(emp.otherDeducts || []);
                     document.getElementById('f-emergency-name').value = emp.emergencyName || '';
                     document.getElementById('f-emergency-phone').value = emp.emergencyPhone || '';
                     document.getElementById('form-header').classList.replace('bg-zinc-900', 'bg-zinc-800');
@@ -3511,6 +3653,61 @@
                     document.getElementById('btn-cancel-edit').classList.remove('hidden');
                     empSwitchTab('add');
                     document.getElementById('content-wrapper').scrollTop = 0;
+                };
+
+                // ── หักอื่นๆ ประจำ (otherDeducts) — แถวละ หมายเหตุ + จำนวน
+                window.empRenderOtherDeducts = (items) => {
+                    const box = document.getElementById('f-od-list');
+                    if (!box) return;
+                    const rows = (items && items.length) ? items : [];
+                    box.innerHTML = rows.map((it, i) => `
+                        <div class="od-row flex gap-3 items-start">
+                          <div class="flex-1">
+                            <input type="text" class="input-field od-label" value="${(it.label||'').replace(/"/g,'&quot;')}"
+                              placeholder="หักค่าอะไร เช่น ค่าชุดฟอร์ม, เงินกู้">
+                          </div>
+                          <div class="w-40">
+                            <input type="number" class="input-field od-amount num" value="${Number(it.amount)||0}"
+                              min="0" step="0.01" placeholder="0.00">
+                          </div>
+                          <button type="button" onclick="empRemoveOtherDeduct(${i})" title="ลบรายการนี้"
+                            class="shrink-0 w-11 h-11 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-all">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                          </button>
+                        </div>`).join('')
+                        || `<p class="text-xs text-zinc-400 font-medium py-3 text-center bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
+                              ยังไม่มีรายการหักประจำ — กด "เพิ่มรายการหัก" ถ้าพนักงานคนนี้ต้องหักอะไรซ้ำทุกงวด
+                            </p>`;
+                    box.querySelectorAll('.od-amount').forEach(el => el.addEventListener('input', empUpdateOtherDeductTotal));
+                    empUpdateOtherDeductTotal();
+                };
+
+                // อ่านทุกแถวตามที่เห็นบนจอ — index ต้องตรงกับปุ่มลบ จึงห้ามกรองทิ้ง
+                window.empReadOtherDeductRows = () =>
+                    [...document.querySelectorAll('#f-od-list .od-row')].map(r => ({
+                        label:  r.querySelector('.od-label')?.value.trim() || '',
+                        amount: Number(r.querySelector('.od-amount')?.value) || 0,
+                    }));
+
+                // สำหรับบันทึก — ตัดแถวที่ไม่ได้กรอกอะไรเลยทิ้ง
+                window.empReadOtherDeducts = () =>
+                    empReadOtherDeductRows().filter(it => it.label || it.amount > 0);
+
+                window.empUpdateOtherDeductTotal = () => {
+                    const total = empReadOtherDeductRows().reduce((s, it) => s + it.amount, 0);
+                    const el = document.getElementById('f-od-total');
+                    if (el) el.textContent = '฿' + total.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+                };
+
+                window.empAddOtherDeduct = () => {
+                    empRenderOtherDeducts([...empReadOtherDeductRows(), { label:'', amount:0 }]);
+                    document.querySelector('#f-od-list .od-row:last-child .od-label')?.focus();
+                };
+
+                window.empRemoveOtherDeduct = (i) => {
+                    const items = empReadOtherDeductRows();
+                    items.splice(i, 1);
+                    empRenderOtherDeducts(items);
                 };
 
                 // preview รูปเมื่อเลือกไฟล์ (local preview ก่อน upload)
@@ -3579,16 +3776,20 @@
                         commRate: Number(v('f-comm-rate')||0), commMin: Number(v('f-comm-min')||0),
                         commission: Number(v('f-comm-rate')||0), paymentMethod: v('f-payment-method'), bankName: v('f-bank-name'), bankAccount: v('f-bank-acc'),
                         sso: v('f-sso'), taxDeduction: v('f-tax'), taxCustomAmount: v('f-tax')==='custom' ? Number(v('f-tax-custom')||0) : 0,
+                        otherDeducts: empReadOtherDeducts(),
                         emergencyName: v('f-emergency-name'), emergencyPhone: v('f-emergency-phone'),
                         updatedAt: new Date().toISOString()
                     };
                     try {
                         if (isEditing) {
                             const uid = document.getElementById('emp-uid').value;
+                            payload.mustChangePassword = document.getElementById('f-must-change-pw').checked;
                             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), payload);
                             showToast('✅ บันทึกการแก้ไขเรียบร้อย', 'success');
                             isEditing = false;
                             document.getElementById('employee-form').reset();
+                            document.getElementById('f-must-change-pw-wrap').classList.add('hidden');
+                            empRenderOtherDeducts([]); // reset() ไม่ล้างแถวที่สร้างด้วย JS
                             document.getElementById('form-header').classList.replace('bg-zinc-800', 'bg-zinc-900');
                             document.getElementById('form-title').textContent = 'ลงทะเบียนพนักงานใหม่';
                             document.getElementById('form-subtitle').textContent = 'Create New Employee Profile';
@@ -3606,9 +3807,12 @@
                             const data = await res.json();
                             if (!res.ok) throw new Error(data.error.message === 'EMAIL_EXISTS' ? 'อีเมลนี้มีอยู่ในระบบแล้ว' : data.error.message);
                             payload.uid = data.localId; payload.createdAt = new Date().toISOString();
+                            // ทุกคนถูกสร้างด้วยรหัสเดียวกัน — บังคับให้ตั้งรหัสใหม่ตอนล็อกอินครั้งแรก
+                            payload.mustChangePassword = true;
                             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', data.localId), payload);
-                            showToast('✅ สร้างพนักงานใหม่สำเร็จ (รหัสผ่าน: 123456)', 'success');
+                            showToast('✅ สร้างพนักงานใหม่สำเร็จ (รหัสชั่วคราว: 123456 — ระบบจะบังคับให้ตั้งรหัสใหม่ตอนล็อกอินครั้งแรก)', 'success');
                             document.getElementById('employee-form').reset();
+                            empRenderOtherDeducts([]);
                             empSwitchTab('manage');
                         }
                     } catch (err) { alert('❌ ' + err.message); }
@@ -3616,13 +3820,14 @@
                 });
 
                 // Load list initially
+                empRenderOtherDeducts([]);
                 empSwitchTab('manage');
 
                 return () => {
                     unsubscribe();
-                    delete window.empSwitchTab;
-                    delete window.empPrepareEdit;
-                    delete window.filterEmployees;
+                    ['empSwitchTab','empPrepareEdit','filterEmployees','empRenderOtherDeducts',
+                     'empReadOtherDeductRows','empReadOtherDeducts','empUpdateOtherDeductTotal',
+                     'empAddOtherDeduct','empRemoveOtherDeduct'].forEach(k => delete window[k]);
                 };
             }
         };
@@ -5797,7 +6002,12 @@ PAGES['payroll'] = {
 
         window.prGenAll = async pid => {
             const active=employees.filter(e=>e.status!=='resigned');
-            if(!confirm(`คำนวณเงินเดือนให้ ${active.length} คน?\nข้อมูลเดิมจะถูกแทนที่`))return;
+            if(!confirm(
+                `คำนวณเงินเดือนใหม่ให้ ${active.length} คน?\n\n`
+              + `คำนวณใหม่จากข้อมูลล่าสุด: เงินเดือน ชั่วโมงลา OT คอมมิชชั่น ประกันสังคม ภาษี และหักอื่นๆ ประจำ\n`
+              + `เก็บค่าที่พิมพ์เองไว้ให้: หักลา รายได้อื่นๆ และชั่วโมงสาย\n\n`
+              + `หมายเหตุ: รายการหักอื่นๆ ที่เพิ่มไว้เฉพาะงวดนี้ จะถูกแทนที่ด้วยรายการประจำจากข้อมูลพนักงาน`
+            ))return;
             const period=periods.find(p=>p.id===pid); if(!period)return;
             const btn=document.querySelector(`[onclick="prGenAll('${pid}')"]`);
             if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังคำนวณ...';}
@@ -5820,6 +6030,17 @@ PAGES['payroll'] = {
                     (o.commItems||[]).forEach(c=>{ otbu[o.uid].salesTotal += c.sales||0; });
                 });
                 const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
+                // ค่าพวกนี้ไม่มีที่มาจากไหน admin พิมพ์เองล้วนๆ — เก็บไว้ก่อนลบแล้วใส่คืน
+                // ไม่งั้นกดคำนวณใหม่ทีเดียวหายหมด ต้องมานั่งกรอกใหม่ทุกคน
+                const manual={};
+                ex.docs.forEach(d=>{
+                    const r=d.data(); if(!r.uid) return;
+                    manual[r.uid]={
+                        deductLeave:  r.deductLeave  || 0,
+                        otherEarning: r.otherEarning || 0,
+                        lateHours:    r.lateHours    || 0,
+                    };
+                });
                 if(ex.docs.length){const b1=writeBatch(db);ex.docs.forEach(d=>b1.delete(d.ref));await b1.commit();}
                 const b2=writeBatch(db);
                 active.forEach(emp=>{
@@ -5837,7 +6058,13 @@ PAGES['payroll'] = {
                     const eH=Math.round(hourly*wh*100)/100;
                     const eC=Math.round(otData.commTotal*100)/100;
                     const salesTotal=Math.round(otData.salesTotal*100)/100;
-                    const tEar=base+eD+eH+eC, tDed=dSSO+dTax, net=tEar-tDed;
+                    // หักอื่นๆ ประจำจากโปรไฟล์ — คัดลอกเป็น snapshot ไว้ในใบเงินเดือน
+                    // งวดที่ปิดไปแล้วจะได้ไม่เปลี่ยนตามถ้ามีคนไปแก้โปรไฟล์ทีหลัง
+                    const odItems=(emp.otherDeducts||[]).filter(it=>it && (it.label || it.amount>0))
+                        .map(it=>({label:it.label||'',amount:Number(it.amount)||0}));
+                    const dOther=Math.round(odItems.reduce((s,it)=>s+it.amount,0)*100)/100;
+                    const mn=manual[emp.uid]||{deductLeave:0,otherEarning:0,lateHours:0};
+                    const tEar=base+eD+eH+eC+mn.otherEarning, tDed=dSSO+dTax+dOther+mn.deductLeave, net=tEar-tDed;
                     const ref=doc(collection(db,'artifacts',APP_ID,'public','data','payroll_records'));
                     b2.set(ref,{
                         periodId:pid,periodNo:period.periodNo,year:period.year,
@@ -5847,10 +6074,10 @@ PAGES['payroll'] = {
                         bankName:emp.bankName||'',bankAccount:emp.bankAccount||'',
                         baseSalary:base,dailyWage:daily,hourlyWage:hourly,commissionRate:commR,commissionMin:emp.commMin||emp.commissionMin||0,
                         workDays:wd,workHours:wh,commissionUnits:salesTotal,
-                        earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:0,
+                        earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:mn.otherEarning,
                         sickLeaveHours:lh.sick,personalLeaveHours:lh.personal,
-                        vacationLeaveHours:lh.vacation,otherLeaveHours:lh.other,lateHours:0,
-                        deductLeave:0,deductSSO:dSSO,deductTax:dTax,otherDeduct:0,taxMode,taxCustomAmount:emp.taxCustomAmount||0,
+                        vacationLeaveHours:lh.vacation,otherLeaveHours:lh.other,lateHours:mn.lateHours,
+                        deductLeave:mn.deductLeave,deductSSO:dSSO,deductTax:dTax,otherDeduct:dOther,otherDeductItems:odItems,taxMode,taxCustomAmount:emp.taxCustomAmount||0,
                         totalEarning:tEar,totalDeduct:tDed,netPay:net,
                         createdAt:new Date().toISOString(),
                     });
@@ -5929,7 +6156,16 @@ PAGES['payroll'] = {
                   </select>
                 </div>
                 <div><label class="pr-lbl">หักภาษี (฿)</label><input id="rdt" type="number" class="pr-input num" value="${r.deductTax||0}" ${r.taxMode==='custom' ? (isDraft?'':'readonly') : 'readonly'} oninput="prRecalc()"></div>
-                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input ${RO} id="rdo" type="number" class="pr-input num" value="${r.otherDeduct||0}"></div>
+                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input readonly id="rdo" type="number" class="pr-input num bg-zinc-100" value="${r.otherDeduct||0}"></div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-zinc-100">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="pr-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46</p>
+                  ${isDraft ? `<button type="button" onclick="prOdAdd()"
+                    class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-lg transition-all text-[11px]">
+                    <i class="fa-solid fa-plus mr-1 text-zinc-500"></i> \u0e40\u0e1e\u0e34\u0e48\u0e21\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</button>` : ''}
+                </div>
+                <div id="pr-od-list" class="space-y-2"></div>
               </div>
             </div>
             <div class="rounded-2xl overflow-hidden border border-zinc-200">
@@ -5942,9 +6178,16 @@ PAGES['payroll'] = {
               </table>
             </div>`;
 
+            // ใบเก่าที่บันทึกก่อนมีรายการย่อย จะมีแต่ยอดรวม otherDeduct
+            // ต้องแปลงเป็น 1 รายการ ไม่งั้น prRecalc จะรวมจาก list ว่างแล้วทับยอดเดิมเป็น 0
+            const odInit = (r.otherDeductItems && r.otherDeductItems.length)
+                ? r.otherDeductItems
+                : (Number(r.otherDeduct)>0 ? [{label:'หักอื่นๆ', amount:Number(r.otherDeduct)}] : []);
+            prOdRender(odInit, isDraft);
+
             sEl('pr-net-prev').textContent=`\u0e3f ${fmt(r.netPay)}`;
             if(isDraft){
-                ['rb','rd','rh','rc','rwd','rwh','rcu','reo','rdl','rds','rdt','rdo','rtm']
+                ['rb','rd','rh','rc','rwd','rwh','rcu','reo','rdl','rds','rdt','rtm']
                     .forEach(id=>sEl(id)?.addEventListener('input',prRecalc));
             }
             const sb=sEl('pr-save-btn'); if(sb) sb.style.display=isDraft?'':'none';
@@ -5953,6 +6196,44 @@ PAGES['payroll'] = {
         };
 
         window.prCloseRec = () => { sEl('pr-modal-rec')?.classList.add('hidden'); editId=null; };
+
+        // ── รายการหักอื่นๆ ในใบเงินเดือน (snapshot ที่คัดลอกมาจากโปรไฟล์ตอนสร้างงวด)
+        // แก้เฉพาะงวดนี้ได้ ไม่ย้อนกลับไปแก้โปรไฟล์
+        let prOdDraft = true;
+        window.prOdRows = () =>
+            [...document.querySelectorAll('#pr-od-list .pr-od-row')].map(r=>({
+                label:  r.querySelector('.pr-od-label')?.value.trim() || '',
+                amount: Number(r.querySelector('.pr-od-amount')?.value) || 0,
+            }));
+
+        window.prOdRender = (items, isDraft) => {
+            prOdDraft = isDraft;
+            const box=sEl('pr-od-list'); if(!box) return;
+            const RO2 = isDraft ? '' : 'readonly';
+            box.innerHTML = (items||[]).map((it,i)=>`
+                <div class="pr-od-row flex gap-2 items-center">
+                  <input ${RO2} type="text" class="pr-input pr-od-label flex-1" value="${(it.label||'').replace(/"/g,'&quot;')}" placeholder="หักค่าอะไร">
+                  <input ${RO2} type="number" step="0.01" class="pr-input num pr-od-amount w-32" value="${Number(it.amount)||0}">
+                  ${isDraft?`<button type="button" onclick="prOdRemove(${i})" title="ลบรายการนี้"
+                    class="shrink-0 w-9 h-9 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-all">
+                    <i class="fa-solid fa-trash-can text-xs"></i></button>`:''}
+                </div>`).join('')
+                || `<p class="text-[11px] text-zinc-400 font-medium py-2 text-center bg-zinc-50 rounded-lg border border-dashed border-zinc-200">
+                      ไม่มีรายการหักอื่นๆ${isDraft?' — ตั้งรายการประจำได้ที่ข้อมูลพนักงาน หรือกด "เพิ่มรายการ" สำหรับงวดนี้เท่านั้น':''}
+                    </p>`;
+            if(isDraft) box.querySelectorAll('.pr-od-amount').forEach(el=>el.addEventListener('input',prRecalc));
+            prRecalc();
+        };
+
+        window.prOdAdd = () => {
+            prOdRender([...prOdRows(), {label:'',amount:0}], prOdDraft);
+            document.querySelector('#pr-od-list .pr-od-row:last-child .pr-od-label')?.focus();
+        };
+
+        window.prOdRemove = (i) => {
+            const items=prOdRows(); items.splice(i,1);
+            prOdRender(items, prOdDraft);
+        };
 
         window.prRecalc = () => {
             const b=gN('rb'),d=gN('rd'),h=gN('rh'),c=gN('rc');
@@ -5978,7 +6259,10 @@ PAGES['payroll'] = {
             }
             const tEar=b+eD+eH+eC+eo;
             if(tm!=='custom'){const te=sEl('rdt');if(te)te.value=calcTax(b,tm);}
-            const tDed=gN('rdl')+gN('rds')+gN('rdt')+gN('rdo');
+            // \u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e21\u0e32\u0e08\u0e32\u0e01\u0e1c\u0e25\u0e23\u0e27\u0e21\u0e02\u0e2d\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e22\u0e48\u0e2d\u0e22 \u0e0a\u0e48\u0e2d\u0e07 rdo \u0e40\u0e1b\u0e47\u0e19\u0e41\u0e04\u0e48\u0e17\u0e35\u0e48\u0e41\u0e2a\u0e14\u0e07\u0e1c\u0e25
+            const dOther=Math.round(prOdRows().reduce((s,it)=>s+it.amount,0)*100)/100;
+            const rdoEl=sEl('rdo'); if(rdoEl) rdoEl.value=dOther;
+            const tDed=gN('rdl')+gN('rds')+gN('rdt')+dOther;
             const net=tEar-tDed;
             const setTL=(id,v)=>{const e=sEl(id);if(e)e.textContent=`\u0e3f${fmt(v)}`;};
             setTL('rte',tEar); setTL('rtd',tDed); setTL('rtn',net);
@@ -5993,7 +6277,9 @@ PAGES['payroll'] = {
             const cm=gN('rcm');
             const eD=d*wd,eH=h*wh,eC=(cm>0&&cu<cm) ? 0 : cu*(c/100);
             const tEar=b+eD+eH+eC+eo;
-            const tDed=gN('rdl')+gN('rds')+gN('rdt')+gN('rdo');
+            const odItems=prOdRows().filter(it=>it.label||it.amount>0);
+            const dOther=Math.round(odItems.reduce((s,it)=>s+it.amount,0)*100)/100;
+            const tDed=gN('rdl')+gN('rds')+gN('rdt')+dOther;
             const net=tEar-tDed;
             const btn=sEl('pr-save-btn'); btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01...';
             try {
@@ -6004,7 +6290,8 @@ PAGES['payroll'] = {
                     earningDaily:eD,earningHourly:eH,earningCommission:eC,otherEarning:eo,
                     sickLeaveHours:gN('rls'),personalLeaveHours:gN('rlp'),
                     vacationLeaveHours:gN('rlv'),otherLeaveHours:gN('rlo'),lateHours:gN('rlt'),
-                    deductLeave:gN('rdl'),deductSSO:gN('rds'),deductTax:gN('rdt'),otherDeduct:gN('rdo'),
+                    deductLeave:gN('rdl'),deductSSO:gN('rds'),deductTax:gN('rdt'),
+                    otherDeduct:dOther,otherDeductItems:odItems,
                     taxMode:tm,totalEarning:tEar,totalDeduct:tDed,netPay:net,
                     updatedAt:new Date().toISOString(),
                 });
@@ -6589,11 +6876,17 @@ PAGES['payroll'] = {
 
             // หัก — taxMode เก็บเป็น text เช่น "3%" หรือ "No"
             const taxLabel = r.taxMode && r.taxMode !== 'No' ? `หักภาษี ณ ที่จ่าย ${r.taxMode}` : 'หักภาษี ณ ที่จ่าย';
+            // แจกแจงหักอื่นๆ ทีละรายการ เพื่อให้พนักงานรู้ว่าถูกหักค่าอะไรบ้าง
+            // ถ้าไม่มีรายการย่อย (ใบเก่าก่อนมีฟีเจอร์นี้) ให้แสดงยอดรวมเหมือนเดิม
+            const odItems = (r.otherDeductItems||[]).filter(it => it && (it.label || it.amount > 0));
+            const otherDeductRows = odItems.length
+                ? odItems.map(it => row(`• ${it.label || 'หักอื่นๆ'}`, fmtI(it.amount), false, '#dc2626'))
+                : [row('หักอื่นๆ', fmtI(r.otherDeduct), false, '#dc2626')];
             const deductRows = [
                 row(taxLabel,          fmtI(r.deductTax),   false, '#dc2626'),
                 row('หักประกันสังคม', fmtI(r.deductSSO),   false, '#dc2626'),
                 row('หักขาดงาน',      fmtI(r.deductLeave), false, '#dc2626'),
-                row('หักอื่นๆ',       fmtI(r.otherDeduct), false, '#dc2626'),
+                ...otherDeductRows,
                 { type:'box', layout:'horizontal', margin:'xs',
                   contents:[
                     { type:'text', text:'รวมเงินหัก', size:'sm', weight:'bold', color:'#dc2626', flex:4 },
@@ -9039,19 +9332,21 @@ PAGES['my-review'] = {
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
-        const { collection, doc, getDocs, getDoc, setDoc, query, orderBy }
+        const { collection, doc, getDocs, getDoc, setDoc, query, orderBy, where }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const col = name => collection(db,'artifacts',APP_ID,'public','data',name);
 
         // โหลด review ทั้งหมด (manager + self) ของฉัน
-        const snap = await getDocs(col('reviews'));
+        // query แคบที่ uid ตัวเอง — ถ้าดึงทั้ง collection security rules จะปฏิเสธทั้งคำขอ
+        // (rules ไม่ใช่ตัวกรอง) และคะแนนประเมินของคนอื่นก็ไม่ควรหลุดมาถึงเบราว์เซอร์อยู่แล้ว
+        const snap = await getDocs(query(col('reviews'), where('uid','==',user.uid)));
         const myReviews = snap.docs.map(d => d.data())
-            .filter(r => r.uid === user.uid && r.kind !== 'self')
+            .filter(r => r.kind !== 'self')
             .sort((a,b) => (b.reviewedAt||'').localeCompare(a.reviewedAt||''));
         const mySelfReviews = {};
         snap.docs.forEach(d => {
             const r = d.data();
-            if (r.uid === user.uid && r.kind === 'self') mySelfReviews[r.cycleId] = r;
+            if (r.kind === 'self') mySelfReviews[r.cycleId] = r;
         });
 
         // โหลด cycles สำหรับประเมินตัวเอง
@@ -11597,6 +11892,11 @@ PAGES['payslip-admin'] = {
             </div>`,
 
             async init(user, profile, db, APP_ID) {
+                // เมนูซ่อนไว้ แต่ router ไม่เช็ค role — พิมพ์ #ot-approve บน URL ก็เข้าได้
+                // ไม่มีบรรทัดนี้ = พนักงานทั่วไปกดอนุมัติ OT ให้ตัวเองได้
+                if (profile.role !== 'admin' && profile.role !== 'manager') {
+                    navigateTo('home'); return;
+                }
                 let allRequests = [], filterStatus = 'all', unsubOt = null;
                 const stMap = { draft:'Draft', pending:'รออนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ไม่อนุมัติ' };
                 const stCls = { draft:'ot-status-draft', pending:'ot-status-pending', approved:'ot-status-approved', rejected:'ot-status-rejected' };
@@ -11862,6 +12162,11 @@ PAGES['payslip-admin'] = {
         </div>`,
 
             async init(user, profile, db, APP_ID) {
+                // เมนูซ่อนไว้ แต่ router ไม่เช็ค role — พิมพ์ #executive บน URL ก็เข้าได้
+                // หน้านี้อ่าน users ทั้ง collection (มีเงินเดือนทุกคน) ต้องกันไว้
+                if (profile.role !== 'admin' && profile.role !== 'manager') {
+                    navigateTo('home'); return;
+                }
                 await (async () => {
                     const { collection, query, where, orderBy, getDocs, onSnapshot, limit }
                         = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');

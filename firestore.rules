@@ -1,0 +1,195 @@
+rules_version = '2';
+
+// ============================================================================
+// Firestore Security Rules — Lamsang HRIS
+// ============================================================================
+// สำคัญ: แอปนี้เป็น client-side ล้วน ไม่มีหลังบ้าน ทุกคำสั่งอ่าน/เขียนมาจากเบราว์เซอร์
+// ผู้ใช้แก้โค้ดหน้าเว็บได้ตามใจ => ไฟล์นี้คือด่านเดียวที่กันข้อมูลจริง
+// การซ่อนเมนูใน UI ไม่ใช่การรักษาความปลอดภัย
+//
+// เหตุผลที่ต้องเข้ม: Email/Password provider เปิดอยู่ และ Firebase API key อ่านได้จากหน้าเว็บ
+// แปลว่าคนนอกสมัครบัญชีเข้ามาในโปรเจกต์นี้ได้เอง
+// => "ล็อกอินแล้ว" ไม่เท่ากับ "เป็นพนักงาน" ต้องเช็คว่ามี user doc จริงเสมอ (isStaff)
+//
+// ข้อควรรู้ก่อนแก้ไฟล์นี้: rules ไม่ใช่ตัวกรอง
+// ถ้าโค้ดสั่ง getDocs(collection('x')) แล้วมีสักแถวที่ไม่มีสิทธิ์อ่าน Firestore ปฏิเสธทั้งคำขอ
+// ไม่ใช่คืนเฉพาะแถวที่อ่านได้ => โค้ดฝั่งพนักงานต้อง query แคบด้วย where('uid','==',...) เสมอ
+//
+// deploy:  firebase deploy --only firestore:rules
+// ทดสอบก่อน deploy: Firebase Console > Firestore > Rules > Playground
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /artifacts/{appId}/public/data {
+
+      // ---- helper ----------------------------------------------------------
+      function signedIn() {
+        return request.auth != null;
+      }
+
+      function me() {
+        return get(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)).data;
+      }
+
+      // มี user doc จริง = แอดมินสร้างให้ ไม่ใช่คนที่ signUp เข้ามาเอง
+      function isStaff() {
+        return signedIn()
+          && exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid))
+          && me().status != 'resigned';
+      }
+
+      function isAdmin() {
+        return isStaff() && me().role == 'admin';
+      }
+
+      function isManager() {
+        return isStaff() && (me().role == 'manager' || me().role == 'admin');
+      }
+
+      function isSelf(uid) {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      // เจ้าของ doc ตามฟิลด์ uid (ใช้กับ collection ที่ doc id เป็น auto-id)
+      function ownsExisting() {
+        return isStaff() && resource.data.uid == request.auth.uid;
+      }
+      function ownsIncoming() {
+        return isStaff() && request.resource.data.uid == request.auth.uid;
+      }
+
+      function onlyFields(allowed) {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+      }
+
+      // ---- users: โปรไฟล์พนักงาน (เงินเดือน เลขบัตร ปชช. บัญชีธนาคาร) --------
+      // หัวใจของระบบ — พนักงานอ่านได้แค่ของตัวเอง
+      //
+      // ผลข้างเคียงที่ยอมรับแล้ว: notifyManagersNewLeave / notifyManagersOutsideClock
+      // อ่าน users ทั้ง collection จากเบราว์เซอร์พนักงานเพื่อหา lineId ของหัวหน้า
+      // rules นี้จะบล็อก => แจ้งเตือน LINE ตอนพนักงานยื่นใบลา/ตอกบัตรนอกพื้นที่จะเงียบไป
+      // (โค้ดมี catch อยู่แล้ว ใบลายังส่งได้ปกติ หัวหน้ายังเห็นในแอป)
+      // ทางแก้ที่ถูกต้องคือย้ายการยิง LINE ไปหลัง Cloud Function
+      // ห้ามแก้เป็น isStaff() เพื่อให้แจ้งเตือนกลับมา = เปิดเงินเดือนทุกคนให้พนักงานอ่าน
+      match /users/{uid} {
+        allow read: if isSelf(uid) || isManager();
+        allow create, delete: if isAdmin();
+
+        // พนักงานแก้ได้เฉพาะข้อมูลติดต่อของตัวเอง — ห้ามแตะ role/status/เงินเดือน/หักอื่นๆ
+        allow update: if isAdmin()
+          || (isSelf(uid) && onlyFields([
+                'photoURL', 'phone', 'address', 'province', 'district', 'subdistrict',
+                'zipcode', 'lineId', 'nickname', 'fnameEN', 'lnameEN',
+                'emergencyName', 'emergencyPhone',
+                'mustChangePassword', 'passwordChangedAt', 'updatedAt'
+              ]));
+      }
+
+      // ---- app_config: LINE token ------------------------------------------
+      // ข้อจำกัดที่ต้องยอมรับ: เบราว์เซอร์พนักงานเป็นคนยิง LINE เอง จึงต้องอ่าน token ได้
+      // => พนักงานที่เปิด DevTools ก๊อป token ไปใช้ได้ ไฟล์นี้กันได้แค่คนนอกที่ไม่ใช่พนักงาน
+      // นี่คือเหตุผลหลักที่ควรย้ายไป Cloud Function — แล้วเปลี่ยน read เป็น false
+      match /app_config/{docId} {
+        allow read:  if isStaff();
+        allow write: if isAdmin();
+      }
+
+      // ---- payroll: เงินเดือน ------------------------------------------------
+      match /payroll_records/{recId} {
+        allow read:  if isAdmin() || ownsExisting();
+        allow write: if isAdmin();
+      }
+
+      match /payroll_periods/{periodId} {
+        allow read:  if isStaff();
+        allow write: if isAdmin();
+      }
+
+      match /payslips/{slipId} {
+        allow read:  if isAdmin() || ownsExisting();
+        allow write: if isAdmin();
+      }
+
+      // ---- leave: การลา ------------------------------------------------------
+      match /leave_requests/{reqId} {
+        allow read: if isManager() || ownsExisting();
+
+        // ยื่นในนามตัวเองเท่านั้น และต้องเริ่มที่ pending (กันยื่นแล้วอนุมัติเอง)
+        allow create: if ownsIncoming() && request.resource.data.status == 'pending';
+
+        allow update: if isManager()
+          || (ownsExisting()
+              && (resource.data.status == 'pending'
+                  || request.resource.data.status == 'cancelled'));
+
+        allow delete: if isAdmin();
+      }
+
+      // doc id = uid (ไม่มีฟิลด์ uid ข้างใน) ต้องใช้ {uid} จาก path
+      // พนักงานเขียนเองได้เพราะตอนยกเลิกใบลา โค้ดคืนโควตาจากเบราว์เซอร์ของเขาเอง
+      // (ไม่ใช่ของดี — ถ้าย้ายไป Cloud Function ควรล็อกเป็น isManager())
+      match /leave_balances/{uid} {
+        allow read:  if isSelf(uid) || isManager();
+        allow write: if isSelf(uid) || isManager();
+      }
+
+      match /work_schedules/{uid} {
+        allow read:  if isStaff();   // ใช้คำนวณชั่วโมงลา/วันทำงานของคนอื่นด้วย
+        allow write: if isAdmin();
+      }
+
+      // ---- attendance: ลงเวลา ------------------------------------------------
+      match /time_logs/{logId} {
+        allow read:   if isManager() || ownsExisting();
+        allow create: if ownsIncoming();      // ตอกบัตรในนามตัวเองเท่านั้น
+        allow update, delete: if isAdmin();
+      }
+
+      match /time_requests/{reqId} {
+        allow read:   if isManager() || ownsExisting();
+        allow create: if ownsIncoming();
+        allow update: if isManager() || ownsExisting();  // เจ้าของกดยกเลิกคำขอตัวเองได้
+        allow delete: if isAdmin();
+      }
+
+      match /ot_requests/{reqId} {
+        allow read:   if isManager() || ownsExisting();
+        allow create: if ownsIncoming();
+        allow update: if isManager() || ownsExisting();  // เจ้าของแก้ draft/กดส่งของตัวเองได้
+        allow delete: if isAdmin();
+      }
+
+      // ---- reviews: ประเมินผลงาน ---------------------------------------------
+      // self-review ไม่มีฟิลด์ reviewerUid (มีแต่ uid + kind:'self') อย่าเช็ค reviewerUid
+      match /reviews/{reviewId} {
+        allow read: if isManager()
+          || ownsExisting()
+          || (isStaff() && resource.data.reviewerUid == request.auth.uid);
+
+        // พนักงานเขียนได้เฉพาะ self-review ของตัวเอง; manager ให้คะแนนคนอื่นได้
+        allow create, update: if isManager()
+          || (ownsIncoming() && request.resource.data.kind == 'self');
+
+        allow delete: if isAdmin();
+      }
+
+      match /review_cycles/{cycleId} {
+        allow read:  if isStaff();   // my-review ต้องอ่านเพื่อเลือกรอบประเมินตัวเอง
+        allow write: if isManager();
+      }
+
+      // ---- ข้อมูลกลาง: พนักงานอ่านได้ แก้ไม่ได้ ------------------------------
+      match /public_holidays/{docId}   { allow read: if isStaff(); allow write: if isAdmin(); }
+      match /shifts/{docId}            { allow read: if isStaff(); allow write: if isAdmin(); }
+      match /branch_locations/{docId}  { allow read: if isStaff(); allow write: if isAdmin(); }
+      match /announcements/{docId}     { allow read: if isStaff(); allow write: if isManager(); }
+    }
+
+    // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
