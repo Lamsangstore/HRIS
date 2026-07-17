@@ -1,6 +1,11 @@
 // เช็คเชิงโครงสร้าง — จับความผิดพลาดที่เคยหลุดมาแล้ว
 // รันเร็ว ไม่ต้องต่อ Firebase
+import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { src, makeChecker } from './extract.mjs';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const check = makeChecker();
 
@@ -65,11 +70,18 @@ check('หน้า my-review ไม่ดึง reviews ทั้ง collection
 check('ไม่มีการอ่าน users ทั้ง collection ด้วย APP_ID (โค้ด global ที่พนักงานเรียกได้)',
       /getDocs\(collection\(db, 'artifacts', APP_ID, 'public', 'data', 'users'\)\)/.test(src), false);
 
-// ── 4. ไฟล์ rules ต้องมีอยู่และปิดท้ายด้วย deny-all ────────────────────────────
-import { readFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-const RULES = join(dirname(fileURLToPath(import.meta.url)), '..', 'firestore.rules');
+// ── 6. import ในหน้า html ต้องชี้ไปไฟล์ที่มีอยู่จริง ───────────────────────────
+// ไม่มี build step — พิมพ์ path ผิด = หน้าขาวทั้งแอป และ node --check จับไม่ได้
+// เพราะมันเช็คแค่ syntax ไม่ได้ resolve import
+{
+    const paths = [...src.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map(m => m[1]);
+    check('มี import ไฟล์ในเครื่องอยู่จริง', paths.length > 0, true);
+    const missing = paths.filter(p => !existsSync(join(ROOT, p)));
+    check('ทุก import path ชี้ไปไฟล์ที่มีอยู่', missing, []);
+}
+
+// ── 7. ไฟล์ rules ต้องมีอยู่และปิดท้ายด้วย deny-all ────────────────────────────
+const RULES = join(ROOT, 'firestore.rules');
 check('มีไฟล์ firestore.rules อยู่ใน repo', existsSync(RULES), true);
 if (existsSync(RULES)) {
     const rules = readFileSync(RULES, 'utf8');
