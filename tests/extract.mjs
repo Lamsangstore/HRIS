@@ -1,12 +1,26 @@
 // ดึงโค้ดจริงจาก app.html มาทดสอบ — ไม่ copy โค้ดมาวางซ้ำ
 // ถ้า copy มาวาง เทสต์จะผ่านทั้งที่ของจริงพัง เพราะทดสอบคนละตัวกัน
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const APP_PATH = join(HERE, '..', 'app.html');
+const ROOT = join(HERE, '..');
+export const APP_PATH = join(ROOT, 'app.html');
 export const src = readFileSync(APP_PATH, 'utf8');
+
+// โค้ดหน้าต่างๆ กระจายอยู่ทั้งใน app.html และ js/pages/ ที่แยกออกไปแล้ว
+// เช็คเชิงโครงสร้าง (role guard ฯลฯ) ต้องมองทั้งสองที่ ไม่งั้นย้ายหน้าออกไป
+// แล้วเทสต์จะเงียบไปเฉยๆ ทั้งที่ควรตรวจต่อ
+export const pageFiles = (() => {
+    const dir = join(ROOT, 'js', 'pages');
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir).filter(f => f.endsWith('.js'))
+        .map(f => ({ name: `js/pages/${f}`, src: readFileSync(join(dir, f), 'utf8') }));
+})();
+
+/** app.html + ทุกไฟล์ใน js/pages/ ต่อกัน — ใช้ค้นหาโค้ดที่อาจอยู่ที่ไหนก็ได้ */
+export const allPageSrc = [{ name: 'app.html', src }, ...pageFiles];
 
 /** ดึงโค้ดระหว่าง marker สองตัว (ใช้คอมเมนต์ในไฟล์เป็นหมุด) */
 export function slice(startMarker, endMarker) {

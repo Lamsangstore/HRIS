@@ -3,7 +3,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { src, makeChecker } from './extract.mjs';
+import { src, allPageSrc, pageFiles, makeChecker } from './extract.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -25,19 +25,35 @@ const GUARDED_PAGES = [
     'leave-admin', 'shift-admin', 'branch-locations', 'time-import', 'holidays',
 ];
 for (const page of GUARDED_PAGES) {
-    // หา key ของหน้า → หา init ที่อยู่ถัดจากนั้น (ข้าม template html ที่ยาวมาก)
-    // → guard ต้องอยู่ต้นๆ ของ init ไม่ใช่หลังจากอ่านข้อมูลไปแล้ว
-    const keys = [`PAGES['${page}']`, `'${page}': {`, `"${page}": {`];
-    const at = keys.map(k => src.indexOf(k)).filter(i => i >= 0).sort((a, b) => a - b)[0];
-    if (at == null) { check(`หาหน้า ${page} ไม่เจอ (เปลี่ยนชื่อ?)`, 'not-found', 'found'); continue; }
+    // หน้าอาจอยู่ใน app.html หรือถูกแยกไป js/pages/<page>.js แล้ว — หาให้ครบทั้งสองแบบ
+    let found = null;
+    for (const f of allPageSrc) {
+        const isOwnFile = f.name === `js/pages/${page}.js`;
+        const keys = isOwnFile
+            ? ['export default {']
+            : [`PAGES['${page}']`, `'${page}': {`, `"${page}": {`];
+        const at = keys.map(k => f.src.indexOf(k)).filter(i => i >= 0).sort((a, b) => a - b)[0];
+        if (at != null) { found = { at, src: f.src, file: f.name }; break; }
+    }
+    if (!found) { check(`หาหน้า ${page} ไม่เจอ (เปลี่ยนชื่อ / ย้ายไฟล์?)`, 'not-found', 'found'); continue; }
 
-    const initAt = src.slice(at).search(/\binit(?:\s*:\s*(?:async\s*)?\(|\s*\(user)/);
+    // หา init ที่อยู่ถัดจาก key (ข้าม template html ที่ยาวมาก)
+    // → guard ต้องอยู่ต้นๆ ของ init ไม่ใช่หลังจากอ่านข้อมูลไปแล้ว
+    const initAt = found.src.slice(found.at).search(/\binit(?:\s*:\s*(?:async\s*)?\(|\s*\(user)/);
     if (initAt < 0) { check(`หา init ของหน้า ${page} ไม่เจอ`, 'not-found', 'found'); continue; }
 
-    const head = src.slice(at + initAt, at + initAt + 700);   // ต้นๆ ของ init เท่านั้น
+    const head = found.src.slice(found.at + initAt, found.at + initAt + 700);
     const hasGuard = /profile\.role\s*!==?\s*['"](admin|manager)['"]/.test(head)
                   && /navigateTo\(['"]home['"]\)/.test(head);
-    check(`หน้า ${page} มี role guard ต้น init`, hasGuard, true);
+    check(`หน้า ${page} มี role guard ต้น init (${found.file})`, hasGuard, true);
+}
+
+// หน้าที่แยกออกไปแล้วต้องถูกลงทะเบียนใน PAGE_MODULES ไม่งั้น router หาไม่เจอ
+for (const f of pageFiles) {
+    const id = f.name.replace('js/pages/', '').replace('.js', '');
+    check(`หน้า ${id} ถูกลงทะเบียนใน PAGE_MODULES`,
+          new RegExp(`'${id}'\\s*:\\s*\\(\\)\\s*=>\\s*import\\(`).test(src), true);
+    check(`${f.name} export default`, /export default \{/.test(f.src), true);
 }
 
 // ── 3. โค้ดฝั่งพนักงานต้อง query แคบ ไม่ใช่ดึงทั้ง collection ──────────────────
@@ -74,7 +90,10 @@ check('ไม่มีการอ่าน users ทั้ง collection ด้
 // ไม่มี build step — พิมพ์ path ผิด = หน้าขาวทั้งแอป และ node --check จับไม่ได้
 // เพราะมันเช็คแค่ syntax ไม่ได้ resolve import
 {
-    const paths = [...src.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map(m => m[1]);
+    const paths = [
+        ...[...src.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map(m => m[1]),
+        ...[...src.matchAll(/import\(\s*['"](\.[^'"]+)['"]\s*\)/g)].map(m => m[1]),   // dynamic import ของหน้าที่แยกไฟล์
+    ];
     check('มี import ไฟล์ในเครื่องอยู่จริง', paths.length > 0, true);
     const missing = paths.filter(p => !existsSync(join(ROOT, p)));
     check('ทุก import path ชี้ไปไฟล์ที่มีอยู่', missing, []);
