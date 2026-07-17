@@ -64,15 +64,20 @@ service cloud.firestore {
         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
       }
 
+      // ---- directory: ข้อมูลสาธารณะของพนักงาน (ชื่อ/role/lineId) ---------------
+      // มีไว้เพื่อให้เบราว์เซอร์พนักงานหา lineId ของหัวหน้าได้ตอนส่งแจ้งเตือน LINE
+      // โดยไม่ต้องเปิด users (ที่มีเงินเดือน/เลขบัตร ปชช.) ให้อ่าน
+      // เขียนได้เฉพาะ admin — โค้ดซิงค์ให้อัตโนมัติตอนบันทึกข้อมูลพนักงาน
+      // ห้ามใส่ข้อมูลอ่อนไหวลง collection นี้ (ดู directoryDocFrom ใน app.html)
+      match /directory/{uid} {
+        allow read:  if isStaff();
+        allow write: if isAdmin();
+      }
+
       // ---- users: โปรไฟล์พนักงาน (เงินเดือน เลขบัตร ปชช. บัญชีธนาคาร) --------
       // หัวใจของระบบ — พนักงานอ่านได้แค่ของตัวเอง
-      //
-      // ผลข้างเคียงที่ยอมรับแล้ว: notifyManagersNewLeave / notifyManagersOutsideClock
-      // อ่าน users ทั้ง collection จากเบราว์เซอร์พนักงานเพื่อหา lineId ของหัวหน้า
-      // rules นี้จะบล็อก => แจ้งเตือน LINE ตอนพนักงานยื่นใบลา/ตอกบัตรนอกพื้นที่จะเงียบไป
-      // (โค้ดมี catch อยู่แล้ว ใบลายังส่งได้ปกติ หัวหน้ายังเห็นในแอป)
-      // ทางแก้ที่ถูกต้องคือย้ายการยิง LINE ไปหลัง Cloud Function
-      // ห้ามแก้เป็น isStaff() เพื่อให้แจ้งเตือนกลับมา = เปิดเงินเดือนทุกคนให้พนักงานอ่าน
+      // ห้ามเปลี่ยน read เป็น isStaff() เด็ดขาด = เปิดเงินเดือนทุกคนให้พนักงานอ่าน
+      // ถ้าต้องการข้อมูลพนักงานคนอื่นในโค้ดฝั่ง client ให้ใช้ directory แทน
       match /users/{uid} {
         allow read: if isSelf(uid) || isManager();
         allow create, delete: if isAdmin();

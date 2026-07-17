@@ -42,6 +42,29 @@ check('หน้า time ไม่ดึง time_logs ทั้ง collection',
 check('หน้า my-review ไม่ดึง reviews ทั้ง collection',
       /const snap = await getDocs\(col\('reviews'\)\);\s*\n\s*const myReviews/.test(src), false);
 
+// ── 4. directory ต้องไม่มีข้อมูลอ่อนไหว ───────────────────────────────────────
+// directory เปิดให้พนักงานทุกคนอ่าน (ใช้หา lineId หัวหน้าตอนส่งแจ้งเตือน)
+// ถ้ามีใครเผลอใส่เงินเดือน/เลขบัตร ปชช. ลงไป = รั่วให้ทั้งบริษัทอ่าน
+{
+    const s = src.indexOf('const directoryDocFrom');
+    check('มีตัวสร้าง directory doc อยู่', s >= 0, true);
+    if (s >= 0) {
+        const body = src.slice(s, src.indexOf('});', s));
+        const LEAKY = ['baseSalary', 'salary', 'idCard', 'bankAccount', 'bankName',
+                       'dob', 'address', 'phone', 'taxCustomAmount', 'otherDeducts', 'commRate'];
+        check('directory ไม่มีข้อมูลอ่อนไหว', LEAKY.filter(f => body.includes(f)), []);
+    }
+    // แจ้งเตือนต้องอ่านจาก directory ไม่ใช่ users
+    check('ตัวหาหัวหน้าส่ง LINE อ่านจาก directory',
+          /getManagerLineTargets[\s\S]{0,400}'directory'/.test(src), true);
+}
+
+// ── 5. ห้ามกลับไปอ่าน users ทั้ง collection จากฝั่งพนักงาน ─────────────────────
+// เคยพัง: notifyManagers* อ่าน users ทั้งก้อนเพื่อหา lineId หัวหน้า
+// ทำให้ต้องเปิด users ให้พนักงานอ่าน = เงินเดือน/เลขบัตรทุกคนหลุด
+check('ไม่มีการอ่าน users ทั้ง collection ด้วย APP_ID (โค้ด global ที่พนักงานเรียกได้)',
+      /getDocs\(collection\(db, 'artifacts', APP_ID, 'public', 'data', 'users'\)\)/.test(src), false);
+
 // ── 4. ไฟล์ rules ต้องมีอยู่และปิดท้ายด้วย deny-all ────────────────────────────
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';

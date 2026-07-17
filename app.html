@@ -1844,14 +1844,30 @@
             return res;
         }
 
+        // ── หา LINE ID ของหัวหน้า/admin เพื่อส่งแจ้งเตือน ─────────────
+        // อ่านจาก directory ไม่ใช่ users
+        //
+        // เดิมโค้ดนี้อ่าน users ทั้ง collection จากเบราว์เซอร์พนักงาน ซึ่งแปลว่า
+        // ต้องเปิดให้พนักงานอ่าน users ได้ = เห็นเงินเดือน เลขบัตร ปชช. เลขบัญชีของทุกคน
+        // (rules ไม่ใช่ตัวกรอง จะขอเฉพาะ field ที่ต้องการไม่ได้ ต้องเปิดทั้ง doc)
+        //
+        // directory จึงเก็บเฉพาะข้อมูลที่ไม่อ่อนไหว (ชื่อ/role/lineId) ให้พนักงานอ่านได้
+        // ส่วน users ยังล็อกไว้ที่ตัวเอง+หัวหน้าเหมือนเดิม
+        // ถ้าย้ายไป Cloud Function เมื่อไหร่ ลบ directory ทิ้งได้เลย
+        async function getManagerLineTargets(excludeUid) {
+            const { collection, getDocs, query, where }
+                = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const snap = await getDocs(query(
+                collection(db, 'artifacts', APP_ID, 'public', 'data', 'directory'),
+                where('notifyTarget', '==', true),
+            ));
+            return snap.docs.map(d => d.data())
+                .filter(u => u.lineId && u.uid !== excludeUid);
+        }
+
         async function notifyManagersNewLeave(req) {
             try {
-                const { collection, getDocs, query, where }
-                    = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const snap = await getDocs(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
-                const managers = snap.docs
-                    .map(d => d.data())
-                    .filter(u => (u.role === 'manager' || u.role === 'admin') && u.lineId);
+                const managers = await getManagerLineTargets();
                 const appUrl = location.origin + location.pathname + '#leave-mgmt';
                 const fmtD = ds => new Date(ds+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
                 const dateRange = req.startDate === req.endDate
@@ -2017,10 +2033,7 @@
         // ── แจ้งหัวหน้า/admin ผ่าน LINE เมื่อลงเวลานอกพื้นที่ ─────────
         async function notifyManagersOutsideClock(empProfile, type, pos, distM, office) {
             try {
-                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const snap = await getDocs(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
-                const managers = snap.docs.map(d => d.data())
-                    .filter(u => (u.role === 'manager' || u.role === 'admin') && u.lineId && u.uid !== empProfile.uid);
+                const managers = await getManagerLineTargets(empProfile.uid);
                 if (!managers.length) return;
                 const actionTxt = type === 'clock_in' ? 'เข้างาน' : 'ออกงาน';
                 const distTxt = distM < 1000 ? `${distM} ม.` : `${(distM/1000).toFixed(2)} กม.`;
@@ -3500,9 +3513,16 @@
                         <div class="bg-white rounded-[2rem] shadow-sm border border-zinc-200 overflow-hidden">
                             <div class="p-6 border-b border-zinc-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                                 <h3 class="font-black text-zinc-800"><i class="fa-solid fa-users text-yellow-500 mr-2"></i> รายชื่อพนักงานทั้งหมด</h3>
-                                <div class="relative w-full sm:w-64">
-                                    <i class="fa-solid fa-search absolute left-3 top-3 text-zinc-400"></i>
-                                    <input id="search-emp" oninput="filterEmployees()" type="text" placeholder="ค้นหาพนักงาน..." class="w-full border border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none">
+                                <div class="flex items-center gap-3 w-full sm:w-auto">
+                                    <button type="button" onclick="empSyncDirectory()" id="dir-sync-btn"
+                                        title="สร้าง/อัปเดตข้อมูลสาธารณะ (ชื่อ/LINE ID) ที่ใช้ส่งแจ้งเตือน"
+                                        class="shrink-0 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-xl transition-all text-xs whitespace-nowrap">
+                                        <i class="fa-solid fa-address-book mr-2 text-zinc-500"></i> ซิงค์ไดเรกทอรี
+                                    </button>
+                                    <div class="relative w-full sm:w-64">
+                                        <i class="fa-solid fa-search absolute left-3 top-3 text-zinc-400"></i>
+                                        <input id="search-emp" oninput="filterEmployees()" type="text" placeholder="ค้นหาพนักงาน..." class="w-full border border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none">
+                                    </div>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
@@ -3547,6 +3567,30 @@
 
                 const v = (id) => document.getElementById(id)?.value.trim() || '';
 
+                // directory = สำเนาข้อมูลที่ "ไม่อ่อนไหว" ของพนักงาน ให้เพื่อนร่วมงานอ่านได้
+                // มีไว้เพื่อให้เบราว์เซอร์พนักงานหา LINE ID ของหัวหน้าได้ตอนส่งแจ้งเตือน
+                // โดยไม่ต้องเปิด users (ที่มีเงินเดือน/เลขบัตร ปชช.) ให้อ่าน
+                // ห้ามใส่ salary/idCard/bankAccount/dob/address ลงไปเด็ดขาด
+                const directoryDocFrom = (p, uid) => ({
+                    uid,
+                    name: p.name || '',
+                    nickname: p.nickname || '',
+                    role: p.role || 'employee',
+                    branch: p.branch || '',
+                    position: p.position || '',
+                    photoURL: p.photoURL || '',
+                    lineId: p.lineId || '',
+                    status: p.status || 'active',
+                    managerUid: p.managerUid || '',
+                    // ทำเป็น field ไว้เลย จะได้ query ตรงๆ ได้ — rules บล็อกการอ่านทั้ง collection
+                    notifyTarget: (p.role === 'manager' || p.role === 'admin') && p.status !== 'resigned',
+                    updatedAt: new Date().toISOString(),
+                });
+
+                const syncDirectory = async (p, uid) =>
+                    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'directory', uid),
+                           directoryDocFrom(p, uid));
+
                 const unsubscribe = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                     allEmployees = [];
                     let html = '';
@@ -3590,6 +3634,23 @@
                     document.getElementById('employee-list')?.querySelectorAll('tr').forEach(r => {
                         r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
                     });
+                };
+
+                // สร้าง directory ให้พนักงานที่มีอยู่แล้ว (คนที่ถูกสร้างก่อนมี directory)
+                // ไม่กดปุ่มนี้ = แจ้งเตือน LINE หาหัวหน้าจะเงียบ เพราะหา lineId ไม่เจอ
+                window.empSyncDirectory = async () => {
+                    const btn = document.getElementById('dir-sync-btn');
+                    const orig = btn ? btn.innerHTML : '';
+                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังซิงค์...'; }
+                    try {
+                        const targets = allEmployees.filter(e => e.uid);
+                        for (const emp of targets) await syncDirectory(emp, emp.uid);
+                        const notify = targets.filter(e =>
+                            (e.role === 'manager' || e.role === 'admin') && e.status !== 'resigned' && e.lineId).length;
+                        showToast(`✅ ซิงค์ ${targets.length} คน — รับแจ้งเตือน LINE ได้ ${notify} คน`, 'success');
+                        if (!notify) showToast('⚠️ ไม่มีหัวหน้า/admin คนไหนใส่ LINE User ID ไว้ — แจ้งเตือนจะไม่ถูกส่ง', 'error');
+                    } catch (e) { showToast('❌ ' + e.message, 'error'); }
+                    finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
                 };
 
                 window.empPrepareEdit = (uid) => {
@@ -3785,6 +3846,7 @@
                             const uid = document.getElementById('emp-uid').value;
                             payload.mustChangePassword = document.getElementById('f-must-change-pw').checked;
                             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), payload);
+                            await syncDirectory(payload, uid);
                             showToast('✅ บันทึกการแก้ไขเรียบร้อย', 'success');
                             isEditing = false;
                             document.getElementById('employee-form').reset();
@@ -3810,6 +3872,7 @@
                             // ทุกคนถูกสร้างด้วยรหัสเดียวกัน — บังคับให้ตั้งรหัสใหม่ตอนล็อกอินครั้งแรก
                             payload.mustChangePassword = true;
                             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', data.localId), payload);
+                            await syncDirectory(payload, data.localId);
                             showToast('✅ สร้างพนักงานใหม่สำเร็จ (รหัสชั่วคราว: 123456 — ระบบจะบังคับให้ตั้งรหัสใหม่ตอนล็อกอินครั้งแรก)', 'success');
                             document.getElementById('employee-form').reset();
                             empRenderOtherDeducts([]);
@@ -3827,7 +3890,7 @@
                     unsubscribe();
                     ['empSwitchTab','empPrepareEdit','filterEmployees','empRenderOtherDeducts',
                      'empReadOtherDeductRows','empReadOtherDeducts','empUpdateOtherDeductTotal',
-                     'empAddOtherDeduct','empRemoveOtherDeduct'].forEach(k => delete window[k]);
+                     'empAddOtherDeduct','empRemoveOtherDeduct','empSyncDirectory'].forEach(k => delete window[k]);
                 };
             }
         };
