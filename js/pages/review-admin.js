@@ -6,7 +6,7 @@
 // ตัวช่วยที่ใช้ร่วมกับหน้าอื่นต้องอยู่บน window ถึงจะเรียกได้จากที่นี่
 // (tests/page-deps.test.mjs คอยตรวจให้ว่าไม่มีตัวไหนหลุด)
 
-import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260717b';
+import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260718a';
 
 export default {
     title: 'ประเมินผลงาน',

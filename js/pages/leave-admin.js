@@ -5,8 +5,8 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260717b';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260717b';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260718a';
+import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260718a';
 
 export default {
     title: 'ตั้งค่าการลา',
@@ -83,7 +83,7 @@ export default {
 
     init: async (user, profile, db, APP_ID) => {
         if (profile.role !== 'admin') { navigateTo('home'); return; }
-        const { collection, doc, getDoc, setDoc, updateDoc, onSnapshot, getDocs, query, where }
+        const { collection, doc, getDoc, setDoc, updateDoc, onSnapshot, getDocs, query, where, writeBatch }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
         let allEmps   = [];
@@ -435,17 +435,28 @@ export default {
                 }));
 
                 // หาใบที่ค่าเปลี่ยน
-                const diffs = [];
+                //
+                // ⚠️ คำนวณด้วย schedule ปัจจุบันของพนักงาน ซึ่งอาจไม่ใช่ตารางที่เขาใช้
+                // ตอนลาจริง (ระบบไม่ได้เก็บตารางย้อนหลัง) ถ้า admin เคยแก้เวลาทำงาน
+                // ใบลาที่ยื่นก่อนหน้านั้นจะถูกคำนวณด้วยเวลาใหม่ = ผิดจากของจริง
+                // จึงข้ามใบที่ตารางถูกแก้ทีหลัง แล้วรายงานแยกให้ admin ตัดสินใจเอง
+                const diffs = [], skipped = [];
                 reqSnap.docs.forEach(d => {
                     const r = d.data();
                     if (!r.uid || !r.startDate || !r.endDate) return;
-                    const fresh = calcLeaveHours(r.startDate, r.startTime, r.endDate, r.endTime, schedOf[r.uid]);
+                    const sched = schedOf[r.uid];
+                    const fresh = calcLeaveHours(r.startDate, r.startTime, r.endDate, r.endTime, sched);
                     const old = r.totalHours ?? 0;
-                    if (Math.abs(fresh - old) > 0.005) {
-                        diffs.push({ id: d.id, uid: r.uid, name: r.employeeName || r.uid,
-                                     date: r.startDate, time: `${r.startTime || '-'}–${r.endTime || '-'}`,
-                                     status: r.status, old, fresh });
-                    }
+                    if (Math.abs(fresh - old) <= 0.005) return;
+
+                    const row = { id: d.id, uid: r.uid, name: r.employeeName || r.uid,
+                                  date: r.startDate, time: `${r.startTime || '-'}–${r.endTime || '-'}`,
+                                  status: r.status, old, fresh };
+
+                    // ตารางถูกแก้หลังวันที่ลา → เชื่อค่าที่คำนวณใหม่ไม่ได้
+                    const schedChanged = (sched?.updatedAt || '').slice(0, 10);
+                    if (schedChanged && schedChanged > r.endDate) { skipped.push(row); return; }
+                    diffs.push(row);
                 });
 
                 if (!diffs.length) {
@@ -490,17 +501,39 @@ export default {
                       </div>`;
                 }
 
+                if (skipped.length && out) {
+                    out.innerHTML += `
+                      <div class="mt-4 pt-3 border-t border-zinc-100">
+                        <p class="text-xs font-black text-orange-600 mb-1">
+                          <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                          ข้าม ${skipped.length} ใบ — ตารางงานถูกแก้หลังวันที่ลา
+                        </p>
+                        <p class="text-[11px] text-zinc-400 font-medium mb-2">
+                          ระบบไม่ได้เก็บตารางงานย้อนหลัง จึงคำนวณใบพวกนี้ใหม่ไม่ได้อย่างถูกต้อง
+                          ถ้าตัวเลขเดิมผิดจริง ให้แก้มือในหน้าอนุมัติการลา
+                        </p>
+                        <div class="text-[11px] text-zinc-500 space-y-0.5">
+                          ${skipped.map(x => `<div>${x.name} · ${x.date} ${x.time} · เดิม ${x.old.toFixed(2)} → คำนวณใหม่ได้ ${x.fresh.toFixed(2)}</div>`).join('')}
+                        </div>
+                      </div>`;
+                }
+
                 if (!apply) {
-                    showToast(`🔍 พบ ${diffs.length} ใบที่ต้องแก้ — ตรวจแล้วกด "เขียนจริง"`, 'success');
+                    showToast(`🔍 พบ ${diffs.length} ใบที่ต้องแก้${skipped.length ? ` (ข้าม ${skipped.length})` : ''} — ตรวจแล้วกด "เขียนจริง"`, 'success');
                     return;
                 }
 
-                // เขียน totalHours ใหม่
-                for (const x of diffs) {
-                    await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', x.id), {
-                        totalHours: x.fresh,
-                        backfilledAt: new Date().toISOString(),
+                // เขียนทีเดียวด้วย batch — ถ้าเขียนทีละใบแล้วหลุดกลางทาง
+                // totalHours จะอัปเดตบางส่วนแต่ usedHours ยังไม่ถูกปรับ = โควตาเพี้ยน
+                // (batch จำกัด 500 ops จึงแบ่งเป็นชุด)
+                const stamp = new Date().toISOString();
+                for (let i = 0; i < diffs.length; i += 450) {
+                    const b = writeBatch(db);
+                    diffs.slice(i, i + 450).forEach(x => {
+                        b.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', x.id),
+                                 { totalHours: x.fresh, backfilledAt: stamp });
                     });
+                    await b.commit();
                 }
 
                 // ปรับ usedHours ของคนที่ได้รับผลกระทบ — รวมใหม่จากใบที่อนุมัติแล้วทั้งหมด
