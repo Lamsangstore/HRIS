@@ -1,0 +1,62 @@
+{
+  "_comment": [
+    "Firestore composite index ที่โค้ดต้องใช้",
+    "",
+    "query ที่มีทั้ง where() และ orderBy() ต้องมี composite index ไม่งั้นพัง",
+    "ด้วย failed-precondition — บางจุดมี fallback เลยไม่พังให้เห็น แต่เงียบไปเฉยๆ",
+    "(หน้า 'นำเข้าเวลางาน' รายการนำเข้าล่าสุดว่างมาตลอดเพราะเหตุนี้)",
+    "",
+    "deploy:  npx firebase deploy --only firestore:indexes --project hris-21093",
+    "สร้าง index ใช้เวลาสักพัก ดูสถานะได้ที่ Console > Firestore > Indexes",
+    "",
+    "เพิ่ม query ใหม่ที่มี where+orderBy เมื่อไหร่ ต้องมาเพิ่มที่นี่ด้วย"
+  ],
+  "indexes": [
+    {
+      "_use": "หน้านำเข้าเวลางาน — รายการที่นำเข้าล่าสุด (js/pages/time-import.js)",
+      "collectionGroup": "time_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isImported", "order": "ASCENDING" },
+        { "fieldPath": "importedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "_use": "ใบลาของฉัน (หน้าการลา) + แจ้งเตือน",
+      "collectionGroup": "leave_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "_use": "ใบลาที่รออนุมัติ — กระดิ่งแจ้งเตือนของหัวหน้า",
+      "collectionGroup": "leave_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "_use": "คำขอแก้เวลาที่รออนุมัติ — กระดิ่งแจ้งเตือนของหัวหน้า",
+      "collectionGroup": "time_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "requestedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "_use": "คำขอแก้เวลาของฉัน (หน้าชี้แจง/แก้ไขเวลา)",
+      "collectionGroup": "time_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
