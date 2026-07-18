@@ -492,7 +492,11 @@ export default {
                         lateHours:    r.lateHours    || 0,
                     };
                 });
-                if(ex.docs.length){const b1=writeBatch(db);ex.docs.forEach(d=>b1.delete(d.ref));await b1.commit();}
+                // ห้ามลบก่อนเขียน: ถ้า commit ชุดใหม่ล้ม (เน็ตหลุด/rules ปฏิเสธ)
+                // งวดนั้นจะไม่เหลือ record เลย ทั้งยอดเงินและค่าที่พิมพ์มือหายถาวร
+                // จึงใช้ doc id ที่คำนวณจาก periodId+uid แล้วเขียนทับ → commit → ค่อยลบของเก่า
+                // ถ้าล้มกลางทางอย่างมากก็มีข้อมูลซ้ำชั่วคราว ซึ่งกดคำนวณใหม่อีกรอบก็หาย
+                const recId = uid => `${pid}_${uid}`;
                 const b2=writeBatch(db);
                 active.forEach(emp=>{
                     const lv=lbu[emp.uid]||[], sc=sbu[emp.uid]||{workDays:[1,2,3,4,5],workStart:'08:00',workEnd:'17:00',breakMinutes:60};
@@ -516,7 +520,7 @@ export default {
                     const dOther=Math.round(odItems.reduce((s,it)=>s+it.amount,0)*100)/100;
                     const mn=manual[emp.uid]||{deductLeave:0,otherEarning:0,lateHours:0};
                     const tEar=base+eD+eH+eC+mn.otherEarning, tDed=dSSO+dTax+dOther+mn.deductLeave, net=tEar-tDed;
-                    const ref=doc(collection(db,'artifacts',APP_ID,'public','data','payroll_records'));
+                    const ref=doc(db,'artifacts',APP_ID,'public','data','payroll_records',recId(emp.uid));
                     b2.set(ref,{
                         periodId:pid,periodNo:period.periodNo,year:period.year,
                         uid:emp.uid,employeeCode:emp.employeeCode||'',name:emp.name,
@@ -534,6 +538,13 @@ export default {
                     });
                 });
                 await b2.commit();
+
+                // ลบ record เก่าที่เป็น auto-id (จากตอนที่ยังไม่ได้ใช้ periodId_uid)
+                // ทำหลัง commit สำเร็จแล้วเท่านั้น — ถ้าขั้นนี้ล้ม ข้อมูลใหม่ยังอยู่ครบ
+                const keep=new Set(active.map(e=>recId(e.uid)));
+                const stale=ex.docs.filter(d=>!keep.has(d.id));
+                if(stale.length){const b3=writeBatch(db);stale.forEach(d=>b3.delete(d.ref));await b3.commit();}
+
                 showToast(`✅ สร้าง ${active.length} รายการสำเร็จ`,'success');
             } catch(err){showToast('❌ '+err.message,'error');console.error(err);}
             finally{if(btn){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-bolt mr-2"></i> คำนวณอัตโนมัติ';}}

@@ -83,13 +83,25 @@ service cloud.firestore {
         allow create, delete: if isAdmin();
 
         // พนักงานแก้ได้เฉพาะข้อมูลติดต่อของตัวเอง — ห้ามแตะ role/status/เงินเดือน/หักอื่นๆ
+        //
+        // mustChangePassword: พนักงานปลดได้เฉพาะ true → false และต้องเขียน
+        // passwordChangedAt มาด้วย (โค้ดเขียนสองฟิลด์นี้พร้อมกันหลัง updatePassword สำเร็จ)
+        // ตั้งกลับเป็น true เองไม่ได้ ต้องเป็น admin
+        //
+        // ข้อจำกัดที่ต้องรู้: gate บังคับเปลี่ยนรหัสอยู่ฝั่ง client (app.html)
+        // คนที่ตั้งใจโกงยิง updateDoc เองจาก DevTools แล้วข้ามได้อยู่ดี
+        // rules ตรงนี้กันแค่ "ปลดธงโดยไม่ได้ตั้งใจ" และบังคับให้มีร่องรอยเวลาที่ปลด
+        // จะกันให้ขาดต้องย้าย gate ไปฝั่งเซิร์ฟเวอร์ (Cloud Function + custom claim)
         allow update: if isAdmin()
           || (isSelf(uid) && onlyFields([
                 'photoURL', 'phone', 'address', 'province', 'district', 'subdistrict',
                 'zipcode', 'lineId', 'nickname', 'fnameEN', 'lnameEN',
-                'emergencyName', 'emergencyPhone',
-                'mustChangePassword', 'passwordChangedAt', 'updatedAt'
-              ]));
+                'emergencyName', 'emergencyPhone', 'updatedAt',
+                'mustChangePassword', 'passwordChangedAt'
+              ])
+              && (!('mustChangePassword' in request.resource.data.diff(resource.data).affectedKeys())
+                  || (request.resource.data.mustChangePassword == false
+                      && 'passwordChangedAt' in request.resource.data.diff(resource.data).affectedKeys())));
       }
 
       // ---- app_config: LINE token ------------------------------------------
@@ -133,11 +145,30 @@ service cloud.firestore {
       }
 
       // doc id = uid (ไม่มีฟิลด์ uid ข้างใน) ต้องใช้ {uid} จาก path
-      // พนักงานเขียนเองได้เพราะตอนยกเลิกใบลา โค้ดคืนโควตาจากเบราว์เซอร์ของเขาเอง
-      // (ไม่ใช่ของดี — ถ้าย้ายไป Cloud Function ควรล็อกเป็น isManager())
+      //
+      // พนักงานต้องเขียนเองได้ เพราะตอนยกเลิกใบลาโค้ดคืนโควตาจากเบราว์เซอร์ของเขา
+      // (app.html — updateDoc(balRef, { '<type>.usedHours': newUsed }))
+      // แต่ต้องเขียนได้แค่ usedHours เท่านั้น ห้ามแตะ totalHours เด็ดขาด
+      // ไม่งั้นพนักงานยิง updateDoc ตั้งโควตาตัวเองเป็นเท่าไหร่ก็ได้จาก DevTools
       match /leave_balances/{uid} {
-        allow read:  if isSelf(uid) || isManager();
-        allow write: if isSelf(uid) || isManager();
+        // totalHours ของทุกประเภทต้องเท่าเดิม — rules ไม่มี loop จึงต้องไล่ทีละตัว
+        function quotaOf(d, t) {
+          return t in d ? d[t].get('totalHours', -1) : -1;
+        }
+        function quotasUnchanged() {
+          let before = resource.data;
+          let after  = request.resource.data;
+          return quotaOf(after,'sick')      == quotaOf(before,'sick')
+              && quotaOf(after,'personal')  == quotaOf(before,'personal')
+              && quotaOf(after,'vacation')  == quotaOf(before,'vacation')
+              && quotaOf(after,'maternity') == quotaOf(before,'maternity')
+              && quotaOf(after,'ordain')    == quotaOf(before,'ordain')
+              && quotaOf(after,'military')  == quotaOf(before,'military');
+        }
+        allow read:   if isSelf(uid) || isManager();
+        allow create: if isManager();
+        allow update: if isManager() || (isSelf(uid) && quotasUnchanged());
+        allow delete: if isAdmin();
       }
 
       match /work_schedules/{uid} {
