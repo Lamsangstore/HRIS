@@ -92,10 +92,11 @@ check('ไม่มีการอ่าน users ทั้ง collection ด้
 {
     const paths = [
         ...[...src.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map(m => m[1]),
-        ...[...src.matchAll(/import\(\s*['"](\.[^'"]+)['"]\s*\)/g)].map(m => m[1]),   // dynamic import ของหน้าที่แยกไฟล์
+        ...[...src.matchAll(/import\(\s*['"](\.[^'"?]+\.js)/g)].map(m => m[1]),   // dynamic import ของหน้าที่แยกไฟล์
     ];
     check('มี import ไฟล์ในเครื่องอยู่จริง', paths.length > 0, true);
-    const missing = paths.filter(p => !existsSync(join(ROOT, p)));
+    // ตัด ?v=... (cache-busting) ออกก่อนหาไฟล์
+    const missing = paths.filter(p => !existsSync(join(ROOT, p.split('?')[0])));
     check('ทุก import path ชี้ไปไฟล์ที่มีอยู่', missing, []);
 }
 

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/syntax.test.mjs && node tests/guards.test.mjs && node tests/page-deps.test.mjs && node tests/leave-hours.test.mjs && node tests/other-deducts.test.mjs"
+    "test": "node tests/syntax.test.mjs && node tests/modules.test.mjs && node tests/guards.test.mjs && node tests/page-deps.test.mjs && node tests/leave-hours.test.mjs && node tests/other-deducts.test.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

@@ -792,15 +792,15 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js';
-        import { STATUS_MAP } from './js/lib/status-map.js';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260717a';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260717a';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260717a';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260717a';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js';
+        } from './js/lib/leave-hours.js?v=20260717a';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1067,20 +1067,26 @@
         // แต่ละหน้าถูก inline ไว้ใน PAGES registry ด้านล่าง
         // หน้าที่แยกออกไปเป็นไฟล์แล้ว — โหลดตอนผู้ใช้เปิดหน้านั้นจริงๆ ไม่ใช่ตอนเปิดแอป
         // ค่อยๆ ย้ายหน้าที่เหลือมาที่นี่ทีละหน้า (app.html ยังยาวเกินไป)
+        // เลขเวอร์ชันของไฟล์ใน js/ — ต่อท้าย import ทุกอันเพื่อบังคับให้เบราว์เซอร์โหลดใหม่
+        // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
+        // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
+        // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
+        const ASSET_V = '20260717a';
+
         const PAGE_MODULES = {
-            'holidays':         () => import('./js/pages/holidays.js'),
-            'shift-admin':      () => import('./js/pages/shift-admin.js'),
-            'branch-locations': () => import('./js/pages/branch-locations.js'),
-            'time-import':      () => import('./js/pages/time-import.js'),
-            'payslip-admin':    () => import('./js/pages/payslip-admin.js'),
-            'review-admin':     () => import('./js/pages/review-admin.js'),
-            'certificate':      () => import('./js/pages/certificate.js'),
-            'payslip':          () => import('./js/pages/payslip.js'),
-            'time-approve':     () => import('./js/pages/time-approve.js'),
-            'time-request':     () => import('./js/pages/time-request.js'),
-            'team-calendar':    () => import('./js/pages/team-calendar.js'),
-            'my-review':        () => import('./js/pages/my-review.js'),
-            'staff-leaves':     () => import('./js/pages/staff-leaves.js'),
+            'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
+            'shift-admin':      () => import('./js/pages/shift-admin.js?v=' + ASSET_V),
+            'branch-locations': () => import('./js/pages/branch-locations.js?v=' + ASSET_V),
+            'time-import':      () => import('./js/pages/time-import.js?v=' + ASSET_V),
+            'payslip-admin':    () => import('./js/pages/payslip-admin.js?v=' + ASSET_V),
+            'review-admin':     () => import('./js/pages/review-admin.js?v=' + ASSET_V),
+            'certificate':      () => import('./js/pages/certificate.js?v=' + ASSET_V),
+            'payslip':          () => import('./js/pages/payslip.js?v=' + ASSET_V),
+            'time-approve':     () => import('./js/pages/time-approve.js?v=' + ASSET_V),
+            'time-request':     () => import('./js/pages/time-request.js?v=' + ASSET_V),
+            'team-calendar':    () => import('./js/pages/team-calendar.js?v=' + ASSET_V),
+            'my-review':        () => import('./js/pages/my-review.js?v=' + ASSET_V),
+            'staff-leaves':     () => import('./js/pages/staff-leaves.js?v=' + ASSET_V),
         };
 
         async function loadPage(pageId) {
