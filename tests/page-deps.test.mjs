@@ -29,6 +29,7 @@ const BUILTINS = new Set([
 // false positive ทำให้คนเลิกเชื่อเทสต์ ซึ่งอันตรายกว่าไม่มีเทสต์
 function stripComments(s) {
     return s
+        .replace(/\\u[0-9a-fA-F]{4}/g, ' ')        // ี ฯลฯ — ไม่ใช่ชื่อตัวแปร
         .replace(/<style[\s\S]*?<\/style>/gi, ' ') // CSS ใน template — @media(), rgba() ไม่ใช่ JS
         .replace(/<!--[\s\S]*?-->/g, ' ')   // คอมเมนต์ HTML ใน template
         .replace(/\/\*[\s\S]*?\*\//g, ' ')  // /* ... */
@@ -43,6 +44,15 @@ for (const f of pageFiles) {
     for (const m of f.src.matchAll(declRe)) {
         for (const g of [m[1], m[2], m[3], m[4]]) if (g) local.add(g);
     }
+    // ประกาศหลายตัวในบรรทัดเดียว: let a = [], b = null, c = 0
+    // regex ด้านบนจับได้แค่ตัวแรก ตัวที่เหลือเลยดูเหมือนไม่มีใครนิยาม
+    for (const m of f.src.matchAll(/(?:const|let|var)\s+([^;=\n]+(?:=[^;\n]*,[^;\n]*)+);/g)) {
+        for (const part of m[1].split(',')) {
+            const n = part.split('=')[0].trim();
+            if (/^[A-Za-z_$][\w$]*$/.test(n)) local.add(n);
+        }
+    }
+
     // ของที่ import เข้ามาเป็นโมดูล — นับว่านิยามแล้ว
     for (const m of f.src.matchAll(/import\s*\{([^}]+)\}\s*from/g)) {
         m[1].split(',').forEach(a => {
@@ -67,8 +77,10 @@ for (const f of pageFiles) {
     }
 
     // ชื่อที่ถูก "เรียกแบบฟังก์ชัน"
+    // ห้ามมีช่องว่างก่อน ( และห้ามมี : นำหน้า — กัน "LINE ID (" ที่เป็นข้อความ
+    // และ ".pr-line-cb:not(...)" ที่เป็น CSS selector
     const used = new Set();
-    for (const m of f.src.matchAll(/(?<![.\w$'"`])([A-Za-z_$][\w$]*)\s*\(/g)) used.add(m[1]);
+    for (const m of f.src.matchAll(/(?<![.:\w$'"`])([A-Za-z_$][\w$]*)\(/g)) used.add(m[1]);
 
     // ...และค่าคงที่ที่ถูกใช้เป็นตัวแปรเฉยๆ (ALL_CAPS)
     // เคยพัง: review-admin ใช้ REVIEW_DIMENSIONS ซึ่งอยู่ใน scope ของ app.html
