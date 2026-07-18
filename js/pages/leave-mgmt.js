@@ -5,9 +5,9 @@
 //
 // scheduleCache / balanceCache เป็นแคชเฉพาะหน้านี้ (ไม่มีใครนอกหน้าใช้) จึงย้ายมาด้วยได้
 
-import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260717a';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260717a';
-import { STATUS_MAP } from '../lib/status-map.js?v=20260717a';
+import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260717b';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260717b';
+import { STATUS_MAP } from '../lib/status-map.js?v=20260717b';
 
 export default {
     title: 'อนุมัติการลา',
@@ -132,14 +132,18 @@ export default {
             return hoursToDisplay(r.totalHours, s || null);
         }
 
-        window.filterRequests = () => {
+        // ประกาศแบบ function เพื่อให้ hoist ได้ — onSnapshot อาจ callback ทันที
+        // (Firestore มี cache ในเครื่อง) ถ้าใช้ const/arrow จะ ReferenceError
+        // แล้วรายการไม่ render ทั้งที่ตัวเลขสถิติขึ้นแล้ว
+        function filterRequests() {
             const st  = document.getElementById('filter-status')?.value;
             const br  = document.getElementById('filter-branch')?.value;
             let filtered = allRequests;
             if (st !== 'all') filtered = filtered.filter(r => r.status === st);
             if (br) filtered = filtered.filter(r => r.branch === br);
             renderRequests(filtered);
-        };
+        }
+        window.filterRequests = filterRequests;
 
         function renderRequests(list) {
             const el = document.getElementById('mgmt-request-list');

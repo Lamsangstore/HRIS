@@ -139,7 +139,10 @@ export default {
             }
         );
 
-        window.psaRender = () => {
+        // ประกาศแบบ function เพื่อให้ hoist ได้ — onSnapshot อาจ callback ทันที
+        // (Firestore มี cache ในเครื่อง) ถ้าใช้ const/arrow จะ ReferenceError
+        // แล้วรายการไม่ render ทั้งที่ตัวเลขสถิติขึ้นแล้ว
+        function psaRender() {
             const el = document.getElementById('psa-list'); if (!el) return;
             const q = (document.getElementById('psa-search')?.value || '').toLowerCase();
             let list = allSlips;
@@ -187,7 +190,8 @@ export default {
                 div.querySelector('.psa-edit-btn').addEventListener('click', () => psaOpenModal(div.dataset.id));
                 div.querySelector('.psa-del-btn').addEventListener('click',  () => psaDelete(div.dataset.id, div.dataset.name));
             });
-        };
+        }
+        window.psaRender = psaRender;
 
         window.psaOpenModal = id => {
             editId = id;

@@ -82,11 +82,15 @@ export default {
             setT('ta-stat-p', s('pending')); setT('ta-stat-a', s('approved')); setT('ta-stat-r', s('rejected'));
         }
 
-        window.taFilter = () => {
+        // ประกาศแบบ function เพื่อให้ hoist ได้ — onSnapshot อาจ callback ทันที
+        // (Firestore มี cache ในเครื่อง) ถ้าใช้ const/arrow จะ ReferenceError
+        // แล้วรายการไม่ render ทั้งที่ตัวเลขสถิติขึ้นแล้ว
+        function taFilter() {
             const f = document.getElementById('ta-filter')?.value||'pending';
             const list = f==='all' ? allReqs : allReqs.filter(r=>r.status===f);
             renderList(list);
-        };
+        }
+        window.taFilter = taFilter;
 
         function renderList(list) {
             const el = document.getElementById('ta-list'); if(!el) return;

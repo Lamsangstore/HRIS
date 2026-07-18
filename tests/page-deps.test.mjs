@@ -98,4 +98,25 @@ for (const f of pageFiles) {
     check(`${f.name}: ทุกฟังก์ชันที่เรียกมีคนนิยามให้`, unresolved, []);
 }
 
+
+// ── ฟังก์ชันที่ callback เรียกทันที ต้องประกาศแบบ hoist ได้ ────────────────────
+// เคยพัง: onSnapshot callback เรียก filterRequests() ที่ประกาศเป็น
+// window.filterRequests = () => {...} ทีหลังในไฟล์ — assignment ไม่ hoist
+// Firestore มี cache ในเครื่อง ทำให้ callback แรกรันทันทีก่อนถึงบรรทัดนั้น
+// → ReferenceError → รายการไม่ render ทั้งที่ตัวเลขสถิติขึ้นแล้ว
+// เครื่องที่เพิ่งเปิด (cache ว่าง) จะไม่เจอ เพราะต้องรอ network
+{
+    const late = [];
+    for (const f of pageFiles) {
+        for (const m of f.src.matchAll(/onSnapshot\(/g)) {
+            const seg = f.src.slice(m.index, m.index + 1400);
+            for (const c of new Set([...seg.matchAll(/(?<![.\w$])([a-zA-Z_$][\w$]*)\(\)/g)].map(x => x[1]))) {
+                const d = f.src.search(new RegExp(`window\\.${c}\\s*=\\s*(?:async\\s*)?\\(`));
+                if (d > 0 && d > m.index) late.push(`${f.name}: onSnapshot เรียก ${c}() ที่ประกาศทีหลังแบบ arrow`);
+            }
+        }
+    }
+    check('ฟังก์ชันที่ snapshot callback เรียก ประกาศแบบ hoist ได้', late, []);
+}
+
 check.done('Dependency ของหน้าที่แยกไฟล์');

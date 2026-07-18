@@ -109,13 +109,17 @@ export default {
             sel.innerHTML = '<option value="all">ทั้งหมด</option>' + years.map(y=>`<option value="${y}" ${y===curVal?'selected':''}>${y}</option>`).join('');
         }
 
-        window.holFilterYear = () => {
+        // ประกาศแบบ function เพื่อให้ hoist ได้ — onSnapshot อาจ callback ทันที
+        // (Firestore มี cache ในเครื่อง) ถ้าใช้ const/arrow จะ ReferenceError
+        // แล้วรายการไม่ render ทั้งที่ตัวเลขสถิติขึ้นแล้ว
+        function holFilterYear() {
             const yr = document.getElementById('hol-year-filter')?.value;
             const filtered = yr==='all' ? allHolidays : allHolidays.filter(h => parseInt(h.date.slice(0,4)).toString()===yr);
             renderList(filtered);
             const cnt = document.getElementById('hol-count');
             if(cnt) cnt.textContent = filtered.length + ' วัน';
-        };
+        }
+        window.holFilterYear = holFilterYear;
 
         const TYPE_MAP = { national:'วันหยุดนักขัตฤกษ์', royal:'วันหยุดราชการพิเศษ', company:'วันหยุดบริษัท', regional:'วันหยุดประจำภูมิภาค' };
         const DAY_NAMES = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
