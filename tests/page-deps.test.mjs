@@ -66,12 +66,19 @@ for (const f of pageFiles) {
         });
     }
 
-    // ชื่อที่ถูก "เรียกแบบฟังก์ชัน" ในไฟล์นี้
-    const called = new Set();
-    for (const m of f.src.matchAll(/(?<![.\w$'"`])([A-Za-z_$][\w$]*)\s*\(/g)) called.add(m[1]);
+    // ชื่อที่ถูก "เรียกแบบฟังก์ชัน"
+    const used = new Set();
+    for (const m of f.src.matchAll(/(?<![.\w$'"`])([A-Za-z_$][\w$]*)\s*\(/g)) used.add(m[1]);
+
+    // ...และค่าคงที่ที่ถูกใช้เป็นตัวแปรเฉยๆ (ALL_CAPS)
+    // เคยพัง: review-admin ใช้ REVIEW_DIMENSIONS ซึ่งอยู่ใน scope ของ app.html
+    // โมดูลมองไม่เห็น หน้าพังทันที แต่เทสต์เงียบเพราะดูแค่ชื่อที่ตามด้วย "("
+    // จำกัดที่ SCREAMING_SNAKE (ต้องมี _) เพื่อไม่ให้ไปจับคำอย่าง "GPS" หรือ "PDF"
+    // ที่อยู่ในข้อความบนหน้าจอ — ค่าคงที่ร่วมในโปรเจกต์นี้ตั้งชื่อแบบนี้ทั้งหมด
+    for (const m of f.src.matchAll(/(?<![.\w$'"`])([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/g)) used.add(m[1]);
 
     // ตัวไหนที่ไม่ได้นิยามเอง ไม่ใช่ builtin → ต้องมีคนตั้งเป็น window.<name> ใน app.html
-    const unresolved = [...called]
+    const unresolved = [...used]
         .filter(n => !local.has(n) && !BUILTINS.has(n))
         .filter(n => !new RegExp(`window\\.${n}\\s*=`).test(src))
         .filter(n => !new RegExp(`window\\.${n}\\s*=`).test(f.src));

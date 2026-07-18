@@ -793,6 +793,8 @@
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
         import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
@@ -1692,30 +1694,8 @@
         // ================================================================
         // SHARED LEAVE HELPERS
         // ================================================================
-        const LEAVE_TYPES = [
-            { id: 'sick',      label: 'ลาป่วย',                   icon: 'fa-kit-medical',      color: 'red',    maxDays: 30 },
-            { id: 'personal',  label: 'ลากิจ',                    icon: 'fa-briefcase',         color: 'blue',   maxDays: 6  },
-            { id: 'vacation',  label: 'ลาพักร้อน',                icon: 'fa-umbrella-beach',    color: 'green',  maxDays: 10 },
-            { id: 'maternity', label: 'ลาคลอด',                   icon: 'fa-baby',              color: 'pink',   maxDays: 98 },
-            { id: 'ordain',    label: 'ลาบวช',                    icon: 'fa-om',                color: 'orange', maxDays: 15 },
-            { id: 'military',  label: 'ลาเพื่อรับราชการทหาร',     icon: 'fa-shield-halved',     color: 'slate',  maxDays: 60 },
-            { id: 'other',     label: 'อื่นๆ',                    icon: 'fa-ellipsis',          color: 'zinc',   maxDays: 0  },
-        ];
-        function getLeaveTypeInfo(id) { return LEAVE_TYPES.find(t => t.id === id) || LEAVE_TYPES[LEAVE_TYPES.length - 1]; }
-        function colorVariants(color) {
-            const map = {
-                red:    { bg:'bg-red-100',    text:'text-red-700',    badge:'bg-red-100 text-red-700'     },
-                blue:   { bg:'bg-blue-100',   text:'text-blue-700',   badge:'bg-blue-100 text-blue-700'   },
-                green:  { bg:'bg-green-100',  text:'text-green-700',  badge:'bg-green-100 text-green-700' },
-                pink:   { bg:'bg-pink-100',   text:'text-pink-700',   badge:'bg-pink-100 text-pink-700'   },
-                orange: { bg:'bg-orange-100', text:'text-orange-700', badge:'bg-orange-100 text-orange-700'},
-                slate:  { bg:'bg-slate-100',  text:'text-slate-700',  badge:'bg-slate-100 text-slate-700' },
-                zinc:   { bg:'bg-zinc-100',   text:'text-zinc-700',   badge:'bg-zinc-100 text-zinc-700'   },
-                yellow: { bg:'bg-yellow-100', text:'text-yellow-700', badge:'bg-yellow-100 text-yellow-700'},
-            };
-            return map[color] || map.zinc;
-        }
-        
+        // LEAVE_TYPES / getLeaveTypeInfo / colorVariants ย้ายไป js/lib/leave-types.js แล้ว (ดู import ด้านบน)
+
         // ชุดคำนวณชั่วโมงลา/แสดงผลวัน+ชม. ย้ายไป js/lib/leave-hours.js แล้ว (ดู import ด้านบน)
 
         // ================================================================
@@ -8052,54 +8032,7 @@ PAGES['staff-leaves'] = {
 // PAGE: review-admin — Manager/Admin ประเมินผลงานพนักงาน
 // ================================================================
 // โครงสร้างหัวข้อประเมิน 4 มิติ (มิติบริหารแสดงเฉพาะหัวหน้างาน)
-const REVIEW_DIMENSIONS = [
-    {
-        id: 'performance',
-        name: 'ผลงานและความสำเร็จของงาน',
-        nameEn: 'Performance & Deliverables',
-        color: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-        items: [
-            { id: 'quality',   name: 'คุณภาพของงาน',                desc: 'ความถูกต้อง แม่นยำ ประณีต และเรียบร้อยของงานที่ได้รับมอบหมาย' },
-            { id: 'quantity',  name: 'ปริมาณงานและความตรงต่อเวลา',  desc: 'ส่งมอบงานได้ตามจำนวนและเสร็จทันกำหนด (Deadline)' },
-            { id: 'goals',     name: 'การบรรลุเป้าหมาย',             desc: 'ผลงานจริงเทียบกับ KPIs/OKRs ที่ตกลงกันไว้' },
-        ]
-    },
-    {
-        id: 'skills',
-        name: 'ทักษะและความเชี่ยวชาญในหน้าที่',
-        nameEn: 'Job Knowledge & Skills',
-        color: 'bg-blue-50 border-blue-200 text-blue-800',
-        items: [
-            { id: 'knowledge',     name: 'ความรู้ในงานที่ทำ',                       desc: 'เข้าใจกระบวนการ ระบบงาน เครื่องมือ หรือเทคโนโลยีที่ต้องใช้' },
-            { id: 'problemSolving', name: 'ทักษะการแก้ปัญหาและการตัดสินใจ',         desc: 'รับมือปัญหาเฉพาะหน้า วิเคราะห์สาเหตุ และหาทางแก้ได้อย่างมีประสิทธิภาพ' },
-            { id: 'improvement',    name: 'การปรับปรุงและพัฒนากระบวนการทำงาน',     desc: 'คิดค้นวิธีทำงานใหม่ที่ช่วยลดเวลา ลดต้นทุน หรือเพิ่มประสิทธิภาพ' },
-        ]
-    },
-    {
-        id: 'behavior',
-        name: 'พฤติกรรมและการทำงานร่วมกับผู้อื่น',
-        nameEn: 'Core Values & Collaboration',
-        color: 'bg-green-50 border-green-200 text-green-800',
-        items: [
-            { id: 'teamwork',      name: 'การทำงานเป็นทีมและความร่วมมือ',  desc: 'สนับสนุนเพื่อนร่วมทีม ประสานงานข้ามแผนก เปิดใจรับฟัง' },
-            { id: 'communication', name: 'การสื่อสาร',                    desc: 'ชัดเจนในการถ่ายทอดข้อมูล พูด เขียน ประสานงานไม่ทำให้เข้าใจผิด' },
-            { id: 'discipline',    name: 'ความรับผิดชอบและวินัยในการทำงาน', desc: 'ตรงต่อเวลา ปฏิบัติตามกฎ ใส่ใจหน้าที่โดยไม่ต้องให้ควบคุมตลอด' },
-            { id: 'attitude',      name: 'ทัศนคติและความยืดหยุ่น',         desc: 'เปิดรับสิ่งใหม่ พร้อมเรียนรู้ รับมือกับภาวะกดดันได้ดี' },
-        ]
-    },
-    {
-        id: 'management',
-        name: 'ทักษะการบริหารจัดการ',
-        nameEn: 'Management Skills',
-        color: 'bg-purple-50 border-purple-200 text-purple-800',
-        managerOnly: true,
-        items: [
-            { id: 'leadership',  name: 'ความเป็นผู้นำ',                          desc: 'สร้างแรงจูงใจ ผลักดัน และนำทีมไปสู่เป้าหมาย' },
-            { id: 'delegation',  name: 'การบริหารจัดการและกระจายงาน',           desc: 'วางแผนงาน จัดลำดับความสำคัญ มอบหมายงานตามศักยภาพ' },
-            { id: 'development', name: 'การพัฒนาผู้ใต้บังคับบัญชา',              desc: 'สอนงาน (Coaching) ให้ Feedback สนับสนุนทีมเติบโต' },
-        ]
-    },
-];
+// REVIEW_DIMENSIONS ย้ายไป js/lib/review-dimensions.js แล้ว (ดู import ด้านบน)
 
 // auto-detect ว่าพนักงานคนนี้มีหน้าที่บริหาร/หัวหน้างานหรือไม่
 function isManagerialEmp(emp) {
@@ -8112,7 +8045,7 @@ function isManagerialEmp(emp) {
 window.isManagerialEmp = isManagerialEmp;
 
 // เก็บไว้เพื่อ backward compat กับ review เก่าที่ใช้ flat criteria
-const REVIEW_DEFAULT_CRITERIA = REVIEW_DIMENSIONS.flatMap(dim => dim.items.map(it => it.name));
+// REVIEW_DEFAULT_CRITERIA ย้ายไป js/lib/review-dimensions.js แล้ว (ดู import ด้านบน)
 
 // หน้า review-admin ย้ายไป js/pages/review-admin.js แล้ว — โหลดผ่าน PAGE_MODULES ใน loadPage
 
