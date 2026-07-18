@@ -29,6 +29,7 @@ const BUILTINS = new Set([
 // false positive ทำให้คนเลิกเชื่อเทสต์ ซึ่งอันตรายกว่าไม่มีเทสต์
 function stripComments(s) {
     return s
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ') // CSS ใน template — @media(), rgba() ไม่ใช่ JS
         .replace(/<!--[\s\S]*?-->/g, ' ')   // คอมเมนต์ HTML ใน template
         .replace(/\/\*[\s\S]*?\*\//g, ' ')  // /* ... */
         .replace(/(^|[^:])\/\/.*$/gm, '$1');// // ... (กัน https:// ด้วย)
@@ -42,6 +43,14 @@ for (const f of pageFiles) {
     for (const m of f.src.matchAll(declRe)) {
         for (const g of [m[1], m[2], m[3], m[4]]) if (g) local.add(g);
     }
+    // ของที่ import เข้ามาเป็นโมดูล — นับว่านิยามแล้ว
+    for (const m of f.src.matchAll(/import\s*\{([^}]+)\}\s*from/g)) {
+        m[1].split(',').forEach(a => {
+            const n = a.split(/\sas\s/).pop().trim();
+            if (/^[A-Za-z_$][\w$]*$/.test(n)) local.add(n);
+        });
+    }
+
     // destructuring — ที่ใช้เยอะสุดคือ const { collection, getDocs } = await import(...)
     for (const m of f.src.matchAll(/(?:const|let|var)\s*\{([^}]+)\}\s*=/g)) {
         m[1].split(',').forEach(a => {
