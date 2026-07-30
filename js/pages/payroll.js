@@ -7,7 +7,7 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ LINE token ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260718b';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260718c';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -382,6 +382,7 @@ export default {
                   <i class="fa-solid fa-lock"></i> \u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14
                 </button>`:''}
                 ${p.status==='final'?`<button onclick="prPaid('${p.id}')" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm"><i class="fa-solid fa-check-double"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22</button>`:''}
+                ${!isDraft?`<button onclick="prReopen('${p.id}','${p.status}')" class="inline-flex items-center gap-2 border-2 border-zinc-200 hover:border-zinc-400 text-zinc-600 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all"><i class="fa-solid fa-unlock"></i> \u0e01\u0e25\u0e31\u0e1a\u0e44\u0e1b\u0e41\u0e01\u0e49</button>`:''}
                 <button onclick="prXLSX('${p.id}')" class="inline-flex items-center gap-2 border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
                   <i class="fa-solid fa-file-excel"></i> Export XLSX
                 </button>
@@ -792,6 +793,19 @@ export default {
             try{await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
                 {status:'paid',paidAt:new Date().toISOString(),paidBy:profile.name});
                 showToast('\u2705 \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22\u0e41\u0e25\u0e49\u0e27','success');
+            }catch(err){showToast('\u274c '+err.message,'error');}
+        };
+        // \u0e1b\u0e25\u0e14\u0e25\u0e47\u0e2d\u0e01\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48\u0e2a\u0e23\u0e38\u0e1b/\u0e08\u0e48\u0e32\u0e22\u0e41\u0e25\u0e49\u0e27\u0e01\u0e25\u0e31\u0e1a\u0e40\u0e1b\u0e47\u0e19 draft \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e41\u0e01\u0e49\u0e44\u0e02
+        // \u0e07\u0e27\u0e14\u0e17\u0e35\u0e48\u0e08\u0e48\u0e32\u0e22\u0e41\u0e25\u0e49\u0e27\u0e40\u0e15\u0e37\u0e2d\u0e19\u0e40\u0e02\u0e49\u0e21\u0e01\u0e27\u0e48\u0e32 \u0e40\u0e1e\u0e23\u0e32\u0e30\u0e40\u0e07\u0e34\u0e19\u0e2d\u0e2d\u0e01\u0e44\u0e1b\u0e41\u0e25\u0e49\u0e27 \u0e01\u0e32\u0e23\u0e41\u0e01\u0e49 = \u0e15\u0e31\u0e27\u0e40\u0e25\u0e02\u0e44\u0e21\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e1a\u0e17\u0e35\u0e48\u0e42\u0e2d\u0e19\u0e08\u0e23\u0e34\u0e07
+        window.prReopen = async (pid, status) => {
+            const msg = status === 'paid'
+                ? '\u26a0\ufe0f \u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e08\u0e48\u0e32\u0e22\u0e40\u0e07\u0e34\u0e19\u0e44\u0e1b\u0e41\u0e25\u0e49\u0e27\n\n\u0e01\u0e32\u0e23\u0e40\u0e1b\u0e34\u0e14\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49\u0e08\u0e30\u0e17\u0e33\u0e43\u0e2b\u0e49\u0e15\u0e31\u0e27\u0e40\u0e25\u0e02\u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a\u0e44\u0e21\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e1a\u0e17\u0e35\u0e48\u0e42\u0e2d\u0e19\u0e08\u0e23\u0e34\u0e07\n\u0e17\u0e33\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e01\u0e23\u0e13\u0e35\u0e08\u0e33\u0e40\u0e1b\u0e47\u0e19\u0e08\u0e23\u0e34\u0e07\u0e46 \u2014 \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e40\u0e1b\u0e34\u0e14\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49?'
+                : '\u0e40\u0e1b\u0e34\u0e14\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49\u0e44\u0e02? \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e08\u0e30\u0e01\u0e25\u0e31\u0e1a\u0e40\u0e1b\u0e47\u0e19 "\u0e23\u0e48\u0e32\u0e07"';
+            if(!confirm(msg)) return;
+            try{
+                await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
+                    {status:'draft', reopenedAt:new Date().toISOString(), reopenedBy:profile.name});
+                showToast('\ud83d\udd13 \u0e40\u0e1b\u0e34\u0e14\u0e07\u0e27\u0e14\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49\u0e44\u0e02\u0e44\u0e14\u0e49\u0e41\u0e25\u0e49\u0e27','success');
             }catch(err){showToast('\u274c '+err.message,'error');}
         };
         window.prDel = async pid => {
@@ -1445,7 +1459,7 @@ export default {
             if(unsubRec) unsubRec();
             ['prSel','prOpenCreate','prCloseCreate','prDoCreate','prGenAll',
              'prOpenRec','prCloseRec','prRecalc','prSaveRec',
-             'prFinal','prPaid','prDel','prCSV','prXLSX',
+             'prFinal','prPaid','prReopen','prDel','prCSV','prXLSX',
              'prBankOpen','prBankClose','prBankExport','prBankToggleAll','prBankUpdateCount',
              'prLineOpen','prLineClose','prLineFilter','prLineToggleAll','prLineSend'
             ].forEach(k=>delete window[k]);
