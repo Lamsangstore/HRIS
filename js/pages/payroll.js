@@ -7,6 +7,20 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ LINE token ใน app.html จึงเรียกผ่าน window
 
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260718b';
+
+// อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
+// ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
+// คำนวณจาก เงินเดือน ÷ 30 วัน ÷ ชม.ทำงานต่อวัน (ฐานเดียวกับค่าจ้างรายวันตามกฎหมายแรงงาน)
+// ชม.ที่เบิก (otConverted) คูณ 1.5 มาแล้วตั้งแต่ตอนเบิก จึงไม่คูณซ้ำที่นี่
+function otHourlyRate(emp, schedule) {
+    if (emp.hourlyWage > 0) return emp.hourlyWage;
+    const base = emp.baseSalary || 0;
+    if (base <= 0) return 0;
+    const hpd = getDayWorkHours(schedule);   // ชม.ทำงานจริงต่อวันของคนนี้ (หักพักแล้ว)
+    return Math.round((base / 30 / hpd) * 100) / 100;
+}
+
 export default {
     title: '\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19',
     html: `
@@ -503,7 +517,10 @@ export default {
                     const lh={sick:0,personal:0,vacation:0,other:0};
                     lv.forEach(l=>{const t=['sick','personal','vacation'].includes(l.type)?l.type:'other';lh[t]+=(l.totalHours||0);});
                     const wd=cntDays(period.startDate,period.endDate,sc);
-                    const base=emp.baseSalary||0, daily=emp.dailyWage||0, hourly=emp.hourlyWage||0, commR=emp.commission||0;
+                    const base=emp.baseSalary||0, daily=emp.dailyWage||0, commR=emp.commission||0;
+                    // ค่าจ้าง/ชม.ที่ใช้จริง — พนักงานเงินเดือนที่ hourlyWage=0 จะคำนวณจากฐานเงินเดือน
+                    // เก็บค่านี้ลง record ด้วย เพื่อให้ตอนแก้รายคน (prSaveRec) คิดเลขตรงกัน
+                    const hourly=otHourlyRate(emp, sc);
                     const taxMode=emp.taxDeduction||'No';
                     const dSSO=emp.sso==='Yes'?Math.min(Math.round(base*0.05),750):0;
                     const dTax=taxMode==='custom' ? (emp.taxCustomAmount||0) : calcTax(base,taxMode), eD=daily*wd;
