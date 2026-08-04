@@ -7,7 +7,7 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ LINE token ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260718f';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260718g';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
