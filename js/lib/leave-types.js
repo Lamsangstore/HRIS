@@ -5,14 +5,23 @@
 // อย่าเอา maxDays ไปแสดงเป็นสิทธิ์ตรงๆ (เคยพลาดมาแล้ว — modal บอก 10 วัน
 // ทั้งที่การ์ดบอก 15 วัน เพราะอ่านคนละแหล่ง)
 
+// hint = คำอธิบายว่าประเภทลานั้นใช้กรณีไหน แสดงหลังพนักงานเลือกในหน้ายื่นลา
+// เพื่อกันเลือกผิดประเภท (เช่น เอาลากิจไปใช้แทนลาพักร้อน)
 export const LEAVE_TYPES = [
-    { id: 'sick',      label: 'ลาป่วย',                   icon: 'fa-kit-medical',      color: 'red',    maxDays: 30 },
-    { id: 'personal',  label: 'ลากิจ',                    icon: 'fa-briefcase',         color: 'blue',   maxDays: 6  },
-    { id: 'vacation',  label: 'ลาพักร้อน',                icon: 'fa-umbrella-beach',    color: 'green',  maxDays: 10 },
-    { id: 'maternity', label: 'ลาคลอด',                   icon: 'fa-baby',              color: 'pink',   maxDays: 98 },
-    { id: 'ordain',    label: 'ลาบวช',                    icon: 'fa-om',                color: 'orange', maxDays: 15 },
-    { id: 'military',  label: 'ลาเพื่อรับราชการทหาร',     icon: 'fa-shield-halved',     color: 'slate',  maxDays: 60 },
-    { id: 'other',     label: 'อื่นๆ',                    icon: 'fa-ellipsis',          color: 'zinc',   maxDays: 0  },
+    { id: 'sick',      label: 'ลาป่วย',                   icon: 'fa-kit-medical',      color: 'red',    maxDays: 30,
+      hint: 'ใช้กรณีเจ็บป่วย หรือมีนัดพบแพทย์' },
+    { id: 'personal',  label: 'ลากิจ',                    icon: 'fa-briefcase',         color: 'blue',   maxDays: 6,
+      hint: 'ใช้สำหรับติดต่อราชการ หรือกิจธุระที่ต้องไปสถานที่ราชการ/โรงเรียน' },
+    { id: 'vacation',  label: 'ลาพักร้อน',                icon: 'fa-umbrella-beach',    color: 'green',  maxDays: 10,
+      hint: 'ใช้กับกิจธุระส่วนตัวทั่วไป นอกเหนือจากลาป่วยและลากิจ' },
+    { id: 'maternity', label: 'ลาคลอด',                   icon: 'fa-baby',              color: 'pink',   maxDays: 98,
+      hint: 'สำหรับพนักงานหญิงที่คลอดบุตร' },
+    { id: 'ordain',    label: 'ลาบวช',                    icon: 'fa-om',                color: 'orange', maxDays: 15,
+      hint: 'สำหรับการอุปสมบท' },
+    { id: 'military',  label: 'ลาเพื่อรับราชการทหาร',     icon: 'fa-shield-halved',     color: 'slate',  maxDays: 60,
+      hint: 'สำหรับการเข้ารับราชการทหาร (เกณฑ์ทหาร/เรียก พล.)' },
+    { id: 'other',     label: 'อื่นๆ',                    icon: 'fa-ellipsis',          color: 'zinc',   maxDays: 0,
+      hint: 'กรณีที่ไม่เข้าประเภทใดข้างต้น โปรดระบุเหตุผลให้ชัดเจน' },
 ];
 export function getLeaveTypeInfo(id) { return LEAVE_TYPES.find(t => t.id === id) || LEAVE_TYPES[LEAVE_TYPES.length - 1]; }
 export function colorVariants(color) {
