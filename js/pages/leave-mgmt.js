@@ -5,9 +5,9 @@
 //
 // scheduleCache / balanceCache เป็นแคชเฉพาะหน้านี้ (ไม่มีใครนอกหน้าใช้) จึงย้ายมาด้วยได้
 
-import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260718d';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260718d';
-import { STATUS_MAP } from '../lib/status-map.js?v=20260718d';
+import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260718e';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours, calcLeaveHours } from '../lib/leave-hours.js?v=20260718e';
+import { STATUS_MAP } from '../lib/status-map.js?v=20260718e';
 
 export default {
     title: 'อนุมัติการลา',
@@ -127,9 +127,21 @@ export default {
                 return s;
             } catch { return { workStart:'08:00', workEnd:'17:00', breakMinutes:60 }; }
         }
+        // ชั่วโมงลาที่ใช้จริง
+        // ใบที่ยัง "รออนุมัติ" คำนวณสดจากตารางงานปัจจุบัน เพราะ totalHours ถูก freeze
+        // ตอนพนักงานยื่น ถ้า admin แก้เวลาเข้า-ออก/เวลาพักหลังจากนั้น ค่าเดิมจะผิด
+        // (เช่น วนิดายื่นลา 12:00–15:00 ตอนพักเที่ยง 60 นาที ได้ 2 ชม. แล้ว admin
+        //  เปลี่ยนเป็นไม่มีพัก ค่าควรเป็น 3 แต่ record ยังเก็บ 2)
+        // ใบที่อนุมัติ/ปฏิเสธ/ยกเลิกแล้ว = freeze ค่าเดิม ไม่คำนวณใหม่
+        function effectiveHours(r) {
+            if (r.status === 'pending' && r.startDate && r.startTime && scheduleCache[r.uid]) {
+                return calcLeaveHours(r.startDate, r.startTime, r.endDate, r.endTime, scheduleCache[r.uid]);
+            }
+            return r.totalHours || 0;
+        }
         function dispHoursForReq(r) {
             const s = scheduleCache[r.uid];
-            return hoursToDisplay(r.totalHours, s || null);
+            return hoursToDisplay(effectiveHours(r), s || null);
         }
 
         // ประกาศแบบ function เพื่อให้ hoist ได้ — onSnapshot อาจ callback ทันที
@@ -258,7 +270,7 @@ export default {
                         const totalH  = b.totalHours != null ? b.totalHours : (getLeaveTypeInfo(tid).maxDays * hpd);
                         const usedH   = b.usedHours  || 0;
                         const remH    = Math.max(0, totalH - usedH);
-                        const reqH    = r.totalHours || 0;
+                        const reqH    = effectiveHours(r);   // ใบ pending คิดสดจากตารางล่าสุด
                         const afterH  = Math.max(0, remH - reqH);
                         const pct     = totalH > 0 ? Math.min(100, Math.round(usedH/totalH*100)) : 0;
                         const willExceed = reqH > remH;
@@ -317,8 +329,12 @@ export default {
             btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
             try {
                 const r = allRequests.find(x => x.id === id);
+                // freeze ชั่วโมงลาด้วยค่าที่คิดจากตารางล่าสุด ณ จุดอนุมัติ
+                // (ใบ pending อาจถูกยื่นตอนตารางงานยังเป็นแบบเก่า) จากนั้นค่าจะไม่เปลี่ยนอีก
+                const frozenHours = r ? effectiveHours(r) : 0;
                 await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: action === 'approve' ? 'approved' : 'rejected',
+                    totalHours: frozenHours,
                     approvedBy: profile.name,
                     approvedAt: new Date().toISOString(),
                     approverNote: note || '',
@@ -330,7 +346,7 @@ export default {
                         const balSnap = await getDoc(balRef);
                         const bal = balSnap.exists() ? balSnap.data() : {};
                         const prev = (bal[tid]?.usedHours) || 0;
-                        const newUsed = Math.round((prev + (r.totalHours || 0)) * 100) / 100;
+                        const newUsed = Math.round((prev + frozenHours) * 100) / 100;
                         // ใช้ dotted path เพื่อ update แค่ usedHours ไม่แตะ totalHours
                         if (balSnap.exists()) {
                             await updateDoc(balRef, { [`${tid}.usedHours`]: newUsed });
