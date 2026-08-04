@@ -5,8 +5,8 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260718c';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260718c';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260718d';
+import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260718d';
 
 export default {
     title: 'ตั้งค่าการลา',
@@ -337,7 +337,13 @@ export default {
                 workStart: document.getElementById('sched-start')?.value || '08:00',
                 workEnd:   document.getElementById('sched-end')?.value   || '17:00',
                 breakStart:   document.getElementById('sched-break-start')?.value || '12:00',
-                breakMinutes: Number(document.getElementById('sched-break')?.value) || 60,
+                // ห้ามใช้ `|| 60` เพราะ 0 เป็น falsy → พัก 0 นาที (ไม่พัก) จะกลายเป็น 60
+                // ช่องว่างจริงๆ ค่อยใช้ค่าตั้งต้น 60 กันเผลอลบทิ้ง
+                breakMinutes: (() => {
+                    const raw = (document.getElementById('sched-break')?.value ?? '').trim();
+                    if (raw === '') return 60;
+                    return Math.max(0, Math.floor(Number(raw) || 0));
+                })(),
                 holidays: (document.getElementById('sched-holidays')?.value || '')
                     .split(',').map(s => s.trim()).filter(Boolean),
                 updatedAt: new Date().toISOString(),

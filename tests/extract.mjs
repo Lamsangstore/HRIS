@@ -22,13 +22,18 @@ export const pageFiles = (() => {
 /** app.html + ทุกไฟล์ใน js/pages/ ต่อกัน — ใช้ค้นหาโค้ดที่อาจอยู่ที่ไหนก็ได้ */
 export const allPageSrc = [{ name: 'app.html', src }, ...pageFiles];
 
-/** ดึงโค้ดระหว่าง marker สองตัว (ใช้คอมเมนต์ในไฟล์เป็นหมุด) */
+/** ดึงโค้ดระหว่าง marker สองตัว (ใช้คอมเมนต์ในไฟล์เป็นหมุด)
+ *  ค้นทั้ง app.html และทุกไฟล์ใน js/pages/ เพราะโค้ดถูกย้ายออกจาก app.html
+ *  ทีละหน้า — ถ้าค้นแค่ app.html เทสต์จะพังเงียบๆ เมื่อย้ายหน้าที่มี marker */
 export function slice(startMarker, endMarker) {
-    const s = src.indexOf(startMarker);
-    if (s < 0) throw new Error(`หา marker ไม่เจอ: "${startMarker}" — โครงโค้ดใน app.html เปลี่ยนไป`);
-    const e = src.indexOf(endMarker, s);
-    if (e < 0) throw new Error(`หา marker ปิดไม่เจอ: "${endMarker}"`);
-    return src.slice(s, e);
+    for (const { name, src: text } of allPageSrc) {
+        const s = text.indexOf(startMarker);
+        if (s < 0) continue;
+        const e = text.indexOf(endMarker, s);
+        if (e < 0) throw new Error(`เจอ marker เปิดใน ${name} แต่หา marker ปิดไม่เจอ: "${endMarker}"`);
+        return text.slice(s, e);
+    }
+    throw new Error(`หา marker ไม่เจอในไฟล์ไหนเลย: "${startMarker}" — โครงโค้ดเปลี่ยนไป`);
 }
 
 /** ดึง top-level function declaration ตามชื่อ (นับวงเล็บปีกกา) */
