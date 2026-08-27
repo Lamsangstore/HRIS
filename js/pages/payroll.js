@@ -5,9 +5,9 @@
 //
 // หน้าใหญ่สุดของระบบ: งวดเงินเดือน, คำนวณอัตโนมัติ, แก้รายคน,
 // export XLSX/KBIZ และส่งสลิปทาง LINE
-// sendLineMessage ผูกกับ LINE token ใน app.html จึงเรียกผ่าน window
+// sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260718g';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260827a';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)

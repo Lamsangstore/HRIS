@@ -54,6 +54,37 @@ npm run test:rules   # ต้องมี Java: brew install openjdk
 - หน้าเปิดได้แต่ข้อมูลว่าง → ฟังก์ชันที่ callback เรียก ประกาศทีหลังแบบ
   `window.fn = () => {}` (ไม่ hoist) เปลี่ยนเป็น `function fn() {}` แล้ว assign ทีหลัง
 
+## Cloud Functions (แจ้งเตือน LINE)
+
+การส่ง LINE ทุกทาง (แจ้งลา / อนุมัติ / ส่งสลิป) วิ่งผ่าน callable `sendLine`
+ใน `functions/index.js` — เบราว์เซอร์ไม่ได้ถือ token แล้ว
+
+ต้องเปิด **Blaze plan** (ผูกบัตร) ถึงจะ deploy functions ได้ ฟรี 2 ล้าน invocation/เดือน
+ที่ปริมาณเท่านี้ค่าใช้จ่ายเกือบเป็นศูนย์ — ตั้ง Budget Alert ที่ ฿100 กันเหนียว
+
+ครั้งแรก (หรือทุกครั้งที่ rotate token):
+
+```bash
+npx firebase functions:secrets:set LINE_TOKEN --project hris-21093
+```
+
+deploy:
+
+```bash
+npx firebase deploy --only functions --project hris-21093
+```
+
+**ลำดับตอน deploy ครั้งแรก:** ตั้ง secret → deploy functions → push โค้ดหน้าเว็บ →
+deploy rules ท้ายสุด (rules ปิด `app_config` read ซึ่งเป็นทางเก่า ถ้า deploy ก่อน
+เบราว์เซอร์ที่ยังใช้โค้ดเก่าค้างอยู่จะส่ง LINE ไม่ได้ระหว่างรอ)
+
+ถ้าหน้าเว็บขึ้น "ยังไม่ได้ deploy Cloud Function sendLine" = function ไม่ได้อยู่ที่
+region `asia-southeast1` หรือยังไม่ได้ deploy ดู log:
+
+```bash
+npx firebase functions:log --only sendLine --project hris-21093
+```
+
 ## Firestore
 
 ```bash

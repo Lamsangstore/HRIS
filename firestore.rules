@@ -104,12 +104,12 @@ service cloud.firestore {
                       && 'passwordChangedAt' in request.resource.data.diff(resource.data).affectedKeys())));
       }
 
-      // ---- app_config: LINE token ------------------------------------------
-      // ข้อจำกัดที่ต้องยอมรับ: เบราว์เซอร์พนักงานเป็นคนยิง LINE เอง จึงต้องอ่าน token ได้
-      // => พนักงานที่เปิด DevTools ก๊อป token ไปใช้ได้ ไฟล์นี้กันได้แค่คนนอกที่ไม่ใช่พนักงาน
-      // นี่คือเหตุผลหลักที่ควรย้ายไป Cloud Function — แล้วเปลี่ยน read เป็น false
+      // ---- app_config: เลิกใช้แล้ว -------------------------------------------
+      // LINE token ย้ายไป Secret Manager (functions/index.js) แล้ว เบราว์เซอร์ไม่ต้องอ่าน
+      // ปิด read ทิ้งเพื่อไม่ให้ token ตัวเก่าที่ค้างอยู่ใน doc นี้ถูกก๊อปไปใช้
+      // ลบ doc app_config/line ทิ้งได้เลยหลัง Cloud Function ใช้งานได้แล้ว
       match /app_config/{docId} {
-        allow read:  if isStaff();
+        allow read:  if false;
         allow write: if isAdmin();
       }
 

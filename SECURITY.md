@@ -28,25 +28,31 @@ match /artifacts/{appId}/public/{document=**} {
 หลัง deploy: เช็ค [Authentication → Users](https://console.firebase.google.com/project/hris-21093/authentication/users)
 ว่ามีบัญชีแปลกปลอมที่ไม่ใช่พนักงานไหม
 
-## 1. Rotate LINE channel access token
+## 1. Rotate LINE channel access token + ตั้ง secret
 
 token เดิมเคย hardcode อยู่ใน `app.html` ซึ่งเสิร์ฟเป็นไฟล์ static ที่ใครเปิดเว็บก็โหลดได้
-**ถือว่าหลุดแล้ว** ใครก็เอาไปส่งข้อความในนาม LINE OA ของบริษัทได้
+และหลังจากย้ายไปเก็บใน Firestore มันก็ยังถูกส่งผ่าน `corsproxy.io` (เซิร์ฟเวอร์ของคนอื่น)
+ทุกครั้งที่ส่งข้อความ **ถือว่าหลุดแล้วทั้งสองทาง** ใครก็เอาไปส่งข้อความในนาม LINE OA ได้
 
 ลบออกจากโค้ดเฉยๆ ไม่พอ — ยังอยู่ใน git history ย้อนกลับไปอ่านได้
 
 1. LINE Developers Console → Messaging API → Channel access token → **Issue new + Revoke เดิม**
-2. เอา token ใหม่ใส่ Firestore — **doc นี้ยังไม่มี ต้องสร้างเอง** (ตั้งใจ ไม่ให้ token ผ่าน git):
+2. ใส่ token ใหม่เป็น secret ฝั่งเซิร์ฟเวอร์ (ไม่ผ่าน git ไม่ผ่านเบราว์เซอร์):
 
-   ไป [Firestore Data](https://console.firebase.google.com/project/hris-21093/firestore/data)
-   → `artifacts` → `bizhris-phichit` → `public` → `data`
-   → **Start collection** ชื่อ `app_config`
-   → Document ID: `line` (พิมพ์เอง อย่ากด Auto-ID)
-   → Field: `channelAccessToken` · string · วาง token ใหม่
+   ```bash
+   npx firebase functions:secrets:set LINE_TOKEN --project hris-21093
+   ```
 
-3. ทดสอบด้วยการส่งสลิปทาง LINE สักครั้ง
+   วาง token แล้ว Enter — จากนั้น deploy ใหม่ให้ function หยิบค่าล่าสุด:
 
-ถ้ายังไม่ได้ทำข้อ 2 ระบบจะขึ้น error ชัดเจนว่ายังไม่ได้ตั้งค่า (ไม่เงียบหาย)
+   ```bash
+   npx firebase deploy --only functions --project hris-21093
+   ```
+
+3. ลบ doc `app_config/line` ใน Firestore ทิ้ง (token ตัวเก่าค้างอยู่ในนั้น ไม่ได้ใช้แล้ว)
+4. ทดสอบด้วยการส่งสลิปทาง LINE สักครั้ง
+
+ถ้ายังไม่ได้ตั้ง secret ระบบจะขึ้น error ชัดเจนตอนส่ง (ไม่เงียบหาย)
 
 ## 2. เปลี่ยน repo เป็น private — ไม่ต้องรีบ
 
@@ -91,24 +97,28 @@ npx firebase deploy --only firestore:rules --project hris-21093
 
 ---
 
-## 4. ยังเหลือ: ย้าย LINE ไป Cloud Function (ยังไม่ทำ)
+## 4. LINE ย้ายไป Cloud Function แล้ว ✅
 
-ตอนนี้เบราว์เซอร์พนักงานเป็นคนยิง LINE เอง เครื่องเขาจึงต้องอ่าน token ได้
-=> **พนักงานที่เปิด DevTools ยังก๊อป token ไปใช้ได้** การย้ายมา Firestore แค่ปิดรู
-ที่หลุดสู่คนนอก ยังไม่ได้แก้ที่ต้นเหตุ
+เบราว์เซอร์พนักงานไม่ได้ถือ LINE token อีกแล้ว — เรียก callable `sendLine`
+(`functions/index.js`, region `asia-southeast1`) ซึ่งอ่าน token จาก Secret Manager
 
-ความเสี่ยงที่เหลือ: พนักงานเอา token ไปส่งข้อความในนาม LINE OA ของบริษัท
-(ทำได้แค่ส่งข้อความ อ่านข้อมูลใน Firestore ไม่ได้ — rules กันอยู่)
+ที่ทำให้ต้องย้ายจริงๆ คือของเดิมพัง: เบราว์เซอร์ยิง `api.line.me` ตรงๆ ไม่ได้
+(LINE ไม่ส่ง CORS header) จึงต้องผ่าน `corsproxy.io` และวันที่เขาเลิกรองรับ URL
+แบบไม่มี API key แจ้งเตือนทุกตัวก็ตายพร้อมกันด้วย `403 keyless_legacy_url`
 
-ถ้าจะแก้ให้จบ: ย้ายการยิง LINE ไปหลัง Cloud Function โดยใช้ **Firestore trigger**
-(`onDocumentCreated('leave_requests/{id}')` → หา manager → ยิง LINE) ไม่ใช่ให้เบราว์เซอร์
-เรียก — จะได้ทั้ง token ที่ปลอดภัยและไม่ต้องมี `directory`
+ฝั่ง function เช็คสองชั้นก่อนยิง:
 
-- token เก็บด้วย `firebase functions:secrets:set LINE_TOKEN` → `app_config` read เป็น `false` ได้
-- function อ่าน `users` ด้วยสิทธิ์ admin → ลบ `directory` ทิ้งได้
+- ผู้เรียกต้องมี user doc จริงและยังไม่ลาออก (`isStaff()` ฉบับเซิร์ฟเวอร์)
+  — "ล็อกอินแล้ว" ไม่พอ เพราะคนนอกสมัครบัญชีเองได้
+- ปลายทางต้องเป็น `lineId` ของพนักงานในระบบ — กันไม่ให้ใครยิงข้อความ
+  ในนาม LINE OA ของบริษัทไปหาคนนอก
 
-ต้องเปิด **Blaze plan** (ผูกบัตร) แต่ฟรี 2 ล้าน invocation/เดือน — ที่ขนาดนี้ค่าใช้จ่าย
-เกือบเป็นศูนย์ แนะนำตั้ง Budget Alert ที่ ฿100 กันเหนียว
+`app_config` เปลี่ยน read เป็น `false` แล้ว (ดู `firestore.rules`)
+
+**ที่ยังเหลือ:** ตัวเนื้อข้อความยังประกอบจากเบราว์เซอร์แล้วส่งเข้า function
+พนักงานจึงยังแต่งข้อความเองส่งหาเพื่อนร่วมงานได้ ถ้าจะปิดให้สนิทต้องเปลี่ยนเป็น
+Firestore trigger (`onDocumentCreated('leave_requests/{id}')` → หา manager → ยิงเอง)
+แล้วให้ function เป็นคนประกอบข้อความ — ตอนนั้นจะลบ `directory` ทิ้งได้ด้วย
 
 ## 5. ยังเหลือ: รหัสผ่านของพนักงานเดิม
 

@@ -792,16 +792,16 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260718g';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260718g';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260718g';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260718g';
-        import { distanceMeters } from './js/lib/geo.js?v=20260718g';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260827a';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260827a';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260827a';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260827a';
+        import { distanceMeters } from './js/lib/geo.js?v=20260827a';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260718g';
+        } from './js/lib/leave-hours.js?v=20260827a';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1072,7 +1072,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260718g';
+        const ASSET_V = '20260827a';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -1715,47 +1715,42 @@
         // ================================================================
         // LINE MESSAGING API — Push Notification Helper
         // ================================================================
-        // token ไม่ฝังในโค้ดแล้ว — อ่านจาก Firestore: app_config/line ฟิลด์ channelAccessToken
-        // (ของเดิมเคย hardcode ไว้ตรงนี้และหลุดขึ้น GitHub public ต้อง rotate ทิ้งแล้ว)
+        // token ไม่อยู่ฝั่งเบราว์เซอร์แล้ว — ยิงผ่าน Cloud Function `sendLine`
+        // (region asia-southeast1) ซึ่งอ่าน token จาก Secret Manager ฝั่งเซิร์ฟเวอร์
         //
-        // ข้อจำกัดที่ต้องรู้: เบราว์เซอร์พนักงานเป็นคนยิง LINE เอง เครื่องเขาจึงต้องอ่าน token ได้
-        // rules จึงเปิดให้ผู้ที่ล็อกอินแล้วอ่าน doc นี้ได้ = คนที่เปิด DevTools ยังเห็น token อยู่ดี
-        // นี่แค่ปิดรูที่หลุดสู่สาธารณะ ยังไม่ใช่การแก้ที่ต้นเหตุ
-        // ทางแก้จริงคือย้ายการยิง LINE ไปไว้หลัง Cloud Function แล้วเก็บ token เป็น env ฝั่งเซิร์ฟเวอร์
-        const LINE_PROXY = 'https://api.line.me/v2/bot/message/push';
+        // ของเดิมยิง api.line.me ตรงๆ ผ่าน corsproxy.io เพราะ LINE ไม่ส่ง CORS header
+        // วันที่ corsproxy.io เลิกรองรับ URL แบบไม่มี API key ทุกการแจ้งเตือนตายพร้อมกัน
+        // ด้วย 403 keyless_legacy_url — และตลอดเวลาที่ใช้งานแบบนั้น token ถูกส่งผ่าน
+        // เซิร์ฟเวอร์ของคนอื่นทุกครั้ง จึงต้องถือว่า token ตัวเก่าหลุดแล้ว
+        //
+        // ฝั่งเซิร์ฟเวอร์เช็คสองชั้น: ผู้เรียกต้องเป็นพนักงานที่ยังทำงานอยู่
+        // และปลายทางต้องเป็น lineId ของพนักงานในระบบ (ดู functions/index.js)
 
-        let _lineTokenCache = null;
-        async function getLineToken() {
-            if (_lineTokenCache) return _lineTokenCache;
-            const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-            const snap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'app_config', 'line'));
-            const token = snap.exists() ? (snap.data().channelAccessToken || '') : '';
-            if (!token) throw new Error('ยังไม่ได้ตั้งค่า LINE token — ไปที่ Firestore: app_config/line แล้วใส่ฟิลด์ channelAccessToken');
-            _lineTokenCache = token;
-            return token;
+        let _lineCallable = null;
+        async function getLineCallable() {
+            if (_lineCallable) return _lineCallable;
+            const { getFunctions, httpsCallable }
+                = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js");
+            _lineCallable = httpsCallable(getFunctions(fbApp, 'asia-southeast1'), 'sendLine');
+            return _lineCallable;
         }
 
         async function sendLineMessage(lineUserId, messages) {
             if (!lineUserId) throw new Error('ไม่มี LINE User ID');
-            const token = await getLineToken();
-            // ใช้ proxy เพื่อหลีกเลี่ยง CORS (LINE API ไม่รองรับ browser request โดยตรง)
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(LINE_PROXY);
-            const res = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token,
-                },
-                body: JSON.stringify({ to: lineUserId, messages }),
-            });
-            if (!res.ok) {
-                const text = await res.text().catch(()=>'');
-                throw new Error(`LINE API error ${res.status}: ${text.slice(0,120)}`);
+            const sendLine = await getLineCallable();
+            try {
+                await sendLine({ to: lineUserId, messages });
+            } catch (e) {
+                // HttpsError ห่อข้อความจริงไว้ใน e.message อยู่แล้ว (รวมถึงข้อความจาก LINE)
+                // แต่ถ้ายังไม่ได้ deploy function จะได้ 'not-found' ซึ่งอ่านไม่รู้เรื่อง
+                if (e?.code === 'functions/not-found') {
+                    throw new Error('ยังไม่ได้ deploy Cloud Function sendLine — ดู DEPLOY.md');
+                }
+                throw new Error(e?.message || 'ส่ง LINE ไม่สำเร็จ');
             }
-            return res;
         }
         // หน้า payroll ที่แยกไฟล์แล้วเรียกตัวนี้ตอนส่งสลิปทาง LINE
-        // ผูกกับ getLineToken/LINE_PROXY ในไฟล์นี้ จึงยังย้ายเป็นโมดูลไม่ได้
+        // ผูกกับ fbApp ในไฟล์นี้ จึงยังย้ายเป็นโมดูลไม่ได้
         window.sendLineMessage = sendLineMessage;
 
         // ── หา LINE ID ของหัวหน้า/admin เพื่อส่งแจ้งเตือน ─────────────
@@ -1900,7 +1895,7 @@
             } catch(e) { console.warn('notifyEmployee:', e); }
         }
         // หน้า leave-mgmt ที่แยกไฟล์แล้วเรียกตัวนี้ตอนอนุมัติ/ไม่อนุมัติ
-        // ยิง LINE ผ่าน sendLineMessage ซึ่งผูกกับ token ในไฟล์นี้ จึงยังย้ายเป็นโมดูลไม่ได้
+        // ยิง LINE ผ่าน sendLineMessage ซึ่งผูกกับ fbApp ในไฟล์นี้ จึงยังย้ายเป็นโมดูลไม่ได้
         window.notifyEmployeeLeaveResult = notifyEmployeeLeaveResult;
 
         // STATUS_MAP ย้ายไป js/lib/status-map.js แล้ว (ดู import ด้านบน)

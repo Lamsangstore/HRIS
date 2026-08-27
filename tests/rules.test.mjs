@@ -72,7 +72,12 @@ await deny('พนักงานอ่านสลิปเงินเดื�
 // ── คนนอกที่สมัครบัญชีเองเข้ามา ──────────────────────────────────────────────
 await deny('คนนอก (ไม่มี user doc) อ่านโปรไฟล์พนักงานไม่ได้', getDoc(doc(outsider, P('users', EMP))));
 await deny('คนนอกอ่านเงินเดือนไม่ได้', getDoc(doc(outsider, P('payroll_records', 'r1'))));
-await deny('คนนอกอ่าน LINE token ไม่ได้', getDoc(doc(outsider, P('app_config', 'line'))));
+await deny('คนนอกอ่าน app_config ไม่ได้', getDoc(doc(outsider, P('app_config', 'line'))));
+
+// ── LINE token ────────────────────────────────────────────────────────────────
+// ย้ายไป Secret Manager แล้ว (functions/index.js) เบราว์เซอร์ไม่ต้องอ่าน app_config อีก
+// ถ้าเทสต์นี้กลับมาแดง แปลว่ามีคนเปิด read ให้ client อ่าน token ได้อีกครั้ง
+await deny('พนักงานเองก็อ่าน app_config ไม่ได้แล้ว', getDoc(doc(asEmp, P('app_config', 'line'))));
 
 check.done('Firestore rules');
 await env.cleanup();
