@@ -5,14 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-<<<<<<< HEAD
 import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260914c';
 import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260914c';
 import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20260914c';
-=======
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260914c';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260914c';
->>>>>>> origin/main
 
 export default {
     title: 'ตั้งค่าการลา',

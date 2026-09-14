@@ -6,11 +6,7 @@
 // วันหยุดตามประเพณี import จาก module ตรงๆ (ไม่ได้อยู่บน window)
 // ตัวช่วยเรื่องวันที่ (todayTH/parseDateTH/dateToTHStr/newDateTH) ยังเป็น global
 
-<<<<<<< HEAD
 import { isPublicHoliday, getHolidayName } from '../lib/holidays.js?v=20260914c';
-=======
-import { isPublicHoliday, getHolidayName } from '../lib/holidays.js?v=20260914c';
->>>>>>> origin/main
 export default {
     title: 'ปฏิทินทีม',
     html: `
