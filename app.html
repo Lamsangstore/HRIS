@@ -792,16 +792,17 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260914a';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260914a';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260914a';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260914a';
-        import { distanceMeters } from './js/lib/geo.js?v=20260914a';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260914c';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260914c';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260914c';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260914c';
+        import { distanceMeters } from './js/lib/geo.js?v=20260914c';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260914a';
+        } from './js/lib/leave-hours.js?v=20260914c';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20260914c';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1072,7 +1073,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260914a';
+        const ASSET_V = '20260914c';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -1259,8 +1260,7 @@
                     if (sessionStorage.getItem('forgotClockOutDismissed') === today) return;
 
                     const dow = newDateTH().getDay();
-                    const workDaySet = new Set(sched.workDays || [1,2,3,4,5]);
-                    if (!workDaySet.has(dow)) return;
+                    if (!workDaySetOn(sched, today).has(dow)) return;
 
                     // เลยเวลาเลิกงาน + 1 ชม. หรือยัง
                     const nowHM = newDateTH().toTimeString().slice(0,5);
@@ -2601,7 +2601,6 @@
                     myLogs.forEach(l => { logsMap[l.localDate] = true; });
                     const leaveMap = buildLeaveMap();
                     const personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
-                    const workDaySet = new Set((mySchedule && mySchedule.workDays) ? mySchedule.workDays : [1,2,3,4,5]);
                     const leaveTypeLabel = { sick:'ป่วย', personal:'กิจ', vacation:'พักร้อน', maternity:'คลอด', ordain:'บวช', military:'ทหาร', other:'ลา' };
                     const leaveTypeClass = { sick:'leave-sick', personal:'leave-personal', vacation:'leave-vacation', maternity:'leave-maternity', ordain:'leave-ordain', military:'leave-military', other:'leave-other' };
                     let html = '';
@@ -2612,7 +2611,7 @@
                         let cls = 'cal-cell';
                         let label = '';
                         const isHol = isPublicHoliday(ds);
-                        const isOffDay = !workDaySet.has(dow) || personalHolSet.has(ds);
+                        const isOffDay = !workDaySetOn(mySchedule, ds).has(dow) || personalHolSet.has(ds);
                         const lv = leaveMap[ds];
                         if (isHol) {
                             cls += ' holiday-cell';
@@ -2778,7 +2777,6 @@
                 };
 
                 function buildMyAttnRows() {
-                    const workDaySet = new Set((mySchedule && mySchedule.workDays) ? mySchedule.workDays : [1,2,3,4,5]);
                     const personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
                     const leaveMap = buildLeaveMap();
 
@@ -2802,7 +2800,8 @@
                         const dow = parseDateTH(ds).getDay();
                         const isPubHol  = isPublicHoliday(ds);
                         const isPersHol = personalHolSet.has(ds);
-                        const isWorkDay = workDaySet.has(dow) && !isPubHol && !isPersHol;
+                        // วันทำงานตามช่วงเวลา — เปลี่ยนวันหยุดแล้วต้องไม่ย้อนไปเปลี่ยนสถานะวันเก่า
+                        const isWorkDay = workDaySetOn(mySchedule, ds).has(dow) && !isPubHol && !isPersHol;
                         const leave = leaveMap[ds];
 
                         const g = groups[ds];
@@ -4495,7 +4494,6 @@
             var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
             var today = todayTH();
             var personalHolSet = new Set((mySchedule && Array.isArray(mySchedule.holidays)) ? mySchedule.holidays : []);
-            var workDaySet2 = new Set((mySchedule && mySchedule.workDays) ? mySchedule.workDays : [1,2,3,4,5]);
             var leaveMap = {};
             myRequests.filter(function(r){ return r.status !== 'cancelled' && r.status !== 'rejected'; }).forEach(function(r) {
                 var d = parseDateTH(r.startDate);
@@ -4523,7 +4521,7 @@
                 var isToday2 = ds === today;
                 var isHol2 = isPublicHoliday(ds);
                 var dow2 = new Date(ds + 'T12:00:00+07:00').getDay();
-                var isPerHol2 = !workDaySet2.has(dow2) || personalHolSet.has(ds);
+                var isPerHol2 = !workDaySetOn(mySchedule, ds).has(dow2) || personalHolSet.has(ds);
                 var leaves2 = leaveMap[ds] || [];
                 var hasPending2 = leaves2.some(function(r){ return r.status === 'pending'; });
                 var approved2 = leaves2.filter(function(r){ return r.status === 'approved'; });
@@ -4974,7 +4972,6 @@ window.isManagerialEmp = isManagerialEmp;
                     mySchedule = schedSnap.exists() ? schedSnap.data()
                         : { workStart:'08:00', workEnd:'17:00', breakMinutes:60, workDays:[1,2,3,4,5] };
                     const hpd = getDayWorkHours(mySchedule);
-                    const workDaySet = new Set(mySchedule.workDays || [1,2,3,4,5]);
 
                     // โหลด periods
                     const perSnap = await getDocs(query(
@@ -5096,12 +5093,12 @@ window.isManagerialEmp = isManagerialEmp;
                         const compDays = new Set();
                         holidays.forEach(h => {
                             const dow = parseDateTH(h.date).getDay();
-                            if (!workDaySet.has(dow)) {
+                            if (!workDaySetOn(mySchedule, h.date).has(dow)) {
                                 let next = parseDateTH(h.date);
                                 for (let i=1;i<=7;i++) {
                                     next.setDate(next.getDate()+1);
                                     const ns = dateToTHStr(next);
-                                    if (workDaySet.has(next.getDay()) && !holSet.has(ns)) { compDays.add(ns); break; }
+                                    if (workDaySetOn(mySchedule, ns).has(next.getDay()) && !holSet.has(ns)) { compDays.add(ns); break; }
                                 }
                             }
                         });
@@ -5122,8 +5119,9 @@ window.isManagerialEmp = isManagerialEmp;
                             const dow = cur.getDay();
                             const isHol     = holSet.has(ds);
                             const isComp    = compDays.has(ds);
-                            const isWeekend = !workDaySet.has(dow);
-                            const isWorkDay = workDaySet.has(dow) && !isHol;
+                            const isWorkDayOfWeek = workDaySetOn(mySchedule, ds).has(dow);
+                            const isWeekend = !isWorkDayOfWeek;
+                            const isWorkDay = isWorkDayOfWeek && !isHol;
 
                             // แสดงทุกวัน: วันทำงาน + วันหยุดสุดสัปดาห์ + วันหยุดประเพณี + ชดเชย
                             const rec = dayMap[ds];
