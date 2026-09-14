@@ -6,7 +6,7 @@
 // ตัวช่วยที่ใช้ร่วมกับหน้าอื่นต้องอยู่บน window ถึงจะเรียกได้จากที่นี่
 // (tests/page-deps.test.mjs คอยตรวจให้ว่าไม่มีตัวไหนหลุด)
 
-import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260827a';
+import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260914a';
 
 export default {
     title: 'ประเมินผลงาน',
@@ -17,7 +17,10 @@ export default {
       <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ประเมินผลงาน</h2>
       <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้างรอบประเมินและให้คะแนนพนักงาน</p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
+      <button id="rv-export-btn" onclick="rvExportExcel()" class="hidden border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2 rounded-xl text-xs uppercase">
+        <i class="fa-solid fa-file-excel mr-1"></i> Export Excel
+      </button>
       <select id="rv-cycle" onchange="rvLoadCycle()" class="border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
         <option value="">— เลือกรอบประเมิน —</option>
       </select>
@@ -185,6 +188,9 @@ export default {
         function allReviewsOf(uid) {
             return reviews[uid] ? Object.values(reviews[uid]) : [];
         }
+        function sortByReviewedAt(arr) {
+            return [...arr].sort((a,b) => (a.reviewedAt || '').localeCompare(b.reviewedAt || ''));
+        }
         function avgOfAllReviews(uid) {
             const arr = allReviewsOf(uid);
             if (!arr.length) return null;
@@ -221,7 +227,17 @@ export default {
                 const isShared = !e.managerUid;     // พนักงานที่ไม่ได้ระบุหัวหน้า — หลายหัวหน้าประเมินได้
                 const avatar = e.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name)}&background=f4f4f5&color=27272a&bold=true`;
                 const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
-                const scoreBadge = `<div class="flex gap-3 mr-2 shrink-0">
+                const scoreCell = (v, label, title = '') => `<div class="text-right" title="${title}">
+                         <p class="font-black text-lg ${scoreColor(v)}">${v.toFixed(1)}</p>
+                         <p class="text-[9px] text-zinc-400 font-bold uppercase">${label}</p>
+                       </div>`;
+                // admin เห็นคะแนนจากหัวหน้าทุกคน, manager เห็นเฉพาะคะแนนของตัวเอง
+                const scoreBadge = isAdmin
+                    ? `<div class="flex gap-3 mr-2 shrink-0 flex-wrap justify-end">
+                    ${sortByReviewedAt(allRs).map(r => scoreCell(r.avg || 0, (r.reviewedBy || 'หัวหน้า').split(' ')[0], r.reviewedBy || '')).join('')}
+                    ${sv ? scoreCell(sv.avg || 0, 'ตัวเอง') : ''}
+                </div>`
+                    : `<div class="flex gap-3 mr-2 shrink-0">
                     ${myR ? `<div class="text-right">
                          <p class="font-black text-lg ${scoreColor(myR.avg)}">${myR.avg.toFixed(1)}</p>
                          <p class="text-[9px] text-zinc-400 font-bold uppercase">${isAdmin && myR.reviewedBy ? myR.reviewedBy.split(' ')[0] : 'คะแนนของคุณ'}</p>
@@ -234,7 +250,9 @@ export default {
                 const sharedBadge = isShared
                     ? `<span class="text-[9px] font-black bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">หลายหัวหน้าประเมินได้</span>` : '';
                 const otherCount = otherRs.length;
-                const otherBadge = otherCount > 0
+                const otherBadge = isAdmin
+                    ? (allRs.length > 1 ? `<span class="text-[9px] font-black bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">หัวหน้าประเมิน ${allRs.length} คน · เฉลี่ย ${avgOfAllReviews(e.uid).toFixed(1)}</span>` : '')
+                    : otherCount > 0
                     ? `<span class="text-[9px] font-black bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded" title="${otherRs.map(r=>r.reviewedBy||'').join(', ')}">หัวหน้าอื่นประเมินแล้ว ${otherCount}</span>`
                     : '';
                 const detailBtn = (allRs.length || sv)
@@ -512,10 +530,90 @@ export default {
             finally { btn.disabled = false; btn.textContent = 'บันทึกผลประเมิน'; }
         };
 
+        // ── Export Excel (admin): สรุปรายคน + รายละเอียดทุกผลประเมินจากทุกหัวหน้า ──
+        if (isAdmin) document.getElementById('rv-export-btn')?.classList.remove('hidden');
+
+        window.rvExportExcel = async () => {
+            if (!isAdmin) return;
+            if (!currentCycle) { showToast('เลือกรอบประเมินก่อน', 'error'); return; }
+            if (typeof XLSX === 'undefined') {
+                try {
+                    await new Promise((res, rej) => {
+                        const s = document.createElement('script');
+                        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                        s.onload = res; s.onerror = rej;
+                        document.head.appendChild(s);
+                    });
+                } catch { showToast('❌ โหลดตัวสร้าง Excel ไม่สำเร็จ', 'error'); return; }
+            }
+
+            const nameOf = uid => allEmployees.find(e => e.uid === uid)?.name || '';
+            const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : '';
+            const num = v => (typeof v === 'number' ? Math.round(v * 100) / 100 : '');
+
+            // หัวหน้าทุกคนที่มีผลประเมินในรอบนี้ → หนึ่งคอลัมน์ต่อคน
+            const reviewerMap = new Map();
+            employees.forEach(e => sortByReviewedAt(allReviewsOf(e.uid)).forEach(r => {
+                const key = r.reviewerUid || 'legacy';
+                if (!reviewerMap.has(key)) reviewerMap.set(key, r.reviewedBy || 'หัวหน้า (ไม่ระบุ)');
+            }));
+            const reviewerKeys = [...reviewerMap.keys()];
+
+            // Sheet 1: สรุป
+            const sumHeader = ['รหัสพนักงาน','ชื่อ - นามสกุล','ตำแหน่ง','สาขา','หัวหน้าโดยตรง',
+                'จำนวนหัวหน้าที่ประเมิน','คะแนนเฉลี่ยจากหัวหน้า',
+                ...reviewerKeys.map(k => `คะแนนจาก ${reviewerMap.get(k)}`),
+                'ประเมินตัวเอง','ส่วนต่าง (หัวหน้า − ตัวเอง)'];
+            const sumRows = employees.map(e => {
+                const rs = reviews[e.uid] || {};
+                const mgrAvg = avgOfAllReviews(e.uid);
+                const sv = selfReviews[e.uid];
+                return [e.employeeCode || '', e.name, e.position || '', e.branch || '',
+                    e.managerUid ? nameOf(e.managerUid) : '(ไม่กำหนด)',
+                    Object.keys(rs).length, num(mgrAvg),
+                    ...reviewerKeys.map(k => num(rs[k]?.avg)),
+                    num(sv?.avg),
+                    (mgrAvg != null && sv) ? num(mgrAvg - sv.avg) : ''];
+            });
+
+            // Sheet 2: รายละเอียด — หนึ่งแถวต่อหนึ่งผลประเมิน (หัวหน้าแต่ละคน + ตัวเอง)
+            const dims = currentCycle.dimensions || REVIEW_DIMENSIONS;
+            const detHeader = ['รหัสพนักงาน','ชื่อ - นามสกุล','ตำแหน่ง','สาขา','ประเภท','ผู้ประเมิน','วันที่ประเมิน','คะแนนเฉลี่ยรวม',
+                ...dims.map(d => `เฉลี่ย: ${d.name}`),
+                ...dims.flatMap(d => d.items.map(it => `${d.name} › ${it.name}`)),
+                'ความเห็น'];
+            const detRows = [];
+            const detRow = (e, r, kind) => [e.employeeCode || '', e.name, e.position || '', e.branch || '',
+                kind, kind === 'ตัวเอง' ? e.name : (r.reviewedBy || ''), fmtDate(r.reviewedAt), num(r.avg),
+                ...dims.map(d => num(r.dimAvg?.[d.id])),
+                ...dims.flatMap(d => d.items.map(it => r.scores?.[d.id + '.' + it.id] || '')),
+                r.comment || ''];
+            employees.forEach(e => {
+                sortByReviewedAt(allReviewsOf(e.uid)).forEach(r => detRows.push(detRow(e, r, 'หัวหน้า')));
+                if (selfReviews[e.uid]) detRows.push(detRow(e, selfReviews[e.uid], 'ตัวเอง'));
+            });
+
+            const makeSheet = (header, rows, widths) => {
+                const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+                ws['!cols'] = header.map((_, i) => ({ wch: widths[i] ?? 14 }));
+                ws['!freeze'] = { xSplit: 2, ySplit: 1 };
+                return ws;
+            };
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, makeSheet(sumHeader, sumRows, [12, 26, 18, 18, 22, 12, 12]), 'สรุป');
+            const detWidths = [12, 26, 18, 18, 10, 22, 14, 12];
+            detWidths[detHeader.length - 1] = 50;
+            XLSX.utils.book_append_sheet(wb, makeSheet(detHeader, detRows, detWidths), 'รายละเอียด');
+
+            const safeName = currentCycle.name.replace(/[\\/:*?"<>|]/g, '_');
+            XLSX.writeFile(wb, `ผลประเมิน_${safeName}.xlsx`);
+            showToast('📥 Export Excel สำเร็จ', 'success');
+        };
+
         if (cycles.length) rvLoadCycle();
 
         return () => {
-            ['rvNewCycle','rvLoadCycle','rvOpenScore','rvSetScore','rvToggleManagerial','rvCloseModal','rvSave','rvOpenDetail','rvCloseDetail'].forEach(k => delete window[k]);
+            ['rvNewCycle','rvLoadCycle','rvOpenScore','rvSetScore','rvToggleManagerial','rvCloseModal','rvSave','rvOpenDetail','rvCloseDetail','rvExportExcel'].forEach(k => delete window[k]);
         };
     }
 };
