@@ -18,7 +18,7 @@ const check = makeChecker();
 const files = [
     { name: 'app.html', dir: ROOT, src },
     ...pageFiles.map(f => ({ name: f.name, dir: join(ROOT, 'js', 'pages'), src: readFileSync(join(ROOT, f.name), 'utf8') })),
-    ...['holidays', 'leave-hours', 'leave-types', 'review-dimensions', 'status-map']
+    ...['holidays', 'leave-hours', 'leave-types', 'review-dimensions', 'status-map', 'work-days']
         .filter(n => existsSync(join(ROOT, 'js', 'lib', `${n}.js`)))
         .map(n => ({ name: `js/lib/${n}.js`, dir: join(ROOT, 'js', 'lib'),
                      src: readFileSync(join(ROOT, 'js', 'lib', `${n}.js`), 'utf8') })),

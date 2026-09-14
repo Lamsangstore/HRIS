@@ -7,7 +7,8 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260827a';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260914b';
+import { workDaySetOn } from '../lib/work-days.js?v=20260914b';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -451,9 +452,9 @@ export default {
         };
 
         function cntDays(sd,ed,sc){
-            const ws=new Set(sc.workDays||[1,2,3,4,5]), hd=new Set(sc.holidays||[]);
+            const hd=new Set(sc.holidays||[]);
             let n=0, d=parseDateTH(sd), end=parseDateTH(ed);
-            while(d<=end){const ds=dateToTHStr(d);if(ws.has(d.getDay())&&!hd.has(ds))n++;d.setDate(d.getDate()+1);}
+            while(d<=end){const ds=dateToTHStr(d);if(workDaySetOn(sc,ds).has(d.getDay())&&!hd.has(ds))n++;d.setDate(d.getDate()+1);}
             return n;
         }
         function calcTax(sal,mode){

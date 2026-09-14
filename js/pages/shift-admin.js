@@ -5,6 +5,8 @@
 //
 // ใช้ showToast / navigateTo ซึ่งยังเป็น global บน window เรียกได้ตรงๆ
 
+import { workDaySetOn } from '../lib/work-days.js?v=20260914b';
+
 export default {
     title: 'จัดการกะงาน',
     html: `
@@ -146,7 +148,7 @@ export default {
             const snap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', uid));
             selEmpSched = snap.exists() ? snap.data() : {};
             const shiftByDay = selEmpSched.shiftByDay || {};
-            const workDaySet = new Set(selEmpSched.workDays || [1,2,3,4,5]);
+            const workDaySet = workDaySetOn(selEmpSched, todayTH());
             const opts = (cur) => `<option value="">ตารางปกติ (${selEmpSched.workStart||'08:00'}–${selEmpSched.workEnd||'17:00'})</option>` +
                 shifts.map(s => `<option value="${s.id}" ${cur===s.id?'selected':''}>${s.name} (${s.start}–${s.end})</option>`).join('');
             el.innerHTML = DOW_FULL.map((d, i) => `

@@ -5,8 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260827a';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260827a';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260914b';
+import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260914b';
+import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20260914b';
 
 export default {
     title: 'ตั้งค่าการลา',
@@ -88,7 +89,8 @@ export default {
 
         let allEmps   = [];
         let selectedEmpUid = null;
-        let workDaysSel = [1, 2, 3, 4, 5];
+        // ประวัติวันทำงานที่กำลังแก้ [{ from:'' | 'YYYY-MM-DD', workDays:[...] }]
+        let wdHist = [];
 
         const unsub = onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'), snap => {
             allEmps = snap.docs.map(d => d.data()).filter(e => e.uid);
@@ -161,7 +163,7 @@ export default {
                 };
             });
 
-            workDaysSel = sched.workDays || [1,2,3,4,5];
+            wdHist = workDaysHistoryOf(sched);
             renderAdminPanel(emp, sched, bal);
         };
 
@@ -170,14 +172,6 @@ export default {
             const panel = document.getElementById('admin-right-panel');
             if (!panel) return;
             const av = emp.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=27272a&color=eab308&bold=true`;
-            const DAY_NAMES = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-            const daysHtml = [0,1,2,3,4,5,6].map(d => {
-                const isSel = workDaysSel.includes(d);
-                return `<button onclick="toggleWorkDay(${d})" id="wday-${d}"
-                    class="day-toggle w-10 h-10 rounded-xl border-2 border-zinc-200 font-black text-xs text-zinc-500 ${isSel ? 'selected' : ''}">
-                    ${DAY_NAMES[d]}</button>`;
-            }).join('');
-
             // คำนวณ hpd จาก schedule จริง
             const hpd = getDayWorkHours(sched);
 
@@ -199,8 +193,16 @@ export default {
               </h4>
               <div class="space-y-5">
                 <div>
-                  <p class="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-widest">วันทำงาน</p>
-                  <div class="flex gap-2 flex-wrap">${daysHtml}</div>
+                  <p class="text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">วันทำงาน</p>
+                  <p class="text-[11px] text-zinc-400 mb-3 font-medium">
+                    เปลี่ยนวันหยุด (เช่น พฤ. → อ.) ให้กด "เปลี่ยนวันทำงานตั้งแต่วันที่" แล้วใส่วันที่มีผล —
+                    วันก่อนหน้านั้นยังคิดขาดงาน/โอที/ชั่วโมงลาตามวันทำงานชุดเดิม
+                  </p>
+                  <div id="wd-hist" class="space-y-3"></div>
+                  <button onclick="addWorkDayChange()" type="button"
+                    class="mt-3 text-xs font-black text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border-2 border-yellow-200 rounded-xl px-3 py-2">
+                    <i class="fa-solid fa-plus mr-1"></i> เปลี่ยนวันทำงานตั้งแต่วันที่
+                  </button>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
@@ -318,22 +320,73 @@ export default {
             ['sched-start','sched-end','sched-break'].forEach(id =>
                 document.getElementById(id)?.addEventListener('input', updateDailyPreview)
             );
+            renderWorkDayHistory();
         }
 
-        window.toggleWorkDay = (d) => {
-            if (workDaysSel.includes(d)) workDaysSel = workDaysSel.filter(x => x !== d);
-            else workDaysSel.push(d);
-            workDaysSel.sort();
-            const btn = document.getElementById(`wday-${d}`);
-            if (btn) {
-                btn.classList.toggle('selected', workDaysSel.includes(d));
-            }
+        function renderWorkDayHistory() {
+            const el = document.getElementById('wd-hist');
+            if (!el) return;
+            const DAY_NAMES = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+            const today = todayTH();
+            // แถวที่มีผลวันนี้ = แถวที่วันที่มีผลล่าสุดแต่ไม่เกินวันนี้ (แถวแรกคือตั้งแต่เริ่มงาน)
+            let currentIdx = 0;
+            wdHist.forEach((h, i) => {
+                if (i > 0 && h.from && h.from <= today && h.from >= (wdHist[currentIdx].from || '')) currentIdx = i;
+            });
+            el.innerHTML = wdHist.map((h, i) => {
+                const chips = [0,1,2,3,4,5,6].map(d => `<button type="button" onclick="toggleWorkDay(${i},${d})"
+                    class="day-toggle w-10 h-10 rounded-xl border-2 border-zinc-200 font-black text-xs text-zinc-500 ${h.workDays.includes(d) ? 'selected' : ''}">
+                    ${DAY_NAMES[d]}</button>`).join('');
+                const isCurrent = i === currentIdx;
+                const label = i === 0
+                    ? `<span class="text-xs font-black text-zinc-600">ตั้งแต่เริ่มงาน</span>`
+                    : `<span class="text-xs font-black text-zinc-600">ตั้งแต่</span>
+                       <input type="date" value="${h.from}" onchange="setWorkDayFrom(${i}, this.value)"
+                         class="border-2 border-zinc-200 rounded-lg px-2 py-1 text-xs font-bold focus:border-yellow-500 focus:outline-none">
+                       <button type="button" onclick="removeWorkDayChange(${i})" title="ลบช่วงนี้"
+                         class="ml-auto text-zinc-400 hover:text-red-500 text-sm"><i class="fa-solid fa-trash-can"></i></button>`;
+                return `<div class="p-3 rounded-xl border-2 ${isCurrent ? 'border-yellow-300 bg-yellow-50/40' : 'border-zinc-200'}">
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">${label}
+                      ${isCurrent ? '<span class="text-[9px] font-black bg-yellow-400 text-zinc-900 px-1.5 py-0.5 rounded">ใช้อยู่ตอนนี้</span>' : ''}
+                    </div>
+                    <div class="flex gap-2 flex-wrap">${chips}</div>
+                </div>`;
+            }).join('');
+        }
+
+        window.toggleWorkDay = (i, d) => {
+            const h = wdHist[i];
+            if (!h) return;
+            h.workDays = h.workDays.includes(d) ? h.workDays.filter(x => x !== d) : [...h.workDays, d].sort();
+            renderWorkDayHistory();
+        };
+        window.addWorkDayChange = () => {
+            const last = wdHist[wdHist.length - 1];
+            wdHist.push({ from: todayTH(), workDays: [...(last ? last.workDays : [1,2,3,4,5])] });
+            renderWorkDayHistory();
+        };
+        window.removeWorkDayChange = (i) => {
+            if (i <= 0) return;
+            wdHist.splice(i, 1);
+            renderWorkDayHistory();
+        };
+        window.setWorkDayFrom = (i, v) => {
+            if (wdHist[i]) wdHist[i].from = v;
+            renderWorkDayHistory();
         };
 
         window.saveSchedule = async () => {
             if (!selectedEmpUid) return;
+            const history = normalizeWorkDaysHistory(wdHist);
+            if (!history) {
+                showToast('❌ ช่วงเปลี่ยนวันทำงานต้องใส่วันที่มีผล และห้ามซ้ำกัน', 'error');
+                return;
+            }
             const payload = {
-                workDays: workDaysSel,
+                // workDays = ชุดที่ใช้วันนี้ (ของเดิมที่ยังอ่าน field นี้ตรงๆ จะได้ค่าถูก)
+                // workDaysHistory = ทุกช่วง ใช้ตัดสินวันในอดีต
+                workDays: workDaysOn({ workDaysHistory: history }, todayTH()),
+                workDaysHistory: history,
                 workStart: document.getElementById('sched-start')?.value || '08:00',
                 workEnd:   document.getElementById('sched-end')?.value   || '17:00',
                 breakStart:   document.getElementById('sched-break-start')?.value || '12:00',
@@ -358,6 +411,8 @@ export default {
             }
             try {
                 await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', selectedEmpUid), payload, { merge: true });
+                wdHist = workDaysHistoryOf(payload);
+                renderWorkDayHistory();
                 showToast('✅ บันทึกตารางงานแล้ว', 'success');
             } catch (e) { showToast('❌ ' + e.message, 'error'); }
         };
@@ -619,7 +674,7 @@ export default {
 
         return () => {
             unsub();
-            ['filterAdminEmpList','selectAdminEmp','toggleWorkDay','saveSchedule','saveQuota','recalcUsedHours','backfillLeaveHours'].forEach(k => delete window[k]);
+            ['filterAdminEmpList','selectAdminEmp','toggleWorkDay','addWorkDayChange','removeWorkDayChange','setWorkDayFrom','saveSchedule','saveQuota','recalcUsedHours','backfillLeaveHours'].forEach(k => delete window[k]);
         };
     }
 };

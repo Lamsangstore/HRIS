@@ -8,7 +8,8 @@
 //     breakStart:'12:00', breakMinutes:60, holidays:['YYYY-MM-DD', ...] }
 // ทุก field มีค่าตั้งต้นให้ — schedule เก่าที่ยังไม่มี breakStart จะถือว่าพัก 12:00
 
-import { isPublicHoliday } from './holidays.js?v=20260827a';
+import { isPublicHoliday } from './holidays.js?v=20260914b';
+import { workDaysOn } from './work-days.js?v=20260914b';
 
 /** 'HH:MM' → นาทีนับจากเที่ยงคืน */
 export function hhmmToMins(hhmm) {
@@ -39,7 +40,6 @@ export function breakOverlapMins(s, e, brk) {
  * พร้อมตัดโควตาไปด้วย
  */
 export function calcLeaveHours(startDate, startTime, endDate, endTime, schedule) {
-    const workDaySet   = new Set(schedule.workDays || [1, 2, 3, 4, 5]);
     const personalHols = new Set(schedule.holidays || []);
     const dayStartM = hhmmToMins(schedule.workStart || '08:00');
     const dayEndM   = hhmmToMins(schedule.workEnd   || '17:00');
@@ -55,7 +55,8 @@ export function calcLeaveHours(startDate, startTime, endDate, endTime, schedule)
         const dy = String(cur.getDate()).padStart(2, '0');
         const ds = yr + '-' + mo + '-' + dy;
 
-        if (workDaySet.has(cur.getDay()) && !personalHols.has(ds) && !isPublicHoliday(ds)) {
+        // วันทำงานของ "วันนั้น" — ใบลาข้ามช่วงเปลี่ยนวันหยุดต้องนับตามชุดที่ใช้จริงแต่ละวัน
+        if (workDaysOn(schedule, ds).includes(cur.getDay()) && !personalHols.has(ds) && !isPublicHoliday(ds)) {
             const isFirstDay = ds === startDate;
             const isLastDay  = ds === endDate;
             const useStartM  = isFirstDay && startTime ? hhmmToMins(startTime) : dayStartM;

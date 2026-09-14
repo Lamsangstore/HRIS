@@ -6,9 +6,10 @@
 // วันหยุด/ประเภทลา/ระยะทาง import จาก module
 // ส่วน officeFor กับ loadBranchLocations ผูกกับแคชพิกัดสาขาใน app.html จึงอยู่บน window
 
-import { isPublicHoliday } from '../lib/holidays.js?v=20260827a';
-import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260827a';
-import { distanceMeters } from '../lib/geo.js?v=20260827a';
+import { isPublicHoliday } from '../lib/holidays.js?v=20260914b';
+import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260914b';
+import { distanceMeters } from '../lib/geo.js?v=20260914b';
+import { workDaySetOn } from '../lib/work-days.js?v=20260914b';
 
 export default {
     title: 'ประวัติเวลา (ทีม)',
@@ -298,7 +299,6 @@ export default {
                 empsInScope.forEach(emp => {
                     const sched = schedMap[emp.uid] || null;
                     const empOffice = officeFor(emp.branch);
-                    const workDaySet = new Set((sched && sched.workDays) ? sched.workDays : [1,2,3,4,5]);
                     const personalHolSet = new Set((sched && Array.isArray(sched.holidays)) ? sched.holidays : []);
                     const empLeaves = leaveByUid[emp.uid] || {};
 
@@ -306,7 +306,8 @@ export default {
                         const dow  = parseDateTH(ds).getDay();
                         const isPubHol  = isPublicHoliday(ds);
                         const isPersHol = personalHolSet.has(ds);
-                        const isWorkDay = workDaySet.has(dow) && !isPubHol && !isPersHol;
+                        // วันทำงานตามช่วงเวลา — เปลี่ยนวันหยุดแล้วต้องไม่ย้อนไปเปลี่ยนสถานะวันเก่า
+                        const isWorkDay = workDaySetOn(sched, ds).has(dow) && !isPubHol && !isPersHol;
                         const leave = empLeaves[ds];
 
                         const g = groups[emp.uid + '|' + ds];
