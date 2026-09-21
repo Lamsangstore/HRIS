@@ -1161,6 +1161,14 @@
             startForgotClockOutWatch(user, userProfile);
         });
 
+        // รหัสที่ระบบตั้งให้ ห้ามพนักงานตั้งกลับเป็นตัวเดิม — ไม่งั้นการบังคับเปลี่ยน
+        // ไร้ความหมาย (พิมพ์รหัสเดิมซ้ำ updatePassword ก็ผ่าน)
+        //   '123456'            = รหัสตอนสร้างพนักงานใหม่
+        //   SYSTEM_RESET_PASSWORD = รหัสหลังแอดมินกดรีเซ็ต
+        //                           ต้องตรงกับ RESET_PASSWORD ใน functions/index.js
+        const SYSTEM_RESET_PASSWORD = 'Lamsang2024';
+        const SYSTEM_PASSWORDS = ['123456', SYSTEM_RESET_PASSWORD];
+
         // ── บังคับเปลี่ยนรหัสผ่านครั้งแรก ───────────────────────────
         // resolve เมื่อเปลี่ยนรหัสสำเร็จเท่านั้น — ปิดไม่ได้ กด ESC ไม่ได้ ข้ามไม่ได้
         function forcePasswordChange(user) {
@@ -1210,7 +1218,7 @@
                     const cf = el.querySelector('#fpc-conf').value;
                     if (pw.length < 6)  return err('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว');
                     if (pw !== cf)      return err('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
-                    if (pw === '123456') return err('ห้ามใช้รหัสเริ่มต้น กรุณาตั้งรหัสอื่น');
+                    if (SYSTEM_PASSWORDS.includes(pw)) return err('ห้ามใช้รหัสที่ระบบตั้งให้ กรุณาตั้งรหัสอื่น');
 
                     const btn = el.querySelector('#fpc-btn');
                     btn.disabled = true;
@@ -3353,7 +3361,16 @@
                             <h4 class="section-title"><i class="fa-solid fa-address-book"></i>3. ข้อมูลการติดต่อ</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                                 <div><label class="input-label">เบอร์โทรศัพท์ *</label><input type="tel" id="f-phone" required class="input-field"></div>
-                                <div><label class="input-label">อีเมลบริษัท (Login) *</label><input type="email" id="f-email" required class="input-field" placeholder="name@lamsang.com"></div>
+                                <div>
+                                    <label class="input-label">อีเมลบริษัท (Login) *</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="email" id="f-email" required class="input-field" placeholder="name@lamsang.com">
+                                        <button type="button" id="f-email-change" onclick="empChangeEmail()" title="เปลี่ยนอีเมลสำหรับล็อกอิน"
+                                            class="hidden shrink-0 bg-zinc-100 hover:bg-yellow-500 text-zinc-600 hover:text-zinc-900 px-4 py-3 rounded-xl transition-all text-sm">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                    </div>
+                                </div>
                                 <div><label class="input-label">Line User ID</label><input type="text" id="f-line-id" class="input-field"></div>
                                 <div class="md:col-span-3"><label class="input-label">ที่อยู่</label><input type="text" id="f-address" class="input-field"></div>
                                 <div><label class="input-label">จังหวัด</label><input type="text" id="f-province" class="input-field"></div>
@@ -3527,7 +3544,12 @@
                             <td class="px-4 py-4"><p class="text-xs font-black text-zinc-600">${emp.employeeCode||'-'}</p><p class="text-[10px] text-zinc-400">${emp.position||emp.role}</p></td>
                             <td class="px-4 py-4 text-xs font-medium text-zinc-600">${emp.branch||'-'}</td>
                             <td class="px-4 py-4">${badge}</td>
-                            <td class="px-6 py-4 text-center"><button onclick="empPrepareEdit('${emp.uid}')" class="text-zinc-500 bg-zinc-100 hover:bg-yellow-500 hover:text-zinc-900 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm"><i class="fa-solid fa-pen mr-1"></i> แก้ไข</button></td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="empPrepareEdit('${emp.uid}')" class="text-zinc-500 bg-zinc-100 hover:bg-yellow-500 hover:text-zinc-900 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm"><i class="fa-solid fa-pen mr-1"></i> แก้ไข</button>
+                                    ${emp.uid === user.uid ? '' : `<button onclick="empResetPassword('${emp.uid}')" class="text-zinc-500 bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm" title="ตั้งรหัสชั่วคราวให้พนักงานที่ลืมรหัสผ่าน"><i class="fa-solid fa-key mr-1"></i> รีเซ็ตรหัส</button>`}
+                                </div>
+                            </td>
                         </tr>`;
                     });
                     const el = document.getElementById('employee-list');
@@ -3560,6 +3582,159 @@
                     finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
                 };
 
+                // ── แก้อีเมลสำหรับล็อกอิน ───────────────────────────────────
+                // อีเมลอยู่สองที่: Firebase Auth (ใช้ล็อกอินจริง) กับ Firestore (ใช้แสดงผล)
+                // แก้ Firestore อย่างเดียวคือกับดักที่เคยเจอมาแล้ว — หน้าจอโชว์อีเมลใหม่
+                // แต่พนักงานยังต้องล็อกอินด้วยอีเมลเก่า callable นี้เปลี่ยนให้ทั้งสองที่
+                window.empChangeEmail = () => {
+                    const uid = document.getElementById('emp-uid').value;
+                    const emp = allEmployees.find(e => e.uid === uid);
+                    if (!emp) return;
+
+                    const el = document.createElement('div');
+                    el.className = 'fixed inset-0 z-[9999] bg-zinc-900/90 flex items-center justify-center p-4';
+                    el.innerHTML = `
+                      <div class="bg-white rounded-2xl w-full max-w-md p-7 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-4">
+                          <div class="w-11 h-11 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-envelope text-yellow-600"></i>
+                          </div>
+                          <div>
+                            <h3 class="font-black text-zinc-800 text-lg">เปลี่ยนอีเมลสำหรับล็อกอิน</h3>
+                            <p class="text-xs text-zinc-400 font-medium">${emp.name || ''}</p>
+                          </div>
+                        </div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">อีเมลที่ระบบแสดงตอนนี้</label>
+                        <p class="bg-zinc-50 border-2 border-zinc-100 rounded-xl px-3 py-2.5 text-sm font-bold text-zinc-400 mb-4 break-all">${emp.email || '—'}</p>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">อีเมลใหม่</label>
+                        <input type="email" id="ce-new" autocomplete="off" placeholder="name@lamsang.com"
+                          class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                        <p id="ce-err" class="text-xs font-bold text-red-500 mt-2 hidden"></p>
+                        <p class="text-xs text-zinc-500 font-medium bg-yellow-50 border border-yellow-200 rounded-xl p-3 mt-4 leading-relaxed">
+                          เปลี่ยนแล้วพนักงานต้องใช้<b>อีเมลใหม่</b>ล็อกอิน รหัสผ่านยังเป็นตัวเดิม
+                          — อย่าลืมบอกเจ้าตัวด้วย
+                          <span class="block mt-1.5 text-zinc-400">ถ้าพนักงานล็อกอินด้วยอีเมลที่แสดงด้านบนไม่ได้
+                          (เคยแก้ไว้แต่ไม่มีผล) ให้พิมพ์อีเมลนั้นซ้ำลงไปแล้วบันทึก เพื่อซิงค์บัญชีล็อกอินให้ตรงกัน</span>
+                        </p>
+                        <button id="ce-btn" class="w-full mt-5 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest">
+                          <i class="fa-solid fa-check mr-2"></i> บันทึกอีเมลใหม่
+                        </button>
+                        <button id="ce-cancel" class="w-full mt-2 text-zinc-400 hover:text-zinc-600 font-bold py-2 text-xs transition-all">ยกเลิก</button>
+                      </div>`;
+                    document.body.appendChild(el);
+
+                    const err = (m) => {
+                        const e = el.querySelector('#ce-err');
+                        e.textContent = m; e.classList.remove('hidden');
+                    };
+                    el.querySelector('#ce-cancel').onclick = () => el.remove();
+
+                    el.querySelector('#ce-btn').onclick = async () => {
+                        const email = el.querySelector('#ce-new').value.trim().toLowerCase();
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('รูปแบบอีเมลไม่ถูกต้อง');
+                        // ไม่บล็อกกรณีพิมพ์อีเมลเดิมซ้ำ — เป็นวิธีซ่อมเคสที่ Firestore กับ Auth
+                        // ไม่ตรงกัน (หน้าจอโชว์อีเมลใหม่ แต่ Auth ยังเป็นอันเก่า) ต้องยิงซ้ำให้ Auth ตามมา
+
+                        const btn = el.querySelector('#ce-btn');
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังบันทึก...';
+                        try {
+                            const { getFunctions, httpsCallable }
+                                = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js");
+                            const call = httpsCallable(getFunctions(fbApp, 'asia-southeast1'), 'updateEmployeeEmail');
+                            const res = await call({ uid, email });
+                            el.remove();
+                            document.getElementById('f-email').value = res.data.email;
+                            showToast(`✅ เปลี่ยนอีเมลล็อกอินเป็น ${res.data.email} แล้ว`, 'success');
+                            // อีเมลที่ Auth ถืออยู่ไม่ตรงกับที่หน้าจอโชว์ = เคยถูกแก้ทาง Firestore อย่างเดียว
+                            // บอกแอดมินไว้ด้วย เพราะแปลว่าที่ผ่านมาพนักงานล็อกอินด้วยอีเมลนี้ไม่ได้
+                            const shown = (emp.email || '').toLowerCase();
+                            if (res.data.previousEmail && res.data.previousEmail.toLowerCase() !== shown) {
+                                showToast(`⚠️ ก่อนหน้านี้บัญชีล็อกอินใช้ ${res.data.previousEmail} ไม่ตรงกับที่หน้าจอโชว์ (${shown || '—'}) — ตอนนี้ตรงกันแล้ว`, 'error');
+                            }
+                        } catch (e) {
+                            err(e?.code === 'functions/not-found'
+                                ? 'ยังไม่ได้ deploy Cloud Function updateEmployeeEmail — ดู DEPLOY.md'
+                                : (e?.message || 'เปลี่ยนอีเมลไม่สำเร็จ'));
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> บันทึกอีเมลใหม่';
+                        }
+                    };
+                    el.querySelector('#ce-new').focus();
+                };
+
+                // ── พนักงานลืมรหัสผ่าน → แอดมินตั้งรหัสชั่วคราวให้ ──────────
+                // เบราว์เซอร์ตั้งรหัสให้คนอื่นไม่ได้ (Firebase client SDK ทำได้แต่ของตัวเอง)
+                // จึงต้องผ่าน callable `resetEmployeePassword` ที่ใช้ Admin SDK
+                // ฝั่งนั้นสุ่มรหัส + เตะ session เดิม + ตั้ง mustChangePassword ให้ครบในคราวเดียว
+                window.empResetPassword = async (uid) => {
+                    const emp = allEmployees.find(e => e.uid === uid);
+                    if (!emp) return;
+                    if (!confirm(`รีเซ็ตรหัสผ่านของ ${emp.name || emp.email} ?\n\n`
+                        + `• รหัสจะถูกตั้งเป็น ${SYSTEM_RESET_PASSWORD}\n`
+                        + '• เครื่องที่พนักงานค้างล็อกอินไว้จะหลุดทั้งหมด\n'
+                        + '• พนักงานต้องตั้งรหัสใหม่ทันทีที่ล็อกอินครั้งถัดไป\n\n'
+                        + 'กดรีเซ็ตตอนที่พนักงานพร้อมล็อกอินทันที — ระหว่างนี้ใครที่รู้รหัสนี้ก็เข้าบัญชีเขาได้')) return;
+
+                    const btns = document.querySelectorAll(`button[onclick="empResetPassword('${uid}')"]`);
+                    btns.forEach(b => { b.disabled = true; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; });
+                    try {
+                        const { getFunctions, httpsCallable }
+                            = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js");
+                        const call = httpsCallable(getFunctions(fbApp, 'asia-southeast1'), 'resetEmployeePassword');
+                        const res = await call({ uid });
+                        empShowTempPassword(emp, res.data.tempPassword);
+                    } catch (e) {
+                        // ยังไม่ได้ deploy function จะได้แค่ 'not-found' ซึ่งอ่านไม่รู้เรื่อง
+                        showToast(e?.code === 'functions/not-found'
+                            ? '❌ ยังไม่ได้ deploy Cloud Function resetEmployeePassword — ดู DEPLOY.md'
+                            : '❌ ' + (e?.message || 'รีเซ็ตรหัสผ่านไม่สำเร็จ'), 'error');
+                    } finally {
+                        btns.forEach(b => { b.disabled = false; b.innerHTML = '<i class="fa-solid fa-key mr-1"></i> รีเซ็ตรหัส'; });
+                    }
+                };
+
+                // รหัสมาจาก function ไม่ใช่ hardcode ฝั่งนี้ — ถ้าวันไหนเปลี่ยนไปใช้รหัสสุ่ม
+                // กล่องนี้จะแสดงค่าที่ถูกตั้งจริงโดยไม่ต้องแก้
+                function empShowTempPassword(emp, pw) {
+                    const el = document.createElement('div');
+                    el.className = 'fixed inset-0 z-[9999] bg-zinc-900/90 flex items-center justify-center p-4';
+                    el.innerHTML = `
+                      <div class="bg-white rounded-2xl w-full max-w-md p-7 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-4">
+                          <div class="w-11 h-11 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-key text-yellow-600"></i>
+                          </div>
+                          <div>
+                            <h3 class="font-black text-zinc-800 text-lg">รีเซ็ตรหัสผ่านแล้ว</h3>
+                            <p class="text-xs text-zinc-400 font-medium">${emp.name || ''} · ${emp.email || ''}</p>
+                          </div>
+                        </div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">รหัสผ่านใหม่ (ชั่วคราว)</label>
+                        <div class="flex items-center gap-2">
+                          <code id="rtp-pw" class="flex-1 bg-zinc-900 text-yellow-400 font-black tracking-[0.2em] text-lg rounded-xl px-4 py-3 text-center select-all">${pw}</code>
+                          <button id="rtp-copy" class="bg-zinc-100 hover:bg-yellow-500 text-zinc-600 hover:text-zinc-900 px-4 py-3 rounded-xl transition-all" title="คัดลอก">
+                            <i class="fa-solid fa-copy"></i>
+                          </button>
+                        </div>
+                        <p class="text-xs text-zinc-500 font-medium bg-yellow-50 border border-yellow-200 rounded-xl p-3 mt-4 leading-relaxed">
+                          บอกพนักงานแล้วให้<b>ล็อกอินทันที</b> — ระบบจะบังคับตั้งรหัสใหม่ก่อนเข้าใช้งาน
+                          พอเขาตั้งเสร็จ รหัสนี้ก็ใช้ไม่ได้อีก
+                          <span class="block mt-1.5 text-zinc-400">รหัสนี้เป็นตัวเดียวกันทุกคน ถ้าปล่อยค้างไว้
+                          คนที่รู้รหัสอาจชิงล็อกอินเข้าบัญชีเขาก่อน</span>
+                        </p>
+                        <button id="rtp-close" class="w-full mt-5 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest">
+                          รับทราบ ปิดหน้าต่าง
+                        </button>
+                      </div>`;
+                    document.body.appendChild(el);
+                    el.querySelector('#rtp-copy').onclick = async () => {
+                        try { await navigator.clipboard.writeText(pw); showToast('คัดลอกรหัสแล้ว', 'success'); }
+                        catch { showToast('คัดลอกไม่ได้ — เลือกข้อความแล้วคัดลอกเอง', 'error'); }
+                    };
+                    el.querySelector('#rtp-close').onclick = () => el.remove();
+                }
+
                 window.empPrepareEdit = (uid) => {
                     const emp = allEmployees.find(e => e.uid === uid);
                     if (!emp) return;
@@ -3583,8 +3758,11 @@
                     document.getElementById('f-idcard').value = emp.idCard || '';
                     document.getElementById('f-phone').value = emp.phone || '';
                     document.getElementById('f-email').value = emp.email || '';
+                    // ช่องนี้ล็อกไว้เสมอ — อีเมลเปลี่ยนได้ทางปุ่มข้างๆ เท่านั้น
+                    // เพราะต้องเปลี่ยนที่ Firebase Auth ด้วย ไม่ใช่แค่ Firestore
                     document.getElementById('f-email').readOnly = true;
                     document.getElementById('f-email').classList.add('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('f-email-change').classList.remove('hidden');
                     document.getElementById('f-line-id').value = emp.lineId || '';
                     document.getElementById('f-address').value = emp.address || '';
                     document.getElementById('f-province').value = emp.province || '';
@@ -3752,6 +3930,11 @@
                         if (isEditing) {
                             const uid = document.getElementById('emp-uid').value;
                             payload.mustChangePassword = document.getElementById('f-must-change-pw').checked;
+                            // อีเมลมี "สองที่" (Firebase Auth + Firestore) แต่ฟอร์มนี้เขียนได้ที่เดียว
+                            // เคยแก้จากตรงนี้แล้ว Firestore เปลี่ยนส่วน Auth ไม่เปลี่ยน พนักงานล็อกอินด้วย
+                            // อีเมลใหม่ไม่ได้ทั้งที่หน้าจอโชว์อีเมลใหม่ → ตัดออกจาก payload ไปเลย
+                            // ทางเดียวที่เปลี่ยนได้คือปุ่มข้างช่องอีเมล (callable updateEmployeeEmail)
+                            delete payload.email;
                             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), payload);
                             await syncDirectory(payload, uid);
                             showToast('✅ บันทึกการแก้ไขเรียบร้อย', 'success');
@@ -3767,6 +3950,7 @@
                             document.getElementById('submit-btn-text').textContent = 'บันทึกและสร้างบัญชีใหม่';
                             const emailEl = document.getElementById('f-email');
                             emailEl.readOnly = false; emailEl.classList.remove('opacity-50', 'cursor-not-allowed');
+                            document.getElementById('f-email-change').classList.add('hidden');
                             empSwitchTab('manage');
                         } else {
                             const { firebaseConfig } = { firebaseConfig: { apiKey: 'AIzaSyADmZFoyvxq7vRD8SvV4PhnmNmnzwZQWVY' } };
@@ -3795,7 +3979,7 @@
 
                 return () => {
                     unsubscribe();
-                    ['empSwitchTab','empPrepareEdit','filterEmployees','empRenderOtherDeducts',
+                    ['empSwitchTab','empPrepareEdit','empResetPassword','empChangeEmail','filterEmployees','empRenderOtherDeducts',
                      'empReadOtherDeductRows','empReadOtherDeducts','empUpdateOtherDeductTotal',
                      'empAddOtherDeduct','empRemoveOtherDeduct','empSyncDirectory'].forEach(k => delete window[k]);
                 };

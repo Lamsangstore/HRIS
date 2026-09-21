@@ -54,10 +54,16 @@ npm run test:rules   # ต้องมี Java: brew install openjdk
 - หน้าเปิดได้แต่ข้อมูลว่าง → ฟังก์ชันที่ callback เรียก ประกาศทีหลังแบบ
   `window.fn = () => {}` (ไม่ hoist) เปลี่ยนเป็น `function fn() {}` แล้ว assign ทีหลัง
 
-## Cloud Functions (แจ้งเตือน LINE)
+## Cloud Functions
 
-การส่ง LINE ทุกทาง (แจ้งลา / อนุมัติ / ส่งสลิป) วิ่งผ่าน callable `sendLine`
-ใน `functions/index.js` — เบราว์เซอร์ไม่ได้ถือ token แล้ว
+`functions/index.js` มีสองตัว ทั้งคู่อยู่ region `asia-southeast1`:
+
+- `sendLine` — การส่ง LINE ทุกทาง (แจ้งลา / อนุมัติ / ส่งสลิป) วิ่งผ่านตัวนี้
+  เบราว์เซอร์ไม่ได้ถือ token แล้ว
+- `resetEmployeePassword` — แอดมินรีเซ็ตรหัสผ่านให้พนักงานที่ลืมรหัส (ตั้งเป็น `Lamsang2024`)
+  ต้องใช้ Admin SDK เพราะ client SDK ตั้งรหัสได้แต่ของตัวเอง (ไม่ต้องใช้ secret)
+- `updateEmployeeEmail` — แอดมินแก้อีเมลล็อกอินของพนักงาน เปลี่ยนทั้ง Firebase Auth
+  และ Firestore พร้อมกัน (ไม่ต้องใช้ secret)
 
 ต้องเปิด **Blaze plan** (ผูกบัตร) ถึงจะ deploy functions ได้ ฟรี 2 ล้าน invocation/เดือน
 ที่ปริมาณเท่านี้ค่าใช้จ่ายเกือบเป็นศูนย์ — ตั้ง Budget Alert ที่ ฿100 กันเหนียว
@@ -78,12 +84,32 @@ npx firebase deploy --only functions --project hris-21093
 deploy rules ท้ายสุด (rules ปิด `app_config` read ซึ่งเป็นทางเก่า ถ้า deploy ก่อน
 เบราว์เซอร์ที่ยังใช้โค้ดเก่าค้างอยู่จะส่ง LINE ไม่ได้ระหว่างรอ)
 
-ถ้าหน้าเว็บขึ้น "ยังไม่ได้ deploy Cloud Function sendLine" = function ไม่ได้อยู่ที่
+ถ้าหน้าเว็บขึ้น "ยังไม่ได้ deploy Cloud Function ..." = function ไม่ได้อยู่ที่
 region `asia-southeast1` หรือยังไม่ได้ deploy ดู log:
 
 ```bash
-npx firebase functions:log --only sendLine --project hris-21093
+npx firebase functions:log --only sendLine,resetEmployeePassword,updateEmployeeEmail --project hris-21093
 ```
+
+`resetEmployeePassword` ต้องให้ service account ของ function มีสิทธิ์แก้ผู้ใช้
+ค่าเริ่มต้นของ Firebase (`firebase-adminsdk`) มีอยู่แล้ว ถ้าเจอ error สิทธิ์
+ให้เช็คว่า service account มี role **Firebase Authentication Admin**
+
+### อีเมลพนักงานอยู่สองที่ — อย่าแก้ที่เดียว
+
+อีเมลถูกเก็บทั้งใน **Firebase Auth** (ตัวที่ใช้ล็อกอินจริง) และใน **Firestore**
+(`users/{uid}.email` ใช้แสดงผล) เคยมีเคสที่แก้ Firestore อย่างเดียวแล้ว Auth ไม่ตาม
+→ หน้าจอโชว์อีเมลใหม่ แต่พนักงานล็อกอินด้วยอีเมลใหม่ไม่ได้ ต้องใช้อันเก่าที่ไม่มีใครจำ
+
+ตอนนี้ฟอร์มแก้ไขพนักงาน **ไม่เขียน `email` ลง Firestore แล้ว** (`delete payload.email`
+ใน `app.html`) ทางเดียวที่เปลี่ยนได้คือปุ่มดินสอข้างช่องอีเมล → callable
+`updateEmployeeEmail` ซึ่งเขียน Auth ก่อนแล้วค่อยเขียน Firestore
+
+**ถ้าเจอเคสที่หลุดสองทางไปแล้ว:** เปิดพนักงานคนนั้น → กดปุ่มดินสอ →
+พิมพ์อีเมลที่ถูกต้องลงไป (พิมพ์ซ้ำตัวที่แสดงอยู่ก็ได้) → บันทึก
+ระบบจะบอกด้วยว่าก่อนหน้านี้บัญชีล็อกอินใช้อีเมลอะไรอยู่
+
+**ห้ามแก้ `users/{uid}.email` จาก Firestore Console ตรงๆ** — จะได้ปัญหาเดิมอีก
 
 ## Firestore
 
