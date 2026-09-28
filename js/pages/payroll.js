@@ -7,8 +7,8 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260914c';
-import { workDaySetOn } from '../lib/work-days.js?v=20260914c';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928a';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928a';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -247,7 +247,7 @@ export default {
 <!-- Modal: Edit Record -->
 <div id="pr-modal-rec" class="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseRec()"></div>
-  <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[96vh] flex flex-col overflow-hidden">
+  <div class="pr-rec-box relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[96vh] flex flex-col overflow-hidden">
     <div class="bg-zinc-900 px-4 sm:px-7 py-4 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-3 min-w-0">
         <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700 shrink-0" onerror="handleImgError(this)">
@@ -258,7 +258,7 @@ export default {
       </div>
       <button onclick="prCloseRec()" class="text-zinc-400 hover:text-white shrink-0 ml-2"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
-    <div class="overflow-y-auto flex-1 p-4 sm:p-7 space-y-5" id="pr-rec-body"></div>
+    <div class="overflow-y-auto flex-1 min-h-0 p-4 sm:p-7 space-y-5" id="pr-rec-body"></div>
     <div class="shrink-0 px-4 sm:px-7 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
       <div class="min-w-0">
         <p class="text-[10px] text-zinc-400 font-bold uppercase">รวมรับ (สุทธิ)</p>
@@ -287,6 +287,9 @@ export default {
         const gN   = id => parseFloat(document.getElementById(id)?.value||0)||0;
         const gV   = id => document.getElementById(id)?.value?.trim()||'';
         const sEl  = id => document.getElementById(id);
+        // confirm() ของ browser ถูกบล็อกใน LINE in-app browser (คืน false ทันที) ปุ่มจึงกดแล้วเงียบ
+        // ใช้ dialog ของแอปแทน — lsgConfirm อยู่ใน app.html
+        const ask = (msg, opts) => window.lsgConfirm ? window.lsgConfirm(msg, opts) : Promise.resolve(confirm(msg));
 
         const empSnap = await getDocs(collection(db,'artifacts',APP_ID,'public','data','users'));
         employees = empSnap.docs.map(d=>d.data()).filter(e=>e.uid);
@@ -336,6 +339,8 @@ export default {
             const period=periods.find(p=>p.id===pid); if(!period) return;
             const panel=sEl('pr-panel');
             if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>`;
+            // จอแคบ (< xl) รายละเอียดงวดอยู่ใต้รายการงวด — เลื่อนลงให้เห็น ไม่งั้นกดแล้วเหมือนไม่มีอะไรเกิดขึ้น
+            if(panel && window.innerWidth<1280) panel.scrollIntoView({behavior:'smooth',block:'start'});
             unsubRec=onSnapshot(
                 query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
                       where('periodId','==',pid)),
@@ -397,22 +402,22 @@ export default {
               </div>
               <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
                 <div class="overflow-x-auto">
-                  <table class="w-full text-sm">
+                  <table class="w-full text-sm fit-mobile">
                     <thead><tr class="bg-zinc-50 border-b border-zinc-200">
                       <th class="px-4 py-3 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</th>
-                      <th class="px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</th>
-                      <th class="px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e2b\u0e31\u0e01</th>
+                      <th class="hidden sm:table-cell px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</th>
+                      <th class="hidden sm:table-cell px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e2b\u0e31\u0e01</th>
                       <th class="px-3 py-3 text-right text-[10px] font-black text-green-600 uppercase tracking-widest">\u0e2a\u0e38\u0e17\u0e18\u0e34</th>
                       <th class="px-3 py-3 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e41\u0e01\u0e49\u0e44\u0e02</th>
                     </tr></thead>
                     <tbody>${records.length ? records.map(r=>{
                         const av=r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
-                        return `<tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-all">
-                          <td class="px-4 py-3"><div class="flex items-center gap-3"><img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-xl object-cover border border-zinc-200 shrink-0"><div class="min-w-0"><p class="font-black text-zinc-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
-                          <td class="px-3 py-3 text-right num text-sm font-bold text-zinc-700">\u0e3f${fmt(r.totalEarning)}</td>
-                          <td class="px-3 py-3 text-right num text-sm font-bold text-red-500">\u0e3f${fmt(r.totalDeduct)}</td>
-                          <td class="px-3 py-3 text-right num font-black text-green-600">\u0e3f${fmt(r.netPay)}</td>
-                          <td class="px-3 py-3 text-center"><button onclick="prOpenRec('${r.id}')" class="text-xs font-black bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 text-zinc-600 px-3 py-1.5 rounded-lg transition-all"><i class="fa-solid fa-pen-to-square mr-1"></i>${isDraft?'\u0e41\u0e01\u0e49\u0e44\u0e02':'\u0e14\u0e39'}</button></td>
+                        return `<tr onclick="prOpenRec('${r.id}')" class="border-b border-zinc-100 hover:bg-zinc-50 active:bg-yellow-50 transition-all cursor-pointer">
+                          <td class="px-3 sm:px-4 py-3"><div class="flex items-center gap-2 sm:gap-3 max-w-[9rem] sm:max-w-none"><img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-xl object-cover border border-zinc-200 shrink-0"><div class="min-w-0"><p class="font-black text-zinc-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
+                          <td class="hidden sm:table-cell px-3 py-3 text-right num text-sm font-bold text-zinc-700">\u0e3f${fmt(r.totalEarning)}</td>
+                          <td class="hidden sm:table-cell px-3 py-3 text-right num text-sm font-bold text-red-500">\u0e3f${fmt(r.totalDeduct)}</td>
+                          <td class="px-2 sm:px-3 py-3 text-right num font-black text-green-600 whitespace-nowrap">\u0e3f${fmt(r.netPay)}</td>
+                          <td class="px-2 sm:px-3 py-3 text-center"><button onclick="event.stopPropagation();prOpenRec('${r.id}')" class="whitespace-nowrap text-xs font-black bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 text-zinc-600 px-3 py-1.5 rounded-lg transition-all"><i class="fa-solid ${isDraft?'fa-pen-to-square':'fa-eye'} sm:mr-1"></i><span class="hidden sm:inline">${isDraft?'\u0e41\u0e01\u0e49\u0e44\u0e02':'\u0e14\u0e39'}</span></button></td>
                         </tr>`;
                     }).join('') : `<tr><td colspan="5" class="text-center py-12 text-zinc-300"><i class="fa-solid fa-circle-exclamation text-3xl mb-3 block"></i><p class="font-bold text-sm">\u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</p></td></tr>`}
                     </tbody>
@@ -469,11 +474,12 @@ export default {
 
         window.prGenAll = async pid => {
             const active=employees.filter(e=>e.status!=='resigned');
-            if(!confirm(
+            if(!await ask(
                 `คำนวณเงินเดือนใหม่ให้ ${active.length} คน?\n\n`
               + `คำนวณใหม่จากข้อมูลล่าสุด: เงินเดือน ชั่วโมงลา OT คอมมิชชั่น ประกันสังคม ภาษี และหักอื่นๆ ประจำ\n`
               + `เก็บค่าที่พิมพ์เองไว้ให้: หักลา รายได้อื่นๆ และชั่วโมงสาย\n\n`
-              + `หมายเหตุ: รายการหักอื่นๆ ที่เพิ่มไว้เฉพาะงวดนี้ จะถูกแทนที่ด้วยรายการประจำจากข้อมูลพนักงาน`
+              + `หมายเหตุ: รายการหักอื่นๆ ที่เพิ่มไว้เฉพาะงวดนี้ จะถูกแทนที่ด้วยรายการประจำจากข้อมูลพนักงาน`,
+              { okText:'คำนวณ' }
             ))return;
             const period=periods.find(p=>p.id===pid); if(!period)return;
             const btn=document.querySelector(`[onclick="prGenAll('${pid}')"]`);
@@ -783,14 +789,14 @@ export default {
         };
 
         window.prFinal = async pid => {
-            if(!confirm('\u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49? \u0e08\u0e30\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e41\u0e01\u0e49\u0e44\u0e02\u0e44\u0e14\u0e49\u0e2d\u0e35\u0e01'))return;
+            if(!await ask('\u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49? \u0e08\u0e30\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e41\u0e01\u0e49\u0e44\u0e02\u0e44\u0e14\u0e49\u0e2d\u0e35\u0e01'))return;
             try{await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
                 {status:'final',finalizedAt:new Date().toISOString(),finalizedBy:profile.name});
                 showToast('\u2705 \u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22','success');
             }catch(err){showToast('\u274c '+err.message,'error');}
         };
         window.prPaid = async pid => {
-            if(!confirm('\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49?'))return;
+            if(!await ask('\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49?'))return;
             try{await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
                 {status:'paid',paidAt:new Date().toISOString(),paidBy:profile.name});
                 showToast('\u2705 \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22\u0e41\u0e25\u0e49\u0e27','success');
@@ -802,7 +808,7 @@ export default {
             const msg = status === 'paid'
                 ? '\u26a0\ufe0f \u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e08\u0e48\u0e32\u0e22\u0e40\u0e07\u0e34\u0e19\u0e44\u0e1b\u0e41\u0e25\u0e49\u0e27\n\n\u0e01\u0e32\u0e23\u0e40\u0e1b\u0e34\u0e14\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49\u0e08\u0e30\u0e17\u0e33\u0e43\u0e2b\u0e49\u0e15\u0e31\u0e27\u0e40\u0e25\u0e02\u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a\u0e44\u0e21\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e1a\u0e17\u0e35\u0e48\u0e42\u0e2d\u0e19\u0e08\u0e23\u0e34\u0e07\n\u0e17\u0e33\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e01\u0e23\u0e13\u0e35\u0e08\u0e33\u0e40\u0e1b\u0e47\u0e19\u0e08\u0e23\u0e34\u0e07\u0e46 \u2014 \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e40\u0e1b\u0e34\u0e14\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49?'
                 : '\u0e40\u0e1b\u0e34\u0e14\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e01\u0e25\u0e31\u0e1a\u0e21\u0e32\u0e41\u0e01\u0e49\u0e44\u0e02? \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e08\u0e30\u0e01\u0e25\u0e31\u0e1a\u0e40\u0e1b\u0e47\u0e19 "\u0e23\u0e48\u0e32\u0e07"';
-            if(!confirm(msg)) return;
+            if(!await ask(msg, { variant: status==='paid'?'warn':'ask' })) return;
             try{
                 await updateDoc(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid),
                     {status:'draft', reopenedAt:new Date().toISOString(), reopenedBy:profile.name});
@@ -810,7 +816,7 @@ export default {
             }catch(err){showToast('\u274c '+err.message,'error');}
         };
         window.prDel = async pid => {
-            if(!confirm('\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e41\u0e25\u0e30\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14?'))return;
+            if(!await ask('\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e41\u0e25\u0e30\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14?',{danger:true,okText:'ลบ'}))return;
             try{
                 const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
                 const b=writeBatch(db); ex.docs.forEach(d=>b.delete(d.ref));

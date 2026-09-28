@@ -210,7 +210,7 @@ export default {
 
         window.holDelete = async (id) => {
             const h = allHolidays.find(x=>x.id===id);
-            if (!confirm(`ลบวันหยุด "${h?.name}" ?`)) return;
+            if (!await lsgConfirm(`ลบวันหยุด "${h?.name}" ?`)) return;
             try {
                 await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','public_holidays',id));
                 showToast('ลบแล้ว','info');
@@ -240,7 +240,7 @@ export default {
                 {date:'2025-12-10',name:'วันรัฐธรรมนูญ',nameEn:'Constitution Day',type:'national'},
                 {date:'2025-12-31',name:'วันสิ้นปี',nameEn:'New Year\'s Eve',type:'national'},
             ];
-            if (!confirm(`เพิ่มวันหยุดนักขัตฤกษ์ปี 2568 จำนวน ${preset.length} วัน?`)) return;
+            if (!await lsgConfirm(`เพิ่มวันหยุดนักขัตฤกษ์ปี 2568 จำนวน ${preset.length} วัน?`)) return;
             try {
                 const batch = writeBatch(db);
                 preset.forEach(h => {

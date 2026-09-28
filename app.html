@@ -60,6 +60,16 @@
         @media (min-width: 768px) {
             input, select, textarea { font-size: inherit; }
         }
+        /* ช่องที่มี class ตั้งขนาดตัวอักษรเอง (text-xs, .pr-input ฯลฯ) ชนะกฎข้างบน → iOS ซูมทุกครั้งที่แตะ
+           แล้วหน้าค้างที่ซูม ปุ่มบันทึกหลุดขอบ จึงบังคับ 16px บนจอมือถือ */
+        @media (max-width: 767px) {
+            input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+            select, textarea { font-size: 16px !important; }
+        }
+        /* จอสัมผัสไม่มี hover — ปุ่มที่ซ่อนไว้จนกว่าจะ hover (แก้ไข/ลบ) ต้องแสดงตลอด */
+        @media (hover: none) {
+            .group .group-hover\:opacity-100 { opacity: 1 !important; }
+        }
 
         /* Remove blue tap highlight, make taps feel instant (no 300ms delay) */
         * {
@@ -363,6 +373,8 @@
             /* ตาราง scroll แนวนอนได้ */
             .overflow-x-auto { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
             table { min-width: max-content; }
+            /* ตารางที่ซ่อนคอลัมน์รองบนมือถือแล้ว ให้พอดีจอ ไม่ต้องเลื่อนหาปุ่มจัดการ */
+            table.fit-mobile { min-width: 0; }
 
             /* card padding ลดบน mobile */
             .rounded-\[2rem\] { border-radius: 1.25rem !important; }
@@ -395,8 +407,19 @@
             .fixed.inset-0 > div > .bg-zinc-900 {
                 margin: 0.5rem;
                 max-height: calc(100vh - 1rem);
+                max-height: calc(100dvh - 1rem);
                 border-radius: 1.25rem !important;
                 overflow-y: auto;
+            }
+            /* modal ที่แบ่ง header / เนื้อหา / footer ด้วย flex-col ให้เลื่อนแค่ส่วนเนื้อหา
+               ไม่งั้นทั้งกล่องกับเนื้อหาเลื่อนซ้อนกัน และปุ่มบันทึกใน footer หลุดใต้จอ (iOS 100vh สูงกว่าจอจริง) */
+            .fixed.inset-0 > .bg-white.flex-col,
+            .fixed.inset-0 > div > .bg-white.flex-col {
+                overflow: hidden;
+            }
+            .fixed.inset-0 > .bg-white.flex-col > .overflow-y-auto,
+            .fixed.inset-0 > div > .bg-white.flex-col > .overflow-y-auto {
+                min-height: 0;
             }
 
             /* modal bottom-sheet style */
@@ -436,20 +459,13 @@
             .space-y-6 > * + * { margin-top: 0.875rem !important; }
             .space-y-8 > * + * { margin-top: 1rem !important; }
 
-            /* pr-modal */
-            #pr-modal-rec .overflow-y-auto,
-            #pr-modal-create .overflow-y-auto {
-                max-height: calc(100vh - 6rem);
-            }
-
-            /* announcement editor บน mobile */
-            #ann-editor-panel { display: none; }
+            /* announcement editor บน mobile — ซ่อนเฉพาะกล่องว่าง "เลือกประกาศ" แสดงเมื่อกดเลือก/สร้างใหม่ */
+            #ann-editor-panel:not(.ann-editing) { display: none; }
         }
 
         /* ========= PAGE TRANSITIONS ========= */
-        #page-content {
-            will-change: opacity;
-        }
+        /* ห้ามใส่ will-change/opacity ค้างไว้ที่ #page-content — มันสร้าง stacking context
+           ทำให้ modal ของทุกหน้า (z-[200]) อยู่ใต้ bottom nav มือถือ (z-50) และปุ่มบันทึกถูกบัง */
         @keyframes pageFadeIn {
             from { opacity: 0; }
             to   { opacity: 1; }
@@ -792,17 +808,17 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260914c';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260914c';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260914c';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260914c';
-        import { distanceMeters } from './js/lib/geo.js?v=20260914c';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928a';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928a';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928a';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928a';
+        import { distanceMeters } from './js/lib/geo.js?v=20260928a';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260914c';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20260914c';
+        } from './js/lib/leave-hours.js?v=20260928a';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20260928a';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1040,6 +1056,11 @@
                 contentEl.innerHTML = page.html;
                 contentEl.offsetHeight; // force reflow
                 contentEl.style.animation = 'pageFadeIn 0.2s ease forwards';
+                // ล้าง animation/opacity เมื่อจบ ไม่งั้น fill-mode ค้าง = stacking context ค้าง (ดูหมายเหตุที่ CSS)
+                contentEl.addEventListener('animationend', () => {
+                    contentEl.style.animation = '';
+                    contentEl.style.opacity = '';
+                }, { once: true });
 
                 document.getElementById('topbar-title').textContent = page.title || 'Lamsang Group';
                 document.title = `${page.title || 'หน้าหลัก'} - Lamsang Group`;
@@ -1073,7 +1094,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260914c';
+        const ASSET_V = '20260928a';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -1314,8 +1335,8 @@
             _forgotInterval = setInterval(check, 10 * 60 * 1000);
         }
 
-        window.handleLogout = () => {
-            if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+        window.handleLogout = async () => {
+            if (await lsgConfirm('คุณต้องการออกจากระบบใช่หรือไม่?', { okText: 'ออกจากระบบ', danger: true })) {
                 if (typeof pageCleanup === 'function') pageCleanup();
                 stopNotifications();
                 signOut(auth).then(() => window.location.href = 'index.html');
@@ -2974,11 +2995,12 @@
                         if (outsideOffice) {
                             const distTxt = distM < 1000 ? `${Math.round(distM)} ม.` : `${(distM/1000).toFixed(2)} กม.`;
                             const actionTxt = type === 'clock_in' ? 'เข้างาน' : 'ออกงาน';
-                            const ok = confirm(
+                            const ok = await lsgConfirm(
                                 `⚠ คุณอยู่นอกพื้นที่ ${myOffice.name} (ห่าง ${distTxt})\n` +
                                 `รัศมีที่อนุญาต: ${myOffice.radius} เมตร\n\n` +
                                 `ต้องการลงเวลา${actionTxt}ต่อหรือไม่?\n` +
-                                `(ระบบจะแจ้งหัวหน้าและบันทึกตำแหน่งของคุณ)`
+                                `(ระบบจะแจ้งหัวหน้าและบันทึกตำแหน่งของคุณ)`,
+                                { variant: 'warn', okText: `ลงเวลา${actionTxt}` }
                             );
                             if (!ok) {
                                 if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
@@ -3450,13 +3472,13 @@
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
+                                <table class="w-full text-sm fit-mobile">
                                     <thead><tr class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest font-bold">
-                                        <th class="px-6 py-4 text-left">พนักงาน</th>
-                                        <th class="px-4 py-4 text-left">รหัส / ตำแหน่ง</th>
-                                        <th class="px-4 py-4 text-left">สาขา</th>
-                                        <th class="px-4 py-4 text-left">สถานะ</th>
-                                        <th class="px-6 py-4 text-center">จัดการ</th>
+                                        <th class="px-3 sm:px-6 py-4 text-left">พนักงาน</th>
+                                        <th class="hidden sm:table-cell px-4 py-4 text-left">รหัส / ตำแหน่ง</th>
+                                        <th class="hidden sm:table-cell px-4 py-4 text-left">สาขา</th>
+                                        <th class="hidden sm:table-cell px-4 py-4 text-left">สถานะ</th>
+                                        <th class="px-3 sm:px-6 py-4 text-center">จัดการ</th>
                                     </tr></thead>
                                     <tbody id="employee-list"><tr><td colspan="5" class="text-center py-10 text-zinc-400">กำลังโหลดข้อมูล...</td></tr></tbody>
                                 </table>
@@ -3540,14 +3562,14 @@
                         if (emp.status === 'resigned') badge = '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold">Resigned</span>';
                         else if (emp.status === 'probation') badge = '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold">Probation</span>';
                         html += `<tr class="hover:bg-zinc-50 transition-all border-b border-zinc-100">
-                            <td class="px-6 py-4"><div class="flex items-center"><img src="${avatar}" onerror="handleImgError(this)" data-name="${emp.name}" class="w-10 h-10 rounded-full border border-zinc-200 mr-3 object-cover"><div><p class="font-bold text-zinc-800 text-sm">${emp.name}</p><p class="text-[10px] text-zinc-400 font-bold">${emp.email}</p></div></div></td>
-                            <td class="px-4 py-4"><p class="text-xs font-black text-zinc-600">${emp.employeeCode||'-'}</p><p class="text-[10px] text-zinc-400">${emp.position||emp.role}</p></td>
-                            <td class="px-4 py-4 text-xs font-medium text-zinc-600">${emp.branch||'-'}</td>
-                            <td class="px-4 py-4">${badge}</td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center justify-center gap-2">
-                                    <button onclick="empPrepareEdit('${emp.uid}')" class="text-zinc-500 bg-zinc-100 hover:bg-yellow-500 hover:text-zinc-900 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm"><i class="fa-solid fa-pen mr-1"></i> แก้ไข</button>
-                                    ${emp.uid === user.uid ? '' : `<button onclick="empResetPassword('${emp.uid}')" class="text-zinc-500 bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm" title="ตั้งรหัสชั่วคราวให้พนักงานที่ลืมรหัสผ่าน"><i class="fa-solid fa-key mr-1"></i> รีเซ็ตรหัส</button>`}
+                            <td class="px-3 sm:px-6 py-4"><div class="flex items-center"><img src="${avatar}" onerror="handleImgError(this)" data-name="${emp.name}" class="w-10 h-10 rounded-full border border-zinc-200 mr-3 object-cover shrink-0"><div class="min-w-0"><p class="font-bold text-zinc-800 text-sm">${emp.name}</p><p class="text-[10px] text-zinc-400 font-bold break-all">${emp.email}</p><div class="sm:hidden flex items-center gap-1.5 mt-1 flex-wrap"><span class="text-[10px] font-black text-zinc-500">${emp.employeeCode||'-'}</span>${badge}</div></div></div></td>
+                            <td class="hidden sm:table-cell px-4 py-4"><p class="text-xs font-black text-zinc-600">${emp.employeeCode||'-'}</p><p class="text-[10px] text-zinc-400">${emp.position||emp.role}</p></td>
+                            <td class="hidden sm:table-cell px-4 py-4 text-xs font-medium text-zinc-600">${emp.branch||'-'}</td>
+                            <td class="hidden sm:table-cell px-4 py-4">${badge}</td>
+                            <td class="px-3 sm:px-6 py-4">
+                                <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
+                                    <button onclick="empPrepareEdit('${emp.uid}')" class="whitespace-nowrap text-zinc-500 bg-zinc-100 hover:bg-yellow-500 hover:text-zinc-900 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm"><i class="fa-solid fa-pen sm:mr-1"></i><span class="hidden sm:inline"> แก้ไข</span></button>
+                                    ${emp.uid === user.uid ? '' : `<button onclick="empResetPassword('${emp.uid}')" class="whitespace-nowrap text-zinc-500 bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm" title="ตั้งรหัสชั่วคราวให้พนักงานที่ลืมรหัสผ่าน"><i class="fa-solid fa-key sm:mr-1"></i><span class="hidden sm:inline"> รีเซ็ตรหัส</span></button>`}
                                 </div>
                             </td>
                         </tr>`;
@@ -3670,7 +3692,7 @@
                 window.empResetPassword = async (uid) => {
                     const emp = allEmployees.find(e => e.uid === uid);
                     if (!emp) return;
-                    if (!confirm(`รีเซ็ตรหัสผ่านของ ${emp.name || emp.email} ?\n\n`
+                    if (!await lsgConfirm(`รีเซ็ตรหัสผ่านของ ${emp.name || emp.email} ?\n\n`
                         + `• รหัสจะถูกตั้งเป็น ${SYSTEM_RESET_PASSWORD}\n`
                         + '• เครื่องที่พนักงานค้างล็อกอินไว้จะหลุดทั้งหมด\n'
                         + '• พนักงานต้องตั้งรหัสใหม่ทันทีที่ล็อกอินครั้งถัดไป\n\n'
@@ -4645,7 +4667,7 @@
                 showToast('วันลาถึงแล้ว ไม่สามารถยกเลิกเองได้ กรุณาติดต่อหัวหน้า', 'error');
                 return;
             }
-            if (!confirm('ต้องการยกเลิกคำขอลานี้?')) return;
+            if (!await lsgConfirm('ต้องการยกเลิกคำขอลานี้?')) return;
             try {
                 await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: 'cancelled', cancelledAt: new Date().toISOString()
@@ -4963,7 +4985,7 @@ window.isManagerialEmp = isManagerialEmp;
 <!-- ── Explain Popup (slide-up sheet) ── -->
 <div id="ot-explain-popup" class="fixed inset-0 z-[400] flex items-end justify-center hidden" style="transition:opacity .2s">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="otCloseExplain()"></div>
-  <div class="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl p-6 pb-8 space-y-4" style="max-height:90vh;overflow-y:auto">
+  <div class="relative bg-white w-full max-w-lg rounded-t-3xl shadow-2xl p-6 pb-8 space-y-4" style="max-height:90vh;max-height:90dvh;overflow-y:auto;padding-bottom:calc(2rem + env(safe-area-inset-bottom, 0px))">
     <div class="w-10 h-1 bg-zinc-200 rounded-full mx-auto mb-4"></div>
     <p class="font-black text-zinc-800 text-base" id="ot-exp-date-label">วันที่...</p>
     <div class="grid grid-cols-2 gap-3">
@@ -6023,7 +6045,7 @@ window.isManagerialEmp = isManagerialEmp;
                     window.otaDecide = async (reqId, empUid, decision) => {
                         const mgrNote = document.getElementById('ota-note-'+reqId)?.value.trim()||'';
                         if (decision==='rejected' && !mgrNote) { showToast('⚠️ กรุณาระบุเหตุผลที่ไม่อนุมัติ','error'); return; }
-                        if (!confirm(decision==='approved' ? 'ยืนยันการอนุมัติ OT?' : 'ยืนยันการไม่อนุมัติ?')) return;
+                        if (!await lsgConfirm(decision==='approved' ? 'ยืนยันการอนุมัติ OT?' : 'ยืนยันการไม่อนุมัติ?', { danger: decision!=='approved' })) return;
                         try {
                             await updateDoc(doc(db,'artifacts',APP_ID,'public','data','ot_requests',reqId), {
                                 status:decision, managerNote:mgrNote,
@@ -6614,6 +6636,9 @@ window.isManagerialEmp = isManagerialEmp;
                 function renderEditor(ann) {
                     const panel = document.getElementById('ann-editor-panel'); if (!panel) return;
                     const isNew = !ann;
+                    panel.classList.add('ann-editing');
+                    // จอแคบ editor อยู่ใต้รายการ — เลื่อนลงให้เห็น
+                    if (window.innerWidth < 1280) requestAnimationFrame(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }));
                     panel.innerHTML = `
                     <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
                       <div class="${isNew?'bg-zinc-900':'bg-zinc-800'} px-7 py-5 flex items-center justify-between">
@@ -6927,13 +6952,14 @@ window.isManagerialEmp = isManagerialEmp;
                 // ── Delete ────────────────────────────────────────────────────
                 window.annDelete = async (id) => {
                     const a = allAnns.find(x=>x.id===id);
-                    if (!confirm(`ลบประกาศ "${a?.title}" ?`)) return;
+                    if (!await lsgConfirm(`ลบประกาศ "${a?.title}" ?`)) return;
                     try {
                         await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','announcements',id));
                         showToast('ลบแล้ว','info');
                         activeId=null;
                         renderList();
                         const panel=document.getElementById('ann-editor-panel');
+                        panel?.classList.remove('ann-editing');
                         if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-64 text-zinc-300"><i class="fa-solid fa-pen-to-square text-5xl mb-3 opacity-20"></i><p class="font-bold text-sm">เลือกประกาศหรือสร้างใหม่</p></div>`;
                     } catch(e) { showToast('❌ '+e.message,'error'); }
                 };

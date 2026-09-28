@@ -6,10 +6,10 @@
 // วันหยุด/ประเภทลา/ระยะทาง import จาก module
 // ส่วน officeFor กับ loadBranchLocations ผูกกับแคชพิกัดสาขาใน app.html จึงอยู่บน window
 
-import { isPublicHoliday } from '../lib/holidays.js?v=20260914c';
-import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260914c';
-import { distanceMeters } from '../lib/geo.js?v=20260914c';
-import { workDaySetOn } from '../lib/work-days.js?v=20260914c';
+import { isPublicHoliday } from '../lib/holidays.js?v=20260928a';
+import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260928a';
+import { distanceMeters } from '../lib/geo.js?v=20260928a';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928a';
 
 export default {
     title: 'ประวัติเวลา (ทีม)',
@@ -649,7 +649,7 @@ export default {
             const url  = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; a.download = `attendance_${document.getElementById('sa-from').value}_${document.getElementById('sa-to').value}.csv`;
-            a.click(); URL.revokeObjectURL(url);
+            a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); // iOS Safari ยังไม่ทันโหลดถ้า revoke ทันที
         };
 
         function saExportSummary() {
@@ -664,7 +664,7 @@ export default {
             const url  = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; a.download = `attendance_summary_${document.getElementById('sa-from').value}_${document.getElementById('sa-to').value}.csv`;
-            a.click(); URL.revokeObjectURL(url);
+            a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); // iOS Safari ยังไม่ทันโหลดถ้า revoke ทันที
         }
 
         // โหลดอัตโนมัติครั้งแรก

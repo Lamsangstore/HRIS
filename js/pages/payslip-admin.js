@@ -249,7 +249,7 @@ export default {
         };
 
         window.psaDelete = async (id, name) => {
-            if (!confirm(`ลบ Slip Link ของ "${name}" ?`)) return;
+            if (!await lsgConfirm(`ลบ Slip Link ของ "${name}" ?`)) return;
             try {
                 await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','payslips',id));
                 showToast('ลบแล้ว', 'info');
