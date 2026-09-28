@@ -7,8 +7,8 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928d';
-import { workDaySetOn } from '../lib/work-days.js?v=20260928d';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928f';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928f';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
