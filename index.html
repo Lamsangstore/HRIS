@@ -11,19 +11,24 @@
     <style>
         body { font-family: 'Prompt', sans-serif; }
         /* Mobile fixes — iOS Safari / LINE in-app browser */
-        html, body { height: 100%; }
-        @supports (height: 100dvh) { .h-screen { height: 100dvh !important; } }
+        html, body { min-height: 100%; }
+        @supports (min-height: 100dvh) { .min-h-screen { min-height: 100dvh !important; } }
         * { -webkit-tap-highlight-color: transparent; }
         input, button { font-size: 16px; touch-action: manipulation; }
         body { overscroll-behavior-y: contain; }
     </style>
 </head>
-<body class="bg-zinc-900 flex flex-col items-center justify-center h-screen overflow-hidden selection:bg-yellow-500 selection:text-zinc-900">
+<!-- เดิม h-screen overflow-hidden: จอเตี้ย (แนวนอน / มือถือเล็ก / มีแถบ LINE) เลื่อนหาปุ่มเข้าสู่ระบบไม่ได้
+     ตอนนี้สูงอย่างน้อยเต็มจอ แต่เลื่อนลงได้ถ้าการ์ดสูงกว่าจอ -->
+<body class="bg-zinc-900 flex flex-col items-center justify-center min-h-screen px-4 py-8 selection:bg-yellow-500 selection:text-zinc-900">
 
-    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+    <!-- แสงพื้นหลัง: ครอบด้วย fixed + overflow-hidden ไม่งั้นวงกลม w-96 ยื่นเกินจอมือถือ ทำให้หน้ากว้างกว่าจอ -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+    </div>
 
-    <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative z-10 border-t-4 border-yellow-500">
+    <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md relative z-10 border-t-4 border-yellow-500">
         <div class="text-center mb-8">
             <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Lamsang Logo" class="h-28 w-auto mx-auto mb-4 object-contain drop-shadow-sm">
             <h2 class="text-3xl font-bold text-zinc-800 tracking-wide">Lamsang Group</h2>
