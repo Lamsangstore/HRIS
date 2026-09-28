@@ -7,8 +7,10 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928f';
-import { workDaySetOn } from '../lib/work-days.js?v=20260928f';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928g';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928g';
+import { calcMonthlyWHT, recordTaxLines, buildYTD, taxMonthsFor, whtSummary, ALLOWANCE_FIELDS }
+    from '../lib/wht.js?v=20260928g';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -461,26 +463,54 @@ export default {
             while(d<=end){const ds=dateToTHStr(d);if(workDaySetOn(sc,ds).has(d.getDay())&&!hd.has(ds))n++;d.setDate(d.getDate()+1);}
             return n;
         }
+        // ภาษีแบบง่าย (ไม่ต้องใช้ยอดสะสม) — "ตามขั้นบันได" (Yes) ใช้ calcMonthlyWHT แบบ PEAK แทน
         function calcTax(sal,mode){
-            if(!mode||mode==='No')return 0;
             if(mode==='3')return Math.round(sal*0.03);
-            const an=sal*12; let t=0,rem=an;
-            for(const [c,r] of [[150000,0],[150000,.05],[200000,.1],[250000,.15],[250000,.2],[500000,.25],[500000,.3],[Infinity,.35]]){
-                const tx=Math.min(rem,c); t+=tx*r; rem-=tx; if(rem<=0)break;
-            }
-            return Math.round(t/12);
+            return 0;
+        }
+
+        // ── ภาษีแบบ PEAK: ยอดสะสมจากงวดที่สรุปแล้วก่อนงวดนี้ในปีภาษีเดียวกัน
+        // ปีภาษี = ปีปฏิทิน (period.year) ร่างที่ยังไม่สรุปไม่นับ เหมือน PEAK นับเฉพาะรอบที่อนุมัติแล้ว
+        function priorPeriods(period, statuses){
+            return periods.filter(p=>p.id!==period.id && Number(p.year)===Number(period.year)
+                && statuses.includes(p.status) && (p.startDate||'') < (period.startDate||''));
+        }
+
+        // วิธีคิดภาษีแบบเดียวกับป๊อปอัปของ PEAK — ไว้กระทบยอดกับ PEAK ได้ง่าย
+        function prWhtDetailHtml(w){
+            const Y=w.ytd, L=w.lines, row=(k,v,cls='')=>`<div class="flex justify-between gap-3 py-1 ${cls}"><span>${k}</span><span class="num font-bold whitespace-nowrap">${v}</span></div>`;
+            const allow=ALLOWANCE_FIELDS.filter(([k])=>w.allowances[k]>0)
+                .map(([k,label])=>row(`&nbsp;&nbsp;· ${label}${k==='socialSecurity'&&w.ssoAuto?' (อัตโนมัติ)':''}`,fmt(w.allowances[k]),'text-zinc-400')).join('');
+            const steps=w.breakdown.filter(b=>b.amount>0)
+                .map(b=>row(`&nbsp;&nbsp;· ${fmt(b.from)} – ${b.to===Infinity?'ขึ้นไป':fmt(b.to)} (${b.rate?b.rate*100+'%':'ยกเว้น'})`,fmt(b.tax),'text-zinc-400')).join('');
+            return `<div class="text-xs text-zinc-600 divide-y divide-zinc-100">
+                ${row('เงินได้ 40(1)',fmt(w.income401))}
+                <p class="text-[10px] text-zinc-400 pb-1 num">${fmt(Y.income401)} + (${fmt(L.salary)} × ${w.n}) + ${fmt(L.add401)} − ${fmt(L.sub401)}</p>
+                ${row('เงินได้ 40(2)',fmt(w.income402))}
+                ${row('รวมเงินได้ทั้งปี',fmt(w.totalIncome))}
+                ${row('หัก ค่าใช้จ่าย (50% ไม่เกิน 100,000)',fmt(w.expense))}
+                ${row('หัก ค่าลดหย่อน',fmt(w.allowanceTotal))}${allow}
+                ${row('เงินได้สุทธิ',fmt(w.netIncome))}${steps}
+                ${row('ภาษีต้องชำระทั้งปี',fmt(w.annualTax),'font-black')}
+                <p class="text-[10px] text-zinc-400 py-1 num">( ${fmt(w.annualTax)} − ${fmt(Y.taxWithheld)} ) บาท / ( ${w.taxMonths} − ${w.monthsPaid} ) เดือน</p>
+                ${row('ภาษีหัก ณ ที่จ่ายเดือนนี้',fmt(w.monthlyWHT),'font-black text-red-600')}
+            </div>`;
         }
 
         window.prGenAll = async pid => {
             const active=employees.filter(e=>e.status!=='resigned');
+            const period=periods.find(p=>p.id===pid); if(!period)return;
+            const draftBefore=priorPeriods(period,['draft']);
             if(!await ask(
                 `คำนวณเงินเดือนใหม่ให้ ${active.length} คน?\n\n`
               + `คำนวณใหม่จากข้อมูลล่าสุด: เงินเดือน ชั่วโมงลา OT คอมมิชชั่น ประกันสังคม ภาษี และหักอื่นๆ ประจำ\n`
               + `เก็บค่าที่พิมพ์เองไว้ให้: หักลา รายได้อื่นๆ และชั่วโมงสาย\n\n`
-              + `หมายเหตุ: รายการหักอื่นๆ ที่เพิ่มไว้เฉพาะงวดนี้ จะถูกแทนที่ด้วยรายการประจำจากข้อมูลพนักงาน`,
+              + `หมายเหตุ: รายการหักอื่นๆ ที่เพิ่มไว้เฉพาะงวดนี้ จะถูกแทนที่ด้วยรายการประจำจากข้อมูลพนักงาน`
+              + (draftBefore.length
+                  ? `\n\n⚠️ งวด ${draftBefore.map(p=>p.periodNo+'/'+p.year).join(', ')} ยังเป็นร่าง — ภาษีแบบขั้นบันไดจะไม่นับยอดของงวดนั้น ควรสรุปงวดก่อนหน้าให้เรียบร้อยก่อน`
+                  : ''),
               { okText:'คำนวณ' }
             ))return;
-            const period=periods.find(p=>p.id===pid); if(!period)return;
             const btn=document.querySelector(`[onclick="prGenAll('${pid}')"]`);
             if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังคำนวณ...';}
             try {
@@ -501,6 +531,13 @@ export default {
                     // รวมยอดขายจาก commItems
                     (o.commItems||[]).forEach(c=>{ otbu[o.uid].salesTotal += c.sales||0; });
                 });
+                // ยอดสะสมภาษีต่อพนักงาน จากงวดที่สรุป/จ่ายแล้วก่อนหน้าในปีเดียวกัน
+                const priorIds=new Set(priorPeriods(period,['final','paid']).map(p=>p.id));
+                const pastBy={};
+                if(priorIds.size){
+                    const past=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('year','==',period.year)));
+                    past.docs.forEach(d=>{const r=d.data();if(!priorIds.has(r.periodId)||!r.uid)return;(pastBy[r.uid]||=[]).push(r);});
+                }
                 const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
                 // ค่าพวกนี้ไม่มีที่มาจากไหน admin พิมพ์เองล้วนๆ — เก็บไว้ก่อนลบแล้วใส่คืน
                 // ไม่งั้นกดคำนวณใหม่ทีเดียวหายหมด ต้องมานั่งกรอกใหม่ทุกคน
@@ -530,7 +567,7 @@ export default {
                     const hourly=otHourlyRate(emp, sc);
                     const taxMode=emp.taxDeduction||'No';
                     const dSSO=emp.sso==='Yes'?Math.min(Math.round(base*0.05),750):0;
-                    const dTax=taxMode==='custom' ? (emp.taxCustomAmount||0) : calcTax(base,taxMode), eD=daily*wd;
+                    const eD=daily*wd;
                     // OT & Commission จาก ot_requests ที่อนุมัติแล้ว
                     const otData=otbu[emp.uid]||{otHours:0,commTotal:0,salesTotal:0};
                     const wh=Math.round(otData.otHours*100)/100;
@@ -543,6 +580,18 @@ export default {
                         .map(it=>({label:it.label||'',amount:Number(it.amount)||0}));
                     const dOther=Math.round(odItems.reduce((s,it)=>s+it.amount,0)*100)/100;
                     const mn=manual[emp.uid]||{deductLeave:0,otherEarning:0,lateHours:0};
+                    // ตัวแปรภาษีแบบ PEAK เก็บไว้ทุกคน (แม้โหมดอื่น) — แก้รายคนแล้วเปลี่ยนเป็น
+                    // "ตามขั้นบันได" จะได้คำนวณต่อได้เลยโดยไม่ต้องดึงยอดสะสมใหม่
+                    const whtBase={
+                        ytd:buildYTD(pastBy[emp.uid],emp.taxOpening,period.year),
+                        taxMonths:taxMonthsFor(emp.startDate,period.year),
+                        allowances:emp.taxAllowances||{},
+                    };
+                    const wht=taxMode==='Yes' ? calcMonthlyWHT({...whtBase,lines:recordTaxLines({
+                        baseSalary:base,earningCommission:eC,earningHourly:eH,earningDaily:eD,
+                        otherEarning:mn.otherEarning,deductLeave:mn.deductLeave,otherDeduct:dOther,deductSSO:dSSO,
+                    })}) : null;
+                    const dTax=taxMode==='custom' ? (emp.taxCustomAmount||0) : wht ? wht.monthlyWHT : calcTax(base,taxMode);
                     const tEar=base+eD+eH+eC+mn.otherEarning, tDed=dSSO+dTax+dOther+mn.deductLeave, net=tEar-tDed;
                     const ref=doc(db,'artifacts',APP_ID,'public','data','payroll_records',recId(emp.uid));
                     b2.set(ref,{
@@ -557,6 +606,7 @@ export default {
                         sickLeaveHours:lh.sick,personalLeaveHours:lh.personal,
                         vacationLeaveHours:lh.vacation,otherLeaveHours:lh.other,lateHours:mn.lateHours,
                         deductLeave:mn.deductLeave,deductSSO:dSSO,deductTax:dTax,otherDeduct:dOther,otherDeductItems:odItems,taxMode,taxCustomAmount:emp.taxCustomAmount||0,
+                        whtBase,wht:whtSummary(wht),
                         totalEarning:tEar,totalDeduct:tDed,netPay:net,
                         createdAt:new Date().toISOString(),
                     });
@@ -644,6 +694,10 @@ export default {
                 <div><label class="pr-lbl">หักภาษี (฿)</label><input id="rdt" type="number" class="pr-input num" value="${r.deductTax||0}" ${r.taxMode==='custom' ? (isDraft?'':'readonly') : 'readonly'} oninput="prRecalc()"></div>
                 <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input readonly id="rdo" type="number" class="pr-input num bg-zinc-100" value="${r.otherDeduct||0}"></div>
               </div>
+              <details id="pr-wht-box" class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2" style="display:none">
+                <summary class="cursor-pointer text-xs font-black text-zinc-600 py-1"><i class="fa-solid fa-calculator mr-1 text-yellow-500"></i> \u0e27\u0e34\u0e18\u0e35\u0e04\u0e33\u0e19\u0e27\u0e13\u0e20\u0e32\u0e29\u0e35 (\u0e41\u0e1a\u0e1a PEAK)</summary>
+                <div id="pr-wht-detail" class="pt-2"></div>
+              </details>
               <div class="mt-4 pt-3 border-t border-zinc-100">
                 <div class="flex items-center justify-between mb-2">
                   <p class="pr-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46</p>
@@ -721,6 +775,7 @@ export default {
             prOdRender(items, prOdDraft);
         };
 
+        let prWhtLast = null;   // ผลภาษีแบบ PEAK ล่าสุดในหน้าแก้รายคน — prSaveRec เก็บลงใบ
         window.prRecalc = () => {
             const b=gN('rb'),d=gN('rd'),h=gN('rh'),c=gN('rc');
             const wd=gN('rwd'),wh=gN('rwh'),cu=gN('rcu'),eo=gN('reo');
@@ -744,10 +799,29 @@ export default {
                 else recNote.innerHTML='';
             }
             const tEar=b+eD+eH+eC+eo;
-            if(tm!=='custom'){const te=sEl('rdt');if(te)te.value=calcTax(b,tm);}
             // \u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e21\u0e32\u0e08\u0e32\u0e01\u0e1c\u0e25\u0e23\u0e27\u0e21\u0e02\u0e2d\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e22\u0e48\u0e2d\u0e22 \u0e0a\u0e48\u0e2d\u0e07 rdo \u0e40\u0e1b\u0e47\u0e19\u0e41\u0e04\u0e48\u0e17\u0e35\u0e48\u0e41\u0e2a\u0e14\u0e07\u0e1c\u0e25
             const dOther=Math.round(prOdRows().reduce((s,it)=>s+it.amount,0)*100)/100;
             const rdoEl=sEl('rdo'); if(rdoEl) rdoEl.value=dOther;
+            // \u0e20\u0e32\u0e29\u0e35: \u0e07\u0e27\u0e14\u0e17\u0e35\u0e48\u0e1b\u0e34\u0e14\u0e41\u0e25\u0e49\u0e27\u0e44\u0e21\u0e48\u0e04\u0e33\u0e19\u0e27\u0e13\u0e17\u0e31\u0e1a \u0e43\u0e0a\u0e49\u0e22\u0e2d\u0e14\u0e17\u0e35\u0e48\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e44\u0e27\u0e49
+            // \u0e02\u0e31\u0e49\u0e19\u0e1a\u0e31\u0e19\u0e44\u0e14 = \u0e41\u0e1a\u0e1a PEAK \u0e15\u0e49\u0e2d\u0e07\u0e21\u0e35 whtBase (\u0e22\u0e2d\u0e14\u0e2a\u0e30\u0e2a\u0e21) \u0e08\u0e32\u0e01\u0e15\u0e2d\u0e19\u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34"
+            // \u0e43\u0e1a\u0e40\u0e01\u0e48\u0e32\u0e17\u0e35\u0e48\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35 \u2192 \u0e04\u0e07\u0e22\u0e2d\u0e14\u0e40\u0e14\u0e34\u0e21\u0e44\u0e27\u0e49 \u0e44\u0e21\u0e48\u0e40\u0e14\u0e32\u0e40\u0e2d\u0e07
+            const rec=records.find(x=>x.id===editId);
+            prWhtLast=null;
+            if(tm==='Yes' && rec?.whtBase){
+                prWhtLast=calcMonthlyWHT({...rec.whtBase,lines:recordTaxLines({
+                    baseSalary:b,earningCommission:eC,earningHourly:eH,earningDaily:eD,otherEarning:eo,
+                    deductLeave:gN('rdl'),otherDeduct:dOther,deductSSO:gN('rds'),
+                })});
+                if(!isLocked && rdtEl) rdtEl.value=prWhtLast.monthlyWHT;
+            } else if(tm!=='custom' && tm!=='Yes' && !isLocked && rdtEl){
+                rdtEl.value=calcTax(b,tm);
+            }
+            const whtBox=sEl('pr-wht-box'), whtDet=sEl('pr-wht-detail');
+            if(whtBox){
+                whtBox.style.display = tm==='Yes' ? '' : 'none';
+                if(whtDet) whtDet.innerHTML = prWhtLast ? prWhtDetailHtml(prWhtLast)
+                    : `<p class="text-xs text-zinc-500 py-2">\u0e43\u0e1a\u0e19\u0e35\u0e49\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e22\u0e2d\u0e14\u0e2a\u0e30\u0e2a\u0e21\u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e1a\u0e1a PEAK \u2014 \u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e02\u0e2d\u0e07\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e43\u0e2b\u0e21\u0e48\u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07</p>`;
+            }
             const tDed=gN('rdl')+gN('rds')+gN('rdt')+dOther;
             const net=tEar-tDed;
             const setTL=(id,v)=>{const e=sEl(id);if(e)e.textContent=`\u0e3f${fmt(v)}`;};
@@ -778,7 +852,8 @@ export default {
                     vacationLeaveHours:gN('rlv'),otherLeaveHours:gN('rlo'),lateHours:gN('rlt'),
                     deductLeave:gN('rdl'),deductSSO:gN('rds'),deductTax:gN('rdt'),
                     otherDeduct:dOther,otherDeductItems:odItems,
-                    taxMode:tm,totalEarning:tEar,totalDeduct:tDed,netPay:net,
+                    taxMode:tm,wht:tm==='Yes'?whtSummary(prWhtLast):null,
+                    totalEarning:tEar,totalDeduct:tDed,netPay:net,
                     updatedAt:new Date().toISOString(),
                 });
                 showToast('\u2705 \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22','success');
@@ -1375,8 +1450,8 @@ export default {
                 },
             ];
 
-            // หัก — taxMode เก็บเป็น text เช่น "3%" หรือ "No"
-            const taxLabel = r.taxMode && r.taxMode !== 'No' ? `หักภาษี ณ ที่จ่าย ${r.taxMode}` : 'หักภาษี ณ ที่จ่าย';
+            // หัก — taxMode: 'No' | 'Yes' (ขั้นบันได) | '3' (3%) | 'custom'
+            const taxLabel = r.taxMode === '3' ? 'หักภาษี ณ ที่จ่าย 3%' : 'หักภาษี ณ ที่จ่าย';
             // แจกแจงหักอื่นๆ ทีละรายการ เพื่อให้พนักงานรู้ว่าถูกหักค่าอะไรบ้าง
             // ถ้าไม่มีรายการย่อย (ใบเก่าก่อนมีฟีเจอร์นี้) ให้แสดงยอดรวมเหมือนเดิม
             const odItems = (r.otherDeductItems||[]).filter(it => it && (it.label || it.amount > 0));
