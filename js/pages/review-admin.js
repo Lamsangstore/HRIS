@@ -6,7 +6,7 @@
 // ตัวช่วยที่ใช้ร่วมกับหน้าอื่นต้องอยู่บน window ถึงจะเรียกได้จากที่นี่
 // (tests/page-deps.test.mjs คอยตรวจให้ว่าไม่มีตัวไหนหลุด)
 
-import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260914c';
+import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260928a';
 
 export default {
     title: 'ประเมินผลงาน',
@@ -124,7 +124,7 @@ export default {
         window.rvNewCycle = async () => {
             const now = newDateTH();
             const defaultName = `ประเมินผลงาน ${now.getMonth() < 6 ? 'ครึ่งปีแรก' : 'ครึ่งปีหลัง'} ${now.getFullYear()+543}`;
-            const name = prompt('ชื่อรอบประเมิน', defaultName);
+            const name = await lsgPrompt('ชื่อรอบประเมิน', defaultName);
             if (!name) return;
             try {
                 await addDoc(col('review_cycles'), {

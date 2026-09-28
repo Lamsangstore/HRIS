@@ -101,7 +101,7 @@ export default {
 
         window.blClear = async (i) => {
             const b = branches[i];
-            if (!confirm('ลบพิกัดของ "'+b+'" และกลับไปใช้ค่าเริ่มต้น?')) return;
+            if (!await lsgConfirm('ลบพิกัดของ "'+b+'" และกลับไปใช้ค่าเริ่มต้น?')) return;
             try {
                 await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','branch_locations', b));
                 delete locMap[b];

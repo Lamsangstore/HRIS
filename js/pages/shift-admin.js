@@ -5,7 +5,7 @@
 //
 // ใช้ showToast / navigateTo ซึ่งยังเป็น global บน window เรียกได้ตรงๆ
 
-import { workDaySetOn } from '../lib/work-days.js?v=20260914c';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928a';
 
 export default {
     title: 'จัดการกะงาน',
@@ -125,7 +125,7 @@ export default {
 
         window.shDelete = async (id) => {
             const s = shifts.find(x => x.id === id);
-            if (!s || !confirm(`ลบกะ "${s.name}"? พนักงานที่ใช้กะนี้จะกลับไปใช้ตารางปกติ`)) return;
+            if (!s || !await lsgConfirm(`ลบกะ "${s.name}"? พนักงานที่ใช้กะนี้จะกลับไปใช้ตารางปกติ`)) return;
             try {
                 await deleteDoc(doc(db,'artifacts',APP_ID,'public','data','shifts', id));
                 showToast('ลบกะแล้ว', 'info');

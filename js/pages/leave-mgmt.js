@@ -5,9 +5,9 @@
 //
 // scheduleCache / balanceCache เป็นแคชเฉพาะหน้านี้ (ไม่มีใครนอกหน้าใช้) จึงย้ายมาด้วยได้
 
-import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260914c';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours, calcLeaveHours } from '../lib/leave-hours.js?v=20260914c';
-import { STATUS_MAP } from '../lib/status-map.js?v=20260914c';
+import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928a';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours, calcLeaveHours } from '../lib/leave-hours.js?v=20260928a';
+import { STATUS_MAP } from '../lib/status-map.js?v=20260928a';
 
 export default {
     title: 'อนุมัติการลา',
@@ -373,7 +373,7 @@ export default {
         window.mgrCancelLeave = async (id) => {
             const r = allRequests.find(x => x.id === id);
             if (!r) return;
-            if (!confirm(`ยกเลิกการลาของ "${r.employeeName}" และคืนสิทธิ์ ${r.totalHours} ชม. ใช่หรือไม่?`)) return;
+            if (!await lsgConfirm(`ยกเลิกการลาของ "${r.employeeName}" และคืนสิทธิ์ ${r.totalHours} ชม. ใช่หรือไม่?`)) return;
             try {
                 await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: 'cancelled',

@@ -202,7 +202,7 @@ export default {
         };
 
         window.trCancel = async (id) => {
-            if (!confirm('ยกเลิกคำขอนี้?')) return;
+            if (!await lsgConfirm('ยกเลิกคำขอนี้?')) return;
             try {
                 await updateDoc(doc(db,'artifacts',APP_ID,'public','data','time_requests',id),
                     { status:'cancelled', cancelledAt: new Date().toISOString() });
