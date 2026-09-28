@@ -447,7 +447,9 @@
             .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
             /* executive dashboard cards */
-            .ex-kpi-val { font-size: 1.35rem !important; }
+            /* ยอดเงินหลักล้าน (฿1,480,000.00) กว้างกว่าการ์ดครึ่งจอ — ย่อตามความกว้างจอ และตัดบรรทัดได้ถ้ายังไม่พอ */
+            .ex-kpi-val { font-size: clamp(0.85rem, 4.3vw, 1.35rem) !important; overflow-wrap: anywhere; }
+            .ex-card { padding: 1rem !important; }
 
             /* ปุ่มลงเวลาใหญ่ขึ้นบน mobile — touch friendly */
             #btn-clock-in, #btn-clock-out { min-height: 3.5rem; font-size: 1.1rem !important; }
@@ -4317,9 +4319,9 @@
                 const pct = max > 0 ? Math.min(100, Math.round(used / max * 100)) : 0;
                 const cv  = colorVariants(t.color);
                 html += `
-                <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-5">
-                  <div class="flex items-center gap-3 mb-3">
-                    <div class="w-10 h-10 rounded-xl ${cv.bg} flex items-center justify-center">
+                <div class="leave-card bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5">
+                  <div class="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-xl ${cv.bg} flex items-center justify-center shrink-0">
                       <i class="fa-solid ${t.icon} ${cv.text}"></i>
                     </div>
                     <div>
@@ -4332,18 +4334,19 @@
                   <div class="w-full bg-zinc-100 rounded-full h-1.5 mb-2">
                     <div class="h-1.5 rounded-full ${cv.bg.replace('100', pct>=100?'500':'400')} transition-all" style="width:${pct}%"></div>
                   </div>
-                  <div class="flex justify-between text-[10px] text-zinc-400 font-bold">
-                    <span class="${used > 0 ? 'text-zinc-600' : ''}">ใช้ ${balanceToDisplay(used, mySchedule)}</span>
-                    <span>สิทธิ์ ${balanceToDisplay(max, mySchedule)}</span>
+                  <!-- flex-wrap + nowrap: การ์ดแคบบนมือถือจะขึ้นบรรทัดใหม่ทีละวลี ไม่ตัดกลาง "30 วัน 0 ชม." -->
+                  <div class="flex flex-wrap justify-between gap-x-2 text-[10px] text-zinc-400 font-bold">
+                    <span class="whitespace-nowrap ${used > 0 ? 'text-zinc-600' : ''}">ใช้ ${balanceToDisplay(used, mySchedule)}</span>
+                    <span class="whitespace-nowrap">สิทธิ์ ${balanceToDisplay(max, mySchedule)}</span>
                   </div>
                 </div>`;
             });
             // card วันทำงาน
             const hpd = getDayWorkHours(mySchedule);
             html += `
-            <div class="leave-card bg-zinc-900 rounded-2xl p-5 text-white">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center">
+            <div class="leave-card bg-zinc-900 rounded-2xl p-4 sm:p-5 text-white">
+              <div class="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center shrink-0">
                   <i class="fa-solid fa-star text-zinc-900"></i>
                 </div>
                 <div>
