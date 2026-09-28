@@ -7,8 +7,8 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928b';
-import { workDaySetOn } from '../lib/work-days.js?v=20260928b';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928c';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928c';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -231,7 +231,7 @@ export default {
         <div><label class="pr-lbl">\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48</label><input type="number" id="pr-no" class="pr-input" placeholder="1" min="1"></div>
         <div><label class="pr-lbl">\u0e1b\u0e35 (\u0e1e.\u0e28.)</label><input type="number" id="pr-yr" class="pr-input" placeholder="2568"></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><label class="pr-lbl">\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</label><input type="date" id="pr-s" class="pr-input"></div>
         <div><label class="pr-lbl">\u0e16\u0e36\u0e07\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</label><input type="date" id="pr-e" class="pr-input"></div>
       </div>
@@ -339,8 +339,7 @@ export default {
             const period=periods.find(p=>p.id===pid); if(!period) return;
             const panel=sEl('pr-panel');
             if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>`;
-            // จอแคบ (< xl) รายละเอียดงวดอยู่ใต้รายการงวด — เลื่อนลงให้เห็น ไม่งั้นกดแล้วเหมือนไม่มีอะไรเกิดขึ้น
-            if(panel && window.innerWidth<1280) panel.scrollIntoView({behavior:'smooth',block:'start'});
+            window.revealOnMobile?.(panel, 1280);   // จอแคบ รายละเอียดงวดอยู่ใต้รายการงวด
             unsubRec=onSnapshot(
                 query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
                       where('periodId','==',pid)),

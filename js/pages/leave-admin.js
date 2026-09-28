@@ -5,9 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260928b';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260928b';
-import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20260928b';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260928c';
+import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260928c';
+import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20260928c';
 
 export default {
     title: 'ตั้งค่าการลา',
@@ -123,6 +123,7 @@ export default {
         };
 
         window.selectAdminEmp = async (uid) => {
+            const isNewPick = selectedEmpUid !== uid;   // โหลดซ้ำหลังบันทึก ไม่ต้องเลื่อนจอ
             selectedEmpUid = uid;
             renderEmpList(allEmps.filter(e => {
                 const q = document.getElementById('admin-emp-search')?.value.toLowerCase() || '';
@@ -165,6 +166,7 @@ export default {
 
             wdHist = workDaysHistoryOf(sched);
             renderAdminPanel(emp, sched, bal);
+            if (isNewPick) window.revealOnMobile?.(document.getElementById('admin-right-panel'));   // จอแคบ รายละเอียดอยู่ใต้รายชื่อ
         };
 
         

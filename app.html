@@ -65,6 +65,10 @@
         @media (max-width: 767px) {
             input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
             select, textarea { font-size: 16px !important; }
+            /* ช่องวันที่/เวลาที่วางคู่กัน 2 คอลัมน์ padding เดิมเบียดจนปีถูกตัด (28/09/20…) */
+            input[type="date"], input[type="time"], input[type="month"] {
+                padding-left: 0.6rem !important; padding-right: 0.4rem !important; min-width: 0;
+            }
         }
         /* จอสัมผัสไม่มี hover — ปุ่มที่ซ่อนไว้จนกว่าจะ hover (แก้ไข/ลบ) ต้องแสดงตลอด */
         @media (hover: none) {
@@ -812,6 +816,14 @@
             return true;
         };
 
+        // ---- หน้าแบบ "รายการ → รายละเอียด" บนจอแคบ รายละเอียดไปอยู่ใต้/เหนือรายการ นอกจอ
+        // กดแล้วเหมือนไม่มีอะไรเกิดขึ้น — เรียกหลังแสดงรายละเอียดเพื่อเลื่อนไปให้เห็น
+        // minWidth = breakpoint ที่ layout กลายเป็น 2 คอลัมน์ (lg=1024, xl=1280)
+        window.revealOnMobile = function(el, minWidth) {
+            if (!el || window.innerWidth >= (minWidth || 1024)) return;
+            requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        };
+
         // ---- Visual viewport height for keyboard-aware fixed elements ----
         // iOS Safari: when the keyboard opens, fixed bottom elements can overlap the input.
         // Set --vvh on root to track the visible area.
@@ -836,17 +848,17 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928b';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928b';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928b';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928b';
-        import { distanceMeters } from './js/lib/geo.js?v=20260928b';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928c';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928c';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928c';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928c';
+        import { distanceMeters } from './js/lib/geo.js?v=20260928c';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260928b';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20260928b';
+        } from './js/lib/leave-hours.js?v=20260928c';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20260928c';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1122,7 +1134,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260928b';
+        const ASSET_V = '20260928c';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -2795,6 +2807,8 @@
                     selectedDateStr = ds;
                     renderCalendar();
                     renderLogs();
+                    // จอแคบ รายการบันทึกเวลาอยู่เหนือปฏิทิน — เลื่อนขึ้นไปให้เห็นวันที่เพิ่งกด
+                    window.revealOnMobile?.(document.getElementById('selected-date-text')?.closest('.rounded-2xl'));
                     const d = parseDateTH(ds);
                     const el = document.getElementById('selected-date-text');
                     if (el) el.textContent = todayTH() === ds ? 'วันนี้' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
@@ -4118,7 +4132,7 @@
         <div id="leave-type-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
       </div>
       <!-- วันที่ -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label class="block text-sm font-bold text-zinc-700 mb-1">วันที่เริ่มลา *</label>
           <input type="date" id="req-start-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
@@ -6665,8 +6679,7 @@ window.isManagerialEmp = isManagerialEmp;
                     const panel = document.getElementById('ann-editor-panel'); if (!panel) return;
                     const isNew = !ann;
                     panel.classList.add('ann-editing');
-                    // จอแคบ editor อยู่ใต้รายการ — เลื่อนลงให้เห็น
-                    if (window.innerWidth < 1280) requestAnimationFrame(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                    window.revealOnMobile?.(panel, 1280);   // จอแคบ editor อยู่ใต้รายการ
                     panel.innerHTML = `
                     <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
                       <div class="${isNew?'bg-zinc-900':'bg-zinc-800'} px-7 py-5 flex items-center justify-between">

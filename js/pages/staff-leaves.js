@@ -5,9 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928b';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260928b';
-import { STATUS_MAP } from '../lib/status-map.js?v=20260928b';
+import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928c';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260928c';
+import { STATUS_MAP } from '../lib/status-map.js?v=20260928c';
 
 export default {
     title: 'ประวัติการลา (ทีม)',
@@ -50,7 +50,7 @@ export default {
         <option value="cancelled">ยกเลิก</option>
       </select>
     </div>
-    <div class="grid grid-cols-2 gap-2">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <div>
         <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ตั้งแต่</label>
         <input type="date" id="sl-from" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-yellow-500 focus:outline-none">
