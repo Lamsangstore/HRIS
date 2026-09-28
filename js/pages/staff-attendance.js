@@ -6,10 +6,10 @@
 // วันหยุด/ประเภทลา/ระยะทาง import จาก module
 // ส่วน officeFor กับ loadBranchLocations ผูกกับแคชพิกัดสาขาใน app.html จึงอยู่บน window
 
-import { isPublicHoliday } from '../lib/holidays.js?v=20260928c';
-import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260928c';
-import { distanceMeters } from '../lib/geo.js?v=20260928c';
-import { workDaySetOn } from '../lib/work-days.js?v=20260928c';
+import { isPublicHoliday } from '../lib/holidays.js?v=20260928d';
+import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260928d';
+import { distanceMeters } from '../lib/geo.js?v=20260928d';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928d';
 
 export default {
     title: 'ประวัติเวลา (ทีม)',
@@ -17,6 +17,12 @@ export default {
 <style>
 .sa-row:hover { background:#fafafa; }
 .sa-chip { font-size:10px; font-weight:800; padding:2px 8px; border-radius:9999px; }
+/* ไม่ใช้ grid-cols-3/4 เพราะ app.html บังคับเหลือ 2 คอลัมน์บนมือถือ */
+.sa-g3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.sa-g4 { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.sa-stat { background:#fafafa; border-radius:.6rem; padding:.35rem .25rem; text-align:center; }
+.sa-stat b { display:block; font-size:.95rem; font-weight:900; line-height:1.2; }
+.sa-stat span { display:block; font-size:9px; font-weight:700; color:#a1a1aa; }
 </style>
 <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -98,7 +104,12 @@ export default {
         <span class="text-xs font-bold text-zinc-500" id="sa-count">-</span>
       </div>
     </div>
-    <div class="overflow-x-auto" id="sa-daily-wrap">
+    <!-- มือถือ: การ์ดรายการแทนตาราง 8–12 คอลัมน์ที่ต้องเลื่อนข้าง  /  sm ขึ้นไป: ตารางเดิม -->
+    <div id="sa-daily-wrap">
+      <div id="sa-daily-cards" class="sm:hidden divide-y divide-zinc-100">
+        <div class="text-center py-16 text-zinc-300"><i class="fa-regular fa-clock text-4xl mb-3 block"></i><span class="font-bold text-sm">เลือกช่วงวันที่แล้วกด "ค้นหา"</span></div>
+      </div>
+      <div class="hidden sm:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest">
           <tr>
@@ -116,8 +127,11 @@ export default {
           <tr><td colspan="8" class="text-center py-16 text-zinc-300"><i class="fa-regular fa-clock text-4xl mb-3 block"></i><span class="font-bold text-sm">เลือกช่วงวันที่แล้วกด "ค้นหา"</span></td></tr>
         </tbody>
       </table>
+      </div>
     </div>
-    <div class="overflow-x-auto hidden" id="sa-summary-wrap">
+    <div class="hidden" id="sa-summary-wrap">
+      <div id="sa-summary-cards" class="sm:hidden divide-y divide-zinc-100"></div>
+      <div class="hidden sm:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-zinc-50 text-zinc-500 text-[11px] uppercase tracking-widest">
           <tr>
@@ -137,6 +151,7 @@ export default {
         </thead>
         <tbody id="sa-summary-tbody"></tbody>
       </table>
+      </div>
     </div>
   </div>
 </div>`,
@@ -233,6 +248,7 @@ export default {
 
             const tbody = document.getElementById('sa-tbody');
             if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></td></tr>`;
+            setCardsMsg(`<i class="fa-solid fa-spinner fa-spin text-3xl"></i>`);
 
             try {
                 // query ตาม date range อย่างเดียว (เลี่ยง composite index)
@@ -450,8 +466,16 @@ export default {
             } catch (e) {
                 console.error('saLoad:', e);
                 if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-red-400 text-sm font-bold">โหลดข้อมูลไม่ได้: ${e.message}</td></tr>`;
+                setCardsMsg(`<span class="text-red-400 text-sm font-bold">โหลดข้อมูลไม่ได้: ${e.message}</span>`);
             }
         };
+
+        function setCardsMsg(html) {
+            ['sa-daily-cards','sa-summary-cards'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = `<div class="text-center py-12 text-zinc-300">${html}</div>`;
+            });
+        }
 
         function renderRows(rows) {
             const tbody = document.getElementById('sa-tbody');
@@ -477,6 +501,7 @@ export default {
             if (!tbody) return;
             if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-zinc-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><span class="font-bold text-sm">ไม่พบประวัติในช่วงนี้</span></td></tr>`;
+                setCardsMsg(`<i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><span class="font-bold text-sm">ไม่พบประวัติในช่วงนี้</span>`);
                 return;
             }
             const timeCell = (time, lat, lng, acc, dist, outside, colorCls, deltaMin, deltaKind) => {
@@ -538,6 +563,31 @@ export default {
                     <td class="px-4 py-3 text-center"><span class="sa-chip ${r.statusCls}">${r.status}</span></td>
                 </tr>`;
             }).join('');
+
+            const cards = document.getElementById('sa-daily-cards');
+            if (cards) cards.innerHTML = rows.map(r => {
+                const dateLabel = new Date(r.date+'T12:00:00+07:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit',timeZone:'Asia/Bangkok'});
+                const avatar = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
+                const rowBg = r.isAbsent ? 'bg-red-50/60' : r.isOT ? 'bg-amber-50/60' : r.isLeave ? 'bg-blue-50/40' : '';
+                return `<div class="px-4 py-3 ${rowBg}">
+                    <div class="flex items-start gap-2.5">
+                        <img src="${avatar}" onerror="handleImgError(this)" data-name="${r.name}" class="w-9 h-9 rounded-full object-cover border border-zinc-200 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <p class="font-bold text-zinc-800 text-sm leading-tight">${r.name}</p>
+                                <span class="sa-chip ${r.statusCls} shrink-0">${r.status}</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-500 font-bold mt-0.5">${dateLabel} · ${r.dow}${r.shift ? ` · <span class="text-indigo-500">${r.shift}</span>` : ''}</p>
+                            <p class="text-[10px] text-zinc-400">${r.code||'-'} · ${r.branch||'-'}</p>
+                        </div>
+                    </div>
+                    ${(r.inTime || r.outTime) ? `<div class="sa-g3 gap-2 mt-2.5 bg-white/70 rounded-xl border border-zinc-100 py-2 px-1">
+                        <div class="text-center"><p class="text-[9px] font-black text-zinc-400 uppercase">เข้างาน</p>${timeCell(r.inTime, r.inLat, r.inLng, r.inAcc, r.inDist, r.inOutside, 'text-green-700', r.lateMinutes, 'late')}</div>
+                        <div class="text-center"><p class="text-[9px] font-black text-zinc-400 uppercase">ออกงาน</p>${timeCell(r.outTime, r.outLat, r.outLng, r.outAcc, r.outDist, r.outOutside, 'text-red-600', r.earlyOutMinutes, 'early')}</div>
+                        <div class="text-center"><p class="text-[9px] font-black text-zinc-400 uppercase">ชั่วโมง</p><span class="font-mono font-black text-zinc-700">${r.hours?r.hours.toFixed(2):'—'}</span></div>
+                    </div>` : ''}
+                </div>`;
+            }).join('');
         }
 
         // ── สรุปรายคน ─────────────────────────────────────────
@@ -573,8 +623,10 @@ export default {
             const tbody = document.getElementById('sa-summary-tbody');
             if (!tbody) return;
             const sums = buildSummary(rows);
+            const cards = document.getElementById('sa-summary-cards');
             if (!sums.length) {
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center py-16 text-zinc-300 font-bold text-sm">ไม่พบข้อมูลในช่วงนี้</td></tr>`;
+                if (cards) cards.innerHTML = `<div class="text-center py-16 text-zinc-300 font-bold text-sm">ไม่พบข้อมูลในช่วงนี้</div>`;
                 return;
             }
             const numCell = (v, cls) => v > 0
@@ -610,6 +662,37 @@ export default {
                     ${fmtLateMin(s.lateMin)}
                     <td class="px-4 py-3 text-right font-black text-zinc-800">${s.hours.toFixed(1)}</td>
                 </tr>`;
+            }).join('');
+
+            // มือถือ: การ์ดรายคน — ตัวเลข 0 เป็นสีจาง ให้ตาไปหยุดที่เรื่องที่ต้องดูจริง
+            const stat = (v, label, cls) => `<div class="sa-stat"><b class="${v>0?cls:'text-zinc-300'}">${v>0?v:'-'}</b><span>${label}</span></div>`;
+            if (cards) cards.innerHTML = sums.map(s => {
+                const avatar = s.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=f4f4f5&color=27272a&bold=true`;
+                const lm = s.lateMin ? (Math.floor(s.lateMin/60) ? `${Math.floor(s.lateMin/60)} ชม. ${s.lateMin%60} น.` : `${s.lateMin} น.`) : '';
+                return `<div class="px-4 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <img src="${avatar}" onerror="handleImgError(this)" data-name="${s.name}" class="w-9 h-9 rounded-full object-cover border border-zinc-200 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-zinc-800 text-sm leading-tight">${s.name}</p>
+                            <p class="text-[10px] text-zinc-400 font-bold">${s.code||'-'} · ${s.branch||'-'}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="font-black text-zinc-800 leading-tight">${s.hours.toFixed(1)}</p>
+                            <p class="text-[9px] font-bold text-zinc-400">ชม. รวม</p>
+                        </div>
+                    </div>
+                    <div class="sa-g4 gap-1.5 mt-2.5">
+                        ${stat(s.present,'มาทำงาน','text-green-700')}
+                        ${stat(s.late,'สาย','text-orange-600')}
+                        ${stat(s.earlyOut,'ออกก่อน','text-pink-600')}
+                        ${stat(s.incomplete,'ไม่ครบ','text-orange-500')}
+                        ${stat(s.absent,'ขาด','text-red-600')}
+                        ${stat(s.leave,'ลา','text-blue-600')}
+                        ${stat(s.ot,'OT','text-amber-600')}
+                        ${stat(s.outside,'นอกพื้นที่','text-red-500')}
+                    </div>
+                    ${lm ? `<p class="text-[11px] font-bold text-rose-600 mt-2"><i class="fa-regular fa-clock mr-1"></i>สาย + ออกก่อนรวม ${lm}</p>` : ''}
+                </div>`;
             }).join('');
         }
 
