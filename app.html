@@ -451,9 +451,10 @@
            มือถือแนวนอนกว้าง > 767px เลยไม่เข้าเงื่อนไขมือถือด้านบน แต่สูงแค่ ~375px
            modal ที่ไม่มี max-height จะล้นทั้งบนและล่าง เลื่อนไม่ได้ ปุ่มส่ง/บันทึกหาย */
         @media (max-width: 767px), (max-height: 600px) {
-            .fixed.inset-0 > .bg-white,
-            .fixed.inset-0 > div > .bg-white,
-            .fixed.inset-0 > div > .bg-zinc-900 {
+            /* จำกัดเป็น div — ไม่งั้นไปโดนปุ่ม bg-zinc-900 / bg-white ที่อยู่ใน card (เช่นปุ่มบันทึกรหัสผ่านใหม่เยื้องขวา) */
+            .fixed.inset-0 > div.bg-white,
+            .fixed.inset-0 > div > div.bg-white,
+            .fixed.inset-0 > div > div.bg-zinc-900 {
                 margin: 0.5rem;
                 max-height: calc(100vh - 1rem);
                 max-height: calc(100dvh - 1rem);
@@ -462,13 +463,25 @@
             }
             /* modal ที่แบ่ง header / เนื้อหา / footer ด้วย flex-col ให้เลื่อนแค่ส่วนเนื้อหา
                ไม่งั้นทั้งกล่องกับเนื้อหาเลื่อนซ้อนกัน และปุ่มบันทึกใน footer หลุดใต้จอ (iOS 100vh สูงกว่าจอจริง) */
-            .fixed.inset-0 > .bg-white.flex-col,
-            .fixed.inset-0 > div > .bg-white.flex-col {
+            .fixed.inset-0 > div.bg-white.flex-col,
+            .fixed.inset-0 > div > div.bg-white.flex-col {
                 overflow: hidden;
             }
-            .fixed.inset-0 > .bg-white.flex-col > .overflow-y-auto,
-            .fixed.inset-0 > div > .bg-white.flex-col > .overflow-y-auto {
+            .fixed.inset-0 > div.bg-white.flex-col > .overflow-y-auto,
+            .fixed.inset-0 > div > div.bg-white.flex-col > .overflow-y-auto {
                 min-height: 0;
+            }
+        }
+
+        /* toast บนมือถือ: เดิมมุมล่างขวา ทับ bottom nav (และแถบยื่นขออนุมัติหน้าเบิก OT) และชิดขอบซ้าย
+           ย้ายขึ้นใต้ topbar เต็มความกว้างเว้นขอบ เหมือน #lsg-toast */
+        @media (max-width: 767px) {
+            .app-toast {
+                top: calc(3.5rem + env(safe-area-inset-top, 0px) + 0.5rem) !important;
+                bottom: auto !important;
+                left: 0.75rem !important;
+                right: 0.75rem !important;
+                text-align: center;
             }
         }
 
@@ -1197,7 +1210,7 @@
         window.showToast = function(msg, type = 'info') {
             const colors = { info: 'bg-zinc-800 text-white', success: 'bg-green-600 text-white', error: 'bg-red-600 text-white' };
             const toast = document.createElement('div');
-            toast.className = `fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-xl shadow-2xl text-sm font-bold ${colors[type]} transition-all`;
+            toast.className = `app-toast fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-xl shadow-2xl text-sm font-bold ${colors[type]} transition-all`;
             toast.textContent = msg;
             document.body.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
@@ -2103,6 +2116,12 @@
         .ann-body ul { list-style:disc inside; padding-left:.5rem; }
         .ann-body ol { list-style:decimal inside; padding-left:.5rem; }
         .ann-body a  { color:#d97706; text-decoration:underline; }
+        /* เนื้อหาที่วางมาจาก Word / Google Docs อาจมีตาราง หรือกล่องที่กำหนดความกว้างเอง
+           การ์ดประกาศเป็น overflow-hidden ส่วนที่เกินจอมือถือจะถูกตัดหายโดยไม่มีทางเลื่อนดู */
+        .ann-body { overflow-wrap:anywhere; }
+        .ann-body * { max-width:100%; }
+        .ann-body table { display:block; min-width:0; overflow-x:auto; border-collapse:collapse; margin:.5rem 0; }   /* min-width:0 ชนะกฎ table{min-width:max-content} ของมือถือ */
+        .ann-body td, .ann-body th { border:1px solid #e4e4e7; padding:.25rem .5rem; min-width:6rem; overflow-wrap:normal; }   /* ไม่บีบช่องจนเหลือทีละตัวอักษร ให้ตารางเลื่อนข้างแทน */
         .ann-card { transition:all .2s; }
         .ann-card:hover { box-shadow:0 6px 24px -6px rgba(0,0,0,.1); }
         </style>
@@ -6627,6 +6646,11 @@ window.isManagerialEmp = isManagerialEmp;
         }
         .ann-editor:focus { border-color:#eab308; box-shadow:0 0 0 3px rgba(234,179,8,.1); }
         .ann-editor img { max-width:100%; border-radius:.5rem; margin:.5rem 0; cursor:pointer; }
+        /* เหมือน .ann-body ในหน้าหลัก: เนื้อหาที่วางมาจาก Word / Google Docs ไม่ดันจอมือถือ */
+        .ann-editor { overflow-wrap:anywhere; }
+        .ann-editor * { max-width:100%; }
+        .ann-editor table { display:block; min-width:0; overflow-x:auto; border-collapse:collapse; margin:.5rem 0; }
+        .ann-editor td, .ann-editor th { border:1px solid #e4e4e7; padding:.25rem .5rem; min-width:6rem; overflow-wrap:normal; }   /* ไม่บีบช่องจนเหลือทีละตัวอักษร ให้ตารางเลื่อนข้างแทน */
         .ann-editor h1 { font-size:1.5rem; font-weight:900; }
         .ann-editor h2 { font-size:1.2rem; font-weight:800; }
         .ann-editor h3 { font-size:1rem;   font-weight:700; }
