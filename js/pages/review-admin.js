@@ -6,7 +6,7 @@
 // ตัวช่วยที่ใช้ร่วมกับหน้าอื่นต้องอยู่บน window ถึงจะเรียกได้จากที่นี่
 // (tests/page-deps.test.mjs คอยตรวจให้ว่าไม่มีตัวไหนหลุด)
 
-import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260928a';
+import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20260928b';
 
 export default {
     title: 'ประเมินผลงาน',
@@ -534,6 +534,7 @@ export default {
         if (isAdmin) document.getElementById('rv-export-btn')?.classList.remove('hidden');
 
         window.rvExportExcel = async () => {
+            if (window.blockedInLINE?.('Export Excel')) return;
             if (!isAdmin) return;
             if (!currentCycle) { showToast('เลือกรอบประเมินก่อน', 'error'); return; }
             if (typeof XLSX === 'undefined') {

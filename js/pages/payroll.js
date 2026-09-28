@@ -7,8 +7,8 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928a';
-import { workDaySetOn } from '../lib/work-days.js?v=20260928a';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20260928b';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928b';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -829,6 +829,7 @@ export default {
         };
 
         window.prXLSX = async pid => {
+            if (window.blockedInLINE?.('Export XLSX')) return;
             const period = periods.find(p => p.id === pid);
             if (!period || !records.length) { showToast('ไม่มีข้อมูล', 'error'); return; }
 
@@ -1049,6 +1050,7 @@ export default {
         };
 
         window.prBankExport = async () => {
+            if (window.blockedInLINE?.('Export KBIZ')) return;
             const dateEl = document.getElementById('pr-bank-date');
             if (!dateEl || !dateEl.value) { showToast('กรุณาระบุวันที่เงินเข้าบัญชี', 'error'); return; }
 
