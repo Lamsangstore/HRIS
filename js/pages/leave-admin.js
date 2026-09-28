@@ -5,9 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260928d';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260928d';
-import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20260928d';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20260928f';
+import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20260928f';
+import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20260928f';
 
 export default {
     title: 'ตั้งค่าการลา',
@@ -15,6 +15,14 @@ export default {
 <style>
 .day-toggle { transition: all .15s; }
 .day-toggle.selected { background:#18181b; color:#eab308; border-color:#18181b; }
+/* ปุ่มวันทำงาน 7 ปุ่ม: จอใหญ่ขนาดคงที่ / มือถือแบ่งเท่ากันให้อยู่แถวเดียว (เดิม ส. ตกบรรทัด)
+   เขียนเองแทน w-full sm:w-10 เพราะ Tailwind CDN เรียงกฎไม่แน่นอน sm: อาจแพ้ */
+.wd-chips { display:flex; flex-wrap:wrap; gap:.5rem; }
+.wd-chips .day-toggle { width:2.5rem; }
+@media (max-width:639px) {
+  .wd-chips { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.25rem; }
+  .wd-chips .day-toggle { width:100%; }
+}
 </style>
 <div class="p-6 lg:p-8 max-w-7xl mx-auto">
 
@@ -337,7 +345,7 @@ export default {
             });
             el.innerHTML = wdHist.map((h, i) => {
                 const chips = [0,1,2,3,4,5,6].map(d => `<button type="button" onclick="toggleWorkDay(${i},${d})"
-                    class="day-toggle w-10 h-10 rounded-xl border-2 border-zinc-200 font-black text-xs text-zinc-500 ${h.workDays.includes(d) ? 'selected' : ''}">
+                    class="day-toggle h-10 rounded-xl border-2 border-zinc-200 font-black text-xs text-zinc-500 ${h.workDays.includes(d) ? 'selected' : ''}">
                     ${DAY_NAMES[d]}</button>`).join('');
                 const isCurrent = i === currentIdx;
                 const label = i === 0
@@ -351,7 +359,7 @@ export default {
                     <div class="flex items-center gap-2 mb-2 flex-wrap">${label}
                       ${isCurrent ? '<span class="text-[9px] font-black bg-yellow-400 text-zinc-900 px-1.5 py-0.5 rounded">ใช้อยู่ตอนนี้</span>' : ''}
                     </div>
-                    <div class="flex gap-2 flex-wrap">${chips}</div>
+                    <div class="wd-chips">${chips}</div>
                 </div>`;
             }).join('');
         }
