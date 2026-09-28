@@ -434,7 +434,6 @@
 
             /* grid cols ลด */
             .grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-            .sm\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
             .grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
             /* นาฬิกา clock page ให้ใหญ่และชัด */
@@ -465,6 +464,13 @@
 
             /* announcement editor บน mobile — ซ่อนเฉพาะกล่องว่าง "เลือกประกาศ" แสดงเมื่อกดเลือก/สร้างใหม่ */
             #ann-editor-panel:not(.ann-editing) { display: none; }
+        }
+
+        /* sm:grid-cols-4 ลดเหลือ 2 เฉพาะช่วง 640–767px — ต่ำกว่า 640 ให้ใช้ค่าที่หน้ากำหนดเอง
+           (เดิมบังคับ 2 คอลัมน์ทุกจอมือถือ ทำให้ grid-cols-1 sm:grid-cols-4 กลายเป็น 2 คอลัมน์
+            เช่น ช่องพิกัดหน้าพิกัดสาขาแคบจนอ่านไม่ออก) */
+        @media (min-width: 640px) and (max-width: 767px) {
+            .sm\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         }
 
         /* ========= PAGE TRANSITIONS ========= */
