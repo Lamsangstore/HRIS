@@ -118,6 +118,7 @@ export default {
         };
 
         window.certPrint = () => {
+            if (window.blockedInLINE?.('การพิมพ์หนังสือรับรอง')) return;
             const titleTxt = certType === 'salary' ? 'หนังสือรับรองเงินเดือน' : 'หนังสือรับรองการทำงาน';
             const win = window.open('about:blank', '_blank');
             if (!win) { showToast('เบราว์เซอร์บล็อกป๊อปอัป — กรุณาอนุญาตก่อน', 'error'); return; }

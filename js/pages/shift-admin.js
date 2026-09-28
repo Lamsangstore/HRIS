@@ -5,7 +5,7 @@
 //
 // ใช้ showToast / navigateTo ซึ่งยังเป็น global บน window เรียกได้ตรงๆ
 
-import { workDaySetOn } from '../lib/work-days.js?v=20260928a';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928b';
 
 export default {
     title: 'จัดการกะงาน',

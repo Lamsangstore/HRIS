@@ -784,6 +784,34 @@
             }
         };
 
+        // ---- ฟีเจอร์ที่ LINE in-app browser ทำไม่ได้ (ดาวน์โหลดไฟล์ / เปิดหน้าต่างพิมพ์) ----
+        // เรียกต้นฟังก์ชัน: if (window.blockedInLINE?.('Export Excel')) return;
+        // ใน LINE จะแสดงคำแนะนำ + ปุ่มเปิดหน้าเดิมใน Safari/Chrome แล้วคืน true ให้หยุดทำงาน
+        window.blockedInLINE = function(what) {
+            if (!window.__isLINE) return false;
+            const browser = window.__isIOS ? 'Safari' : (window.__isAndroid ? 'Chrome' : 'เบราว์เซอร์');
+            showDialog({
+                kind: 'confirm',
+                variant: 'warn',
+                title: 'เปิดใน ' + browser + ' เพื่อใช้งาน',
+                message: (what || 'ฟีเจอร์นี้') + ' ใช้ในแอป LINE ไม่ได้ เพราะ LINE ไม่รองรับการดาวน์โหลดไฟล์และการพิมพ์\n\n'
+                       + 'กด "เปิดใน ' + browser + '" แล้วทำรายการเดิมอีกครั้ง\n(ครั้งแรกอาจต้องล็อกอินใหม่)',
+                okText: 'เปิดใน ' + browser,
+                cancelText: 'ปิด',
+            }).then(ok => {
+                if (!ok) return;
+                if (window.liff && window.liff.openWindow) {
+                    window.liff.openWindow({ url: location.href, external: true });
+                    return;
+                }
+                // LINE เปิดลิงก์ที่มี openExternalBrowser=1 ในเบราว์เซอร์หลักของเครื่อง
+                const u = new URL(location.href);
+                u.searchParams.set('openExternalBrowser', '1');
+                location.href = u.toString();
+            });
+            return true;
+        };
+
         // ---- Visual viewport height for keyboard-aware fixed elements ----
         // iOS Safari: when the keyboard opens, fixed bottom elements can overlap the input.
         // Set --vvh on root to track the visible area.
@@ -808,17 +836,17 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928a';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928a';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928a';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928a';
-        import { distanceMeters } from './js/lib/geo.js?v=20260928a';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928b';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928b';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928b';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928b';
+        import { distanceMeters } from './js/lib/geo.js?v=20260928b';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260928a';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20260928a';
+        } from './js/lib/leave-hours.js?v=20260928b';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20260928b';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1094,7 +1122,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260928a';
+        const ASSET_V = '20260928b';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),

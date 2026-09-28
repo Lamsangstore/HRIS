@@ -5,9 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928a';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260928a';
-import { STATUS_MAP } from '../lib/status-map.js?v=20260928a';
+import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928b';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260928b';
+import { STATUS_MAP } from '../lib/status-map.js?v=20260928b';
 
 export default {
     title: 'ประวัติการลา (ทีม)',
@@ -350,6 +350,7 @@ export default {
         }
 
         window.slExport = () => {
+            if (window.blockedInLINE?.('Export CSV')) return;
             if (!filtered.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
             const header = ['EmployeeCode','Name','Branch','Type','StartDate','EndDate','Hours','Status','Reason','ApprovedBy','ApprovedAt'];
             const lines = [header.join(',')];

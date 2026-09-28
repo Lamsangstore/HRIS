@@ -255,6 +255,7 @@ export default {
         };
 
         window.tiDownloadTemplate = () => {
+            if (window.blockedInLINE?.('การดาวน์โหลด Template')) return;
             const csv = 'employee_code,date,time_in,time_out,note\nEMP001,2025-03-01,08:05,17:30,import\nEMP002,2025-03-01,08:10,17:45,\n';
             const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
             const a = Object.assign(document.createElement('a'), {

@@ -6,10 +6,10 @@
 // วันหยุด/ประเภทลา/ระยะทาง import จาก module
 // ส่วน officeFor กับ loadBranchLocations ผูกกับแคชพิกัดสาขาใน app.html จึงอยู่บน window
 
-import { isPublicHoliday } from '../lib/holidays.js?v=20260928a';
-import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260928a';
-import { distanceMeters } from '../lib/geo.js?v=20260928a';
-import { workDaySetOn } from '../lib/work-days.js?v=20260928a';
+import { isPublicHoliday } from '../lib/holidays.js?v=20260928b';
+import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20260928b';
+import { distanceMeters } from '../lib/geo.js?v=20260928b';
+import { workDaySetOn } from '../lib/work-days.js?v=20260928b';
 
 export default {
     title: 'ประวัติเวลา (ทีม)',
@@ -630,6 +630,7 @@ export default {
         };
 
         window.saExport = () => {
+            if (window.blockedInLINE?.('Export CSV')) return;
             if (!lastRows.length) { showToast('ไม่มีข้อมูลให้ Export', 'error'); return; }
             if (saView === 'summary') { saExportSummary(); return; }
             const header = ['Date','DayOfWeek','EmployeeCode','Name','Branch','ClockIn','InLat','InLng','InAcc','InDistM','InOutside','LateMin','ClockOut','OutLat','OutLng','OutAcc','OutDistM','OutOutside','EarlyOutMin','TotalLateMin','InMapUrl','OutMapUrl','Hours','Status'];

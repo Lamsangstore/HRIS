@@ -8,8 +8,8 @@
 //     breakStart:'12:00', breakMinutes:60, holidays:['YYYY-MM-DD', ...] }
 // ทุก field มีค่าตั้งต้นให้ — schedule เก่าที่ยังไม่มี breakStart จะถือว่าพัก 12:00
 
-import { isPublicHoliday } from './holidays.js?v=20260928a';
-import { workDaysOn } from './work-days.js?v=20260928a';
+import { isPublicHoliday } from './holidays.js?v=20260928b';
+import { workDaysOn } from './work-days.js?v=20260928b';
 
 /** 'HH:MM' → นาทีนับจากเที่ยงคืน */
 export function hhmmToMins(hhmm) {
