@@ -854,17 +854,18 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928f';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928f';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928f';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928f';
-        import { distanceMeters } from './js/lib/geo.js?v=20260928f';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928g';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928g';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928g';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928g';
+        import { distanceMeters } from './js/lib/geo.js?v=20260928g';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260928f';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20260928f';
+        } from './js/lib/leave-hours.js?v=20260928g';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20260928g';
+        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20260928g';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1140,7 +1141,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260928f';
+        const ASSET_V = '20260928g';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -3467,8 +3468,24 @@
                                 <div><label class="input-label">ธนาคาร</label><select id="f-bank-name" class="input-field cursor-pointer"><option value="">- เลือกธนาคาร -</option><option value="KBANK">กสิกรไทย</option><option value="SCB">ไทยพาณิชย์</option><option value="BBL">กรุงเทพ</option><option value="KTB">กรุงไทย</option><option value="BAY">กรุงศรี</option></select></div>
                                 <div><label class="input-label">เลขที่บัญชี</label><input type="text" id="f-bank-acc" class="input-field"></div>
                                 <div><label class="input-label">ประกันสังคม</label><select id="f-sso" class="input-field cursor-pointer"><option value="Yes">เข้าร่วม (5%)</option><option value="No">ไม่เข้าร่วม</option></select></div>
-                                <div><label class="input-label">หักภาษี ณ ที่จ่าย</label><select id="f-tax" class="input-field cursor-pointer" onchange="document.getElementById('f-tax-custom-wrap').style.display=this.value==='custom'?'block':'none'"><option value="No">ไม่หัก</option><option value="Yes">หักตามขั้นบันได</option><option value="3">หัก 3%</option><option value="custom">กำหนดเอง</option></select></div>
+                                <div><label class="input-label">หักภาษี ณ ที่จ่าย</label><select id="f-tax" class="input-field cursor-pointer" onchange="empTaxToggle()"><option value="No">ไม่หัก</option><option value="Yes">หักตามขั้นบันได (แบบ PEAK)</option><option value="3">หัก 3%</option><option value="custom">กำหนดเอง</option></select></div>
                                 <div id="f-tax-custom-wrap" style="display:none"><label class="input-label">จำนวนภาษี (฿/เดือน)</label><input type="number" id="f-tax-custom" class="input-field" value="0" min="0" step="0.01" placeholder="เช่น 208.34"></div>
+                            </div>
+
+                            <!-- ภาษีขั้นบันไดแบบ PEAK: ค่าลดหย่อนต่อปี + ยอดยกมา (ดู js/lib/wht.js) -->
+                            <div id="f-tax-peak-wrap" class="mb-10 -mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-5" style="display:none">
+                                <p class="text-sm font-black text-zinc-700 mb-1"><i class="fa-solid fa-receipt mr-1 text-yellow-500"></i> ค่าลดหย่อนภาษี (บาท/ปี)</p>
+                                <p class="text-xs text-zinc-400 font-medium mb-4">ตามแท็บ "ข้อมูลค่าลดหย่อน" ใน PEAK — ช่องประกันสังคมเว้นว่าง = คิดอัตโนมัติจากยอดที่หักจริง</p>
+                                <div id="f-ta-grid" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6"></div>
+                                <p class="text-sm font-black text-zinc-700 mb-1"><i class="fa-solid fa-clock-rotate-left mr-1 text-yellow-500"></i> ยอดยกมา (เดือนที่ไม่ได้จ่ายผ่านระบบนี้)</p>
+                                <p class="text-xs text-zinc-400 font-medium mb-4">กรอกเฉพาะเดือนในปีภาษีนี้ที่จ่ายก่อนเริ่มใช้ HRIS (ดูยอดจาก PEAK) — งวดที่สรุปในระบบแล้วนับให้เอง ห้ามกรอกซ้ำ</p>
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    <div><label class="input-label">ปีภาษี (ค.ศ.)</label><input type="number" id="f-to-year" class="input-field" placeholder="เช่น 2026"></div>
+                                    <div><label class="input-label">จำนวนเดือนที่จ่ายแล้ว</label><input type="number" id="f-to-months" class="input-field" min="0" max="12" placeholder="0"></div>
+                                    <div><label class="input-label">เงินได้สะสม 40(1)</label><input type="number" id="f-to-income" class="input-field" step="0.01" placeholder="0"></div>
+                                    <div><label class="input-label">ภาษีที่หักแล้ว</label><input type="number" id="f-to-tax" class="input-field" step="0.01" placeholder="0"></div>
+                                    <div><label class="input-label">ประกันสังคมสะสม</label><input type="number" id="f-to-sso" class="input-field" step="0.01" placeholder="0"></div>
+                                </div>
                             </div>
 
                             <h4 class="section-title"><i class="fa-solid fa-money-bill-transfer"></i>6. หักอื่นๆ ประจำทุกงวด</h4>
@@ -3855,8 +3872,10 @@
                     document.getElementById('f-bank-acc').value = emp.bankAccount || '';
                     document.getElementById('f-sso').value = emp.sso || 'Yes';
                     document.getElementById('f-tax').value = emp.taxDeduction || 'No';
-                    document.getElementById('f-tax-custom-wrap').style.display = emp.taxDeduction==='custom' ? 'block' : 'none';
                     document.getElementById('f-tax-custom').value = emp.taxCustomAmount || 0;
+                    empTaxToggle();
+                    empRenderTaxAllowances(emp.taxAllowances);
+                    empRenderTaxOpening(emp.taxOpening);
                     empRenderOtherDeducts(emp.otherDeducts || []);
                     document.getElementById('f-emergency-name').value = emp.emergencyName || '';
                     document.getElementById('f-emergency-phone').value = emp.emergencyPhone || '';
@@ -3870,6 +3889,37 @@
                     empSwitchTab('add');
                     document.getElementById('content-wrapper').scrollTop = 0;
                 };
+
+                // ── ภาษีขั้นบันไดแบบ PEAK: ค่าลดหย่อนต่อปี (taxAllowances) + ยอดยกมา (taxOpening)
+                window.empTaxToggle = () => {
+                    const m = document.getElementById('f-tax')?.value;
+                    document.getElementById('f-tax-custom-wrap').style.display = m === 'custom' ? 'block' : 'none';
+                    document.getElementById('f-tax-peak-wrap').style.display = m === 'Yes' ? '' : 'none';
+                };
+                // ช่องว่าง = ใช้ค่าอัตโนมัติ (ผู้มีเงินได้ 60,000 / ประกันสังคมตามยอดหักจริง) — เก็บเป็น null
+                window.empRenderTaxAllowances = (spec) => {
+                    const s = spec || {};
+                    const grid = document.getElementById('f-ta-grid');
+                    if (!grid) return;
+                    grid.innerHTML = ALLOWANCE_FIELDS.map(([k, label]) => {
+                        const ph = k === 'personal' ? '60000' : k === 'socialSecurity' ? 'อัตโนมัติ' : '0';
+                        const v = s[k] == null || s[k] === '' ? '' : Number(s[k]);
+                        return `<div><label class="input-label">${label}</label><input type="number" data-ta="${k}" class="input-field" min="0" step="0.01" placeholder="${ph}" value="${v}"></div>`;
+                    }).join('');
+                };
+                window.empReadTaxAllowances = () => Object.fromEntries(
+                    [...document.querySelectorAll('#f-ta-grid [data-ta]')]
+                        .map(el => [el.dataset.ta, el.value === '' ? null : Number(el.value) || 0]));
+                window.empRenderTaxOpening = (o) => {
+                    const x = o || {}, set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v ? v : ''; };
+                    set('f-to-year', x.year); set('f-to-months', x.months); set('f-to-income', x.income401);
+                    set('f-to-tax', x.tax); set('f-to-sso', x.sso);
+                };
+                window.empReadTaxOpening = () => {
+                    const n = id => Number(document.getElementById(id)?.value) || 0;
+                    return { year: n('f-to-year'), months: n('f-to-months'), income401: n('f-to-income'), tax: n('f-to-tax'), sso: n('f-to-sso') };
+                };
+                empRenderTaxAllowances({});
 
                 // ── หักอื่นๆ ประจำ (otherDeducts) — แถวละ หมายเหตุ + จำนวน
                 window.empRenderOtherDeducts = (items) => {
@@ -3992,6 +4042,7 @@
                         commRate: Number(v('f-comm-rate')||0), commMin: Number(v('f-comm-min')||0),
                         commission: Number(v('f-comm-rate')||0), paymentMethod: v('f-payment-method'), bankName: v('f-bank-name'), bankAccount: v('f-bank-acc'),
                         sso: v('f-sso'), taxDeduction: v('f-tax'), taxCustomAmount: v('f-tax')==='custom' ? Number(v('f-tax-custom')||0) : 0,
+                        taxAllowances: empReadTaxAllowances(), taxOpening: empReadTaxOpening(),
                         otherDeducts: empReadOtherDeducts(),
                         emergencyName: v('f-emergency-name'), emergencyPhone: v('f-emergency-phone'),
                         updatedAt: new Date().toISOString()
@@ -4011,7 +4062,7 @@
                             isEditing = false;
                             document.getElementById('employee-form').reset();
                             document.getElementById('f-must-change-pw-wrap').classList.add('hidden');
-                            empRenderOtherDeducts([]); // reset() ไม่ล้างแถวที่สร้างด้วย JS
+                            empRenderOtherDeducts([]); empRenderTaxAllowances({}); empRenderTaxOpening({}); empTaxToggle(); // reset() ไม่ล้างแถวที่สร้างด้วย JS
                             document.getElementById('form-header').classList.replace('bg-zinc-800', 'bg-zinc-900');
                             document.getElementById('form-title').textContent = 'ลงทะเบียนพนักงานใหม่';
                             document.getElementById('form-subtitle').textContent = 'Create New Employee Profile';
@@ -4036,7 +4087,7 @@
                             await syncDirectory(payload, data.localId);
                             showToast('✅ สร้างพนักงานใหม่สำเร็จ (รหัสชั่วคราว: 123456 — ระบบจะบังคับให้ตั้งรหัสใหม่ตอนล็อกอินครั้งแรก)', 'success');
                             document.getElementById('employee-form').reset();
-                            empRenderOtherDeducts([]);
+                            empRenderOtherDeducts([]); empRenderTaxAllowances({}); empRenderTaxOpening({}); empTaxToggle();
                             empSwitchTab('manage');
                         }
                     } catch (err) { alert('❌ ' + err.message); }
@@ -4044,7 +4095,7 @@
                 });
 
                 // Load list initially
-                empRenderOtherDeducts([]);
+                empRenderOtherDeducts([]); empRenderTaxAllowances({}); empRenderTaxOpening({}); empTaxToggle();
                 empSwitchTab('manage');
 
                 return () => {

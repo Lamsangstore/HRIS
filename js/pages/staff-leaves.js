@@ -5,9 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928f';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260928f';
-import { STATUS_MAP } from '../lib/status-map.js?v=20260928f';
+import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20260928g';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20260928g';
+import { STATUS_MAP } from '../lib/status-map.js?v=20260928g';
 
 export default {
     title: 'ประวัติการลา (ทีม)',
