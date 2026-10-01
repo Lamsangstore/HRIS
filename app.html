@@ -873,18 +873,18 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20260928g';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20260928g';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20260928g';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20260928g';
-        import { distanceMeters } from './js/lib/geo.js?v=20260928g';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20261001a';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20261001a';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20261001a';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20261001a';
+        import { distanceMeters } from './js/lib/geo.js?v=20261001a';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20260928g';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20260928g';
-        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20260928g';
+        } from './js/lib/leave-hours.js?v=20261001a';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20261001a';
+        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20261001a';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -973,6 +973,7 @@
             const isManager = profile.role === 'manager' || isAdmin;
             return [
                 { id: 'home',          icon: 'fa-house',                 label: 'หน้าหลัก',              show: true },
+                { id: 'apps',          icon: 'fa-grip',                  label: 'แอปของร้าน',            show: true },
                 { id: 'executive',     icon: 'fa-chart-line',            label: 'แดชบอร์ดผู้บริหาร',     show: isManager },
                 { id: 'time',          icon: 'fa-clock',                 label: 'เวลาทำงาน & กะ',        show: true },
                 { id: 'time-request',  icon: 'fa-pen-to-square',         label: 'ชี้แจง/แก้ไขเวลา',      show: true },
@@ -1168,7 +1169,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20260928g';
+        const ASSET_V = '20261001a';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -1177,6 +1178,7 @@
             'time-import':      () => import('./js/pages/time-import.js?v=' + ASSET_V),
             'payslip-admin':    () => import('./js/pages/payslip-admin.js?v=' + ASSET_V),
             'review-admin':     () => import('./js/pages/review-admin.js?v=' + ASSET_V),
+            'apps':             () => import('./js/pages/apps.js?v=' + ASSET_V),
             'certificate':      () => import('./js/pages/certificate.js?v=' + ASSET_V),
             'payslip':          () => import('./js/pages/payslip.js?v=' + ASSET_V),
             'time-approve':     () => import('./js/pages/time-approve.js?v=' + ASSET_V),
