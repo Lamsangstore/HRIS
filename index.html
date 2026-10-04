@@ -6,10 +6,34 @@
     <title>เข้าสู่ระบบ - Lamsang Group</title>
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // ธีมกลาง Lamsang (LAMSANG-THEME.md) — ค่าเดียวกับตัวแปร --ls-* ใน <style> ด้านล่าง
+                        brand: { 50:'#faf6ec', 100:'#f3ead4', 200:'#e7d5a8', 300:'#d9bf7d', 400:'#ccac60', 500:'#bf9c4f', 600:'#a8853f', 700:'#886a32', 800:'#6b5329', 900:'#4a3a1d' },
+                        panel: { 700:'#3a3833', 800:'#2a2825', 900:'#1c1b19' },
+                    },
+                    fontFamily: { sans: ['Noto Sans Thai', 'system-ui', '-apple-system', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Prompt', sans-serif; }
+        /* ธีมกลาง Lamsang — ค่าตรงกับ LAMSANG-THEME.md (สีแบรนด์ซ้ำกับ tailwind.config ด้านบน แก้คู่กัน) */
+        :root {
+            --ls-font: 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
+            --ls-brand-50:#faf6ec; --ls-brand-100:#f3ead4; --ls-brand-200:#e7d5a8; --ls-brand-300:#d9bf7d; --ls-brand-400:#ccac60;
+            --ls-brand-500:#bf9c4f; --ls-brand-600:#a8853f; --ls-brand-700:#886a32; --ls-brand-800:#6b5329; --ls-brand-900:#4a3a1d;
+            --ls-brand-rgb: 168,133,63;   /* brand-600 สำหรับ rgba() */
+            --ls-panel-900:#1c1b19; --ls-panel-800:#2a2825; --ls-panel-700:#3a3833;   /* แถบมืด: เมนูข้าง / แถบหัว */
+            --ls-bg:#f8fafc; --ls-card:#ffffff; --ls-border:#e2e8f0; --ls-border-strong:#cbd5e1; --ls-hover:#f1f5f9;
+            --ls-text:#0f172a; --ls-text-body:#334155; --ls-muted:#64748b; --ls-faint:#94a3b8;
+        }
+        body { font-family: var(--ls-font); }
         /* Mobile fixes — iOS Safari / LINE in-app browser */
         html, body { min-height: 100%; }
         @supports (min-height: 100dvh) { .min-h-screen { min-height: 100dvh !important; } }
@@ -20,53 +44,53 @@
 </head>
 <!-- เดิม h-screen overflow-hidden: จอเตี้ย (แนวนอน / มือถือเล็ก / มีแถบ LINE) เลื่อนหาปุ่มเข้าสู่ระบบไม่ได้
      ตอนนี้สูงอย่างน้อยเต็มจอ แต่เลื่อนลงได้ถ้าการ์ดสูงกว่าจอ -->
-<body class="bg-zinc-900 flex flex-col items-center justify-center min-h-screen px-4 py-8 selection:bg-yellow-500 selection:text-zinc-900">
+<body class="bg-panel-900 flex flex-col items-center justify-center min-h-screen px-4 py-8 selection:bg-brand-600 selection:text-white">
 
     <!-- แสงพื้นหลัง: ครอบด้วย fixed + overflow-hidden ไม่งั้นวงกลม w-96 ยื่นเกินจอมือถือ ทำให้หน้ากว้างกว่าจอ -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-brand-700 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
     </div>
 
-    <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md relative z-10 border-t-4 border-yellow-500">
+    <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md relative z-10 border-t-4 border-brand-500">
         <div class="text-center mb-8">
             <img src="https://lh3.googleusercontent.com/d/1wFGzcl5Y3yEfd39sA2LTbrgeNkgVxm27" alt="Lamsang Logo" class="h-28 w-auto mx-auto mb-4 object-contain drop-shadow-sm">
-            <h2 class="text-3xl font-bold text-zinc-800 tracking-wide">Lamsang Group</h2>
-            <p class="text-zinc-500 text-sm mt-2">ระบบจัดการทรัพยากรบุคคล (HRIS)</p>
+            <h2 class="text-3xl font-bold text-slate-800 tracking-wide">Lamsang Group</h2>
+            <p class="text-slate-500 text-sm mt-2">ระบบจัดการทรัพยากรบุคคล (HRIS)</p>
         </div>
         
-        <div id="login-loading" class="hidden text-center text-yellow-600 mb-4 py-4">
+        <div id="login-loading" class="hidden text-center text-brand-600 mb-4 py-4">
             <i class="fa-solid fa-circle-notch fa-spin text-4xl"></i>
-            <p class="mt-4 text-sm font-medium text-zinc-600">กำลังตรวจสอบข้อมูล...</p>
+            <p class="mt-4 text-sm font-medium text-slate-600">กำลังตรวจสอบข้อมูล...</p>
         </div>
         
         <div id="login-form" class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-zinc-700 mb-1">อีเมล (Email)</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">อีเมล (Email)</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-envelope text-zinc-400"></i>
+                        <i class="fa-solid fa-envelope text-slate-400"></i>
                     </div>
-                    <input type="email" id="login-email" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 transition-colors" placeholder="employee@lamsang.com">
+                    <input type="email" id="login-email" class="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-brand-500 focus:border-brand-500 transition-colors" placeholder="employee@lamsang.com">
                 </div>
             </div>
             <div>
-                <label class="block text-sm font-medium text-zinc-700 mb-1">รหัสผ่าน (Password)</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน (Password)</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-lock text-zinc-400"></i>
+                        <i class="fa-solid fa-lock text-slate-400"></i>
                     </div>
-                    <input type="password" id="login-password" class="w-full border border-zinc-300 rounded-xl pl-10 pr-4 py-3 focus:ring-yellow-500 focus:border-yellow-500 bg-white transition-colors" placeholder="••••••••"
+                    <input type="password" id="login-password" class="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 focus:ring-brand-500 focus:border-brand-500 bg-white transition-colors" placeholder="••••••••"
                         onkeydown="if(event.key==='Enter') handleLogin()">
                 </div>
             </div>
-            <button onclick="handleLogin()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center">
+            <button onclick="handleLogin()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center">
                 <i class="fa-solid fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
             </button>
         </div>
     </div>
     
-    <div class="text-zinc-500 text-sm mt-8 relative z-10">&copy; 2026 Lamsang Group All Rights Reserved.</div>
+    <div class="text-slate-500 text-sm mt-8 relative z-10">&copy; 2026 Lamsang Group All Rights Reserved.</div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";

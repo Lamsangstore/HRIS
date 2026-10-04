@@ -10,82 +10,82 @@ export default {
     html: `
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="mb-8">
-    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">นำเข้าเวลางาน</h2>
-    <p class="text-sm text-zinc-400 font-medium mt-0.5">Import ข้อมูลเวลาเข้า-ออกงานจากระบบเก่าหรือเครื่องสแกนลายนิ้วมือ</p>
+    <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">นำเข้าเวลางาน</h2>
+    <p class="text-sm text-slate-400 font-medium mt-0.5">Import ข้อมูลเวลาเข้า-ออกงานจากระบบเก่าหรือเครื่องสแกนลายนิ้วมือ</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- กรอกทีละรายการ -->
-    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
-      <h3 class="font-black text-zinc-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-widest">
-        <i class="fa-solid fa-keyboard text-yellow-500"></i> กรอกทีละรายการ
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 class="font-black text-slate-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-keyboard text-brand-500"></i> กรอกทีละรายการ
       </h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">พนักงาน</label>
-          <select id="ti-emp" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">พนักงาน</label>
+          <select id="ti-emp" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
             <option value="">-- เลือกพนักงาน --</option>
           </select>
         </div>
         <div>
-          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วันที่</label>
-          <input type="date" id="ti-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">วันที่</label>
+          <input type="date" id="ti-date" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาเข้างาน</label>
-            <input type="time" id="ti-in" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">เวลาเข้างาน</label>
+            <input type="time" id="ti-in" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
           </div>
           <div>
-            <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาออกงาน</label>
-            <input type="time" id="ti-out" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">เวลาออกงาน</label>
+            <input type="time" id="ti-out" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
           </div>
         </div>
         <div>
-          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">หมายเหตุ</label>
-          <input type="text" id="ti-note" placeholder="เช่น นำเข้าจากระบบเก่า" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">หมายเหตุ</label>
+          <input type="text" id="ti-note" placeholder="เช่น นำเข้าจากระบบเก่า" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
         </div>
         <button onclick="tiSaveOne()" id="ti-save-btn"
-          class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
+          class="w-full bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
           <i class="fa-solid fa-plus mr-2"></i> เพิ่มรายการ
         </button>
       </div>
     </div>
 
     <!-- Import CSV -->
-    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
-      <h3 class="font-black text-zinc-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-widest">
-        <i class="fa-solid fa-file-csv text-yellow-500"></i> Import จาก CSV
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 class="font-black text-slate-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-file-csv text-brand-500"></i> Import จาก CSV
       </h3>
-      <div class="mb-4 bg-zinc-50 rounded-xl p-4 border border-zinc-200">
-        <p class="text-xs font-black text-zinc-600 mb-2 uppercase tracking-widest">รูปแบบ CSV ที่รองรับ:</p>
-        <code class="text-[11px] text-zinc-500 leading-relaxed">employee_code, date, time_in, time_out, note<br>EMP001, 2025-03-01, 08:05, 17:30, import<br>EMP002, 2025-03-01, 08:10, 17:45,</code>
-        <button onclick="tiDownloadTemplate()" class="mt-3 text-xs font-bold text-yellow-600 hover:text-yellow-700 flex items-center gap-1">
+      <div class="mb-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+        <p class="text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">รูปแบบ CSV ที่รองรับ:</p>
+        <code class="text-[11px] text-slate-500 leading-relaxed">employee_code, date, time_in, time_out, note<br>EMP001, 2025-03-01, 08:05, 17:30, import<br>EMP002, 2025-03-01, 08:10, 17:45,</code>
+        <button onclick="tiDownloadTemplate()" class="mt-3 text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1">
           <i class="fa-solid fa-download"></i> ดาวน์โหลด Template
         </button>
       </div>
-      <label class="block w-full cursor-pointer border-2 border-dashed border-zinc-300 hover:border-yellow-400 rounded-xl p-8 text-center transition-all">
-        <i class="fa-solid fa-file-arrow-up text-3xl text-zinc-400 mb-3 block"></i>
-        <p class="font-bold text-zinc-600 text-sm">คลิกหรือลากไฟล์ CSV มาวาง</p>
-        <p class="text-xs text-zinc-400 mt-1">รองรับไฟล์ .csv เท่านั้น</p>
+      <label class="block w-full cursor-pointer border-2 border-dashed border-slate-300 hover:border-brand-400 rounded-xl p-8 text-center transition-all">
+        <i class="fa-solid fa-file-arrow-up text-3xl text-slate-400 mb-3 block"></i>
+        <p class="font-bold text-slate-600 text-sm">คลิกหรือลากไฟล์ CSV มาวาง</p>
+        <p class="text-xs text-slate-400 mt-1">รองรับไฟล์ .csv เท่านั้น</p>
         <input type="file" accept=".csv" class="hidden" onchange="tiParseCSV(this)">
       </label>
       <div id="ti-csv-preview" class="mt-4 hidden">
-        <p class="text-xs font-black text-zinc-500 mb-2 uppercase tracking-widest" id="ti-csv-count">-</p>
-        <div class="max-h-48 overflow-y-auto rounded-xl border border-zinc-200">
+        <p class="text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" id="ti-csv-count">-</p>
+        <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200">
           <table class="w-full text-xs">
-            <thead><tr class="bg-zinc-50 border-b">
-              <th class="px-3 py-2 text-left font-black text-zinc-500">รหัส</th>
-              <th class="px-3 py-2 text-left font-black text-zinc-500">วันที่</th>
-              <th class="px-3 py-2 text-left font-black text-zinc-500">เข้า</th>
-              <th class="px-3 py-2 text-left font-black text-zinc-500">ออก</th>
-              <th class="px-3 py-2 text-left font-black text-zinc-500">สถานะ</th>
+            <thead><tr class="bg-slate-50 border-b">
+              <th class="px-3 py-2 text-left font-black text-slate-500">รหัส</th>
+              <th class="px-3 py-2 text-left font-black text-slate-500">วันที่</th>
+              <th class="px-3 py-2 text-left font-black text-slate-500">เข้า</th>
+              <th class="px-3 py-2 text-left font-black text-slate-500">ออก</th>
+              <th class="px-3 py-2 text-left font-black text-slate-500">สถานะ</th>
             </tr></thead>
             <tbody id="ti-csv-rows"></tbody>
           </table>
         </div>
         <button onclick="tiImportCSV()" id="ti-import-btn"
-          class="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-3 rounded-xl text-sm uppercase tracking-widest shadow-md">
+          class="mt-3 w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-3 rounded-xl text-sm uppercase tracking-widest shadow-md">
           <i class="fa-solid fa-bolt mr-2"></i> นำเข้า <span id="ti-import-count">0</span> รายการ
         </button>
       </div>
@@ -93,15 +93,15 @@ export default {
   </div>
 
   <!-- Recent imports -->
-  <div class="mt-6 bg-white rounded-2xl border border-zinc-200 overflow-hidden">
-    <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-      <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest">
-        <i class="fa-solid fa-history text-yellow-500 mr-2"></i> รายการที่นำเข้าล่าสุด
+  <div class="mt-6 bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="font-black text-slate-800 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-history text-brand-500 mr-2"></i> รายการที่นำเข้าล่าสุด
       </h3>
-      <span id="ti-log-count" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full">-</span>
+      <span id="ti-log-count" class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">-</span>
     </div>
-    <div id="ti-log-list" class="divide-y divide-zinc-100 max-h-64 overflow-y-auto">
-      <div class="p-6 text-center text-zinc-400 text-sm">กำลังโหลด...</div>
+    <div id="ti-log-list" class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+      <div class="p-6 text-center text-slate-400 text-sm">กำลังโหลด...</div>
     </div>
   </div>
 </div>`,
@@ -140,7 +140,7 @@ export default {
                 if (cnt) cnt.textContent = logs.length + ' รายการ';
                 const el = document.getElementById('ti-log-list');
                 if (!el) return;
-                if (!logs.length) { el.innerHTML='<div class="p-6 text-center text-zinc-400 text-sm">ยังไม่มีรายการ</div>'; return; }
+                if (!logs.length) { el.innerHTML='<div class="p-6 text-center text-slate-400 text-sm">ยังไม่มีรายการ</div>'; return; }
                 el.innerHTML = logs.map(l => {
                     const emp = employees.find(e=>e.uid===l.uid);
                     return `<div class="flex items-center gap-4 px-5 py-3">
@@ -148,10 +148,10 @@ export default {
                         <i class="fa-solid ${l.type==='clock_in'?'fa-right-to-bracket text-green-600':'fa-right-from-bracket text-red-500'} text-xs"></i>
                       </div>
                       <div class="flex-1 min-w-0">
-                        <p class="font-bold text-zinc-800 text-xs truncate">${emp?.name||l.uid}</p>
-                        <p class="text-[10px] text-zinc-400">${l.localDate} · ${l.timestamp ? new Date(l.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : ''} · ${l.note||''}</p>
+                        <p class="font-bold text-slate-800 text-xs truncate">${emp?.name||l.uid}</p>
+                        <p class="text-[10px] text-slate-400">${l.localDate} · ${l.timestamp ? new Date(l.timestamp).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}) : ''} · ${l.note||''}</p>
                       </div>
-                      <span class="text-[10px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">${l.importedBy||'Admin'}</span>
+                      <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${l.importedBy||'Admin'}</span>
                     </div>`;
                 }).join('');
             }
@@ -209,7 +209,7 @@ export default {
                         note: note || 'Import CSV',
                         found: !!emp
                     });
-                    rows.push(`<tr class="border-b border-zinc-100 ${!emp?'bg-red-50':''}">
+                    rows.push(`<tr class="border-b border-slate-100 ${!emp?'bg-red-50':''}">
                       <td class="px-3 py-2 font-bold">${code}</td>
                       <td class="px-3 py-2">${date}</td>
                       <td class="px-3 py-2">${timeIn||'-'}</td>

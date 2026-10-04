@@ -43,19 +43,19 @@ function render(apps) {
     const ordered = [...groups].sort(([a], [b]) => Number(isOther(a)) - Number(isOther(b)));
     return ordered.map(([cat, list]) => `
         <section class="mb-8">
-          <p class="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-3">${esc(cat)}</p>
+          <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">${esc(cat)}</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             ${list.map(a => {
                 const safe = /^https?:\/\//.test(a.link) ? a.link : '#';
                 return `
               <a href="${esc(safe)}" target="_blank" rel="noopener"
-                 class="group flex items-center gap-3 bg-white rounded-2xl border border-zinc-200 p-3.5 hover:border-yellow-400 hover:shadow-md transition-all min-w-0">
+                 class="group flex items-center gap-3 bg-white rounded-2xl border border-slate-200 p-3.5 hover:border-brand-400 hover:shadow-md transition-all min-w-0">
                 ${iconHtml(a)}
                 <span class="min-w-0 flex-1">
-                  <span class="block font-black text-zinc-800 text-sm truncate">${esc(a.name)}</span>
-                  ${a.description ? `<span class="block text-xs text-zinc-400 font-medium line-clamp-2">${esc(a.description)}</span>` : ''}
+                  <span class="block font-black text-slate-800 text-sm truncate">${esc(a.name)}</span>
+                  ${a.description ? `<span class="block text-xs text-slate-400 font-medium line-clamp-2">${esc(a.description)}</span>` : ''}
                 </span>
-                <i class="fa-solid fa-arrow-up-right-from-square text-zinc-300 group-hover:text-yellow-500 text-xs shrink-0"></i>
+                <i class="fa-solid fa-arrow-up-right-from-square text-slate-300 group-hover:text-brand-500 text-xs shrink-0"></i>
               </a>`;
             }).join('')}
           </div>
@@ -70,11 +70,11 @@ export default {
 </style>
 <div class="p-6 lg:p-8 max-w-6xl mx-auto">
   <div class="mb-8">
-    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">แอปของร้าน</h2>
-    <p class="text-sm text-zinc-400 font-medium mt-0.5">ทางเข้าแอปทั้งหมดของร้าน — แอปของร้านใช้อีเมลและรหัสผ่านเดียวกับ HRIS</p>
+    <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">แอปของร้าน</h2>
+    <p class="text-sm text-slate-400 font-medium mt-0.5">ทางเข้าแอปทั้งหมดของร้าน — แอปของร้านใช้อีเมลและรหัสผ่านเดียวกับ HRIS</p>
   </div>
   <div id="apps-body">
-    <div class="p-10 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
+    <div class="p-10 text-center text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
   </div>
 </div>`,
 
@@ -83,16 +83,16 @@ export default {
         const showError = (msg) => {
             if (!body) return;
             body.innerHTML = `
-              <div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center">
-                <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-2xl mb-3"></i>
-                <p class="text-sm font-bold text-zinc-700">${esc(msg)}</p>
-                <button id="apps-retry" class="mt-4 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest">ลองใหม่</button>
+              <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                <i class="fa-solid fa-triangle-exclamation text-brand-500 text-2xl mb-3"></i>
+                <p class="text-sm font-bold text-slate-700">${esc(msg)}</p>
+                <button id="apps-retry" class="mt-4 bg-panel-900 hover:bg-panel-800 text-brand-400 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest">ลองใหม่</button>
               </div>`;
             document.getElementById('apps-retry')?.addEventListener('click', load);
         };
 
         async function load() {
-            if (body) body.innerHTML = '<div class="p-10 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>';
+            if (body) body.innerHTML = '<div class="p-10 text-center text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>';
             let res;
             try {
                 const token = await user.getIdToken();
@@ -111,10 +111,10 @@ export default {
             if (!body) return;
             body.innerHTML = apps.length
                 ? render(apps) + (profile?.role === 'admin'
-                    ? `<p class="text-xs text-zinc-400 font-medium mt-2"><i class="fa-solid fa-pen mr-1"></i>
-                         เพิ่ม/แก้รายชื่อแอปได้ที่ <a href="https://lamsangstore.com/admin/apps" target="_blank" rel="noopener" class="underline hover:text-yellow-600">หลังบ้านเว็บร้าน → แอปของร้าน</a></p>`
+                    ? `<p class="text-xs text-slate-400 font-medium mt-2"><i class="fa-solid fa-pen mr-1"></i>
+                         เพิ่ม/แก้รายชื่อแอปได้ที่ <a href="https://lamsangstore.com/admin/apps" target="_blank" rel="noopener" class="underline hover:text-brand-600">หลังบ้านเว็บร้าน → แอปของร้าน</a></p>`
                     : '')
-                : '<div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-sm font-bold text-zinc-400">ยังไม่มีแอปที่คุณใช้ได้</div>';
+                : '<div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm font-bold text-slate-400">ยังไม่มีแอปที่คุณใช้ได้</div>';
         }
 
         await load();

@@ -13,14 +13,14 @@ export default {
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">วันหยุดตามประเพณี</h2>
-      <p class="text-sm text-zinc-400 font-medium mt-0.5">จัดการวันหยุดนักขัตฤกษ์ที่แสดงบนปฏิทินของพนักงานทุกคน</p>
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">วันหยุดตามประเพณี</h2>
+      <p class="text-sm text-slate-400 font-medium mt-0.5">จัดการวันหยุดนักขัตฤกษ์ที่แสดงบนปฏิทินของพนักงานทุกคน</p>
     </div>
     <div class="flex gap-2">
-      <button onclick="holAddPreset()" class="inline-flex items-center gap-2 border-2 border-zinc-200 hover:border-yellow-400 text-zinc-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
+      <button onclick="holAddPreset()" class="inline-flex items-center gap-2 border-2 border-slate-200 hover:border-brand-400 text-slate-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
         <i class="fa-solid fa-wand-magic-sparkles"></i> เพิ่ม Preset ปี 2568
       </button>
-      <button onclick="holOpenModal(null)" class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-5 py-2.5 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
+      <button onclick="holOpenModal(null)" class="inline-flex items-center gap-2 bg-panel-900 hover:bg-panel-800 text-brand-400 font-black px-5 py-2.5 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
         <i class="fa-solid fa-plus"></i> เพิ่มวันหยุด
       </button>
     </div>
@@ -28,17 +28,17 @@ export default {
 
   <!-- Filter by year -->
   <div class="flex items-center gap-3 mb-6">
-    <label class="text-xs font-black text-zinc-500 uppercase tracking-widest">แสดงปี (พ.ศ.)</label>
-    <select id="hol-year-filter" onchange="holFilterYear()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+    <label class="text-xs font-black text-slate-500 uppercase tracking-widest">แสดงปี (พ.ศ.)</label>
+    <select id="hol-year-filter" onchange="holFilterYear()" class="border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
       <option value="all">ทั้งหมด</option>
     </select>
-    <span id="hol-count" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full ml-auto">-</span>
+    <span id="hol-count" class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full ml-auto">-</span>
   </div>
 
   <!-- Holiday list -->
-  <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
-    <div id="hol-list" class="divide-y divide-zinc-100">
-      <div class="p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+  <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div id="hol-list" class="divide-y divide-slate-100">
+      <div class="p-8 text-center text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
     </div>
   </div>
 </div>
@@ -47,29 +47,29 @@ export default {
 <div id="hol-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="holCloseModal()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+    <div class="bg-panel-900 px-7 py-5 flex items-center justify-between">
       <div>
         <h3 id="hol-modal-title" class="font-black text-white text-lg">เพิ่มวันหยุด</h3>
-        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Public Holiday</p>
+        <p class="text-brand-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Public Holiday</p>
       </div>
-      <button onclick="holCloseModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="holCloseModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
     <div class="p-7 space-y-4">
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วันที่</label>
-        <input type="date" id="hol-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">วันที่</label>
+        <input type="date" id="hol-date" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
       </div>
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ชื่อวันหยุด (ภาษาไทย)</label>
-        <input type="text" id="hol-name" placeholder="เช่น วันสงกรานต์" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">ชื่อวันหยุด (ภาษาไทย)</label>
+        <input type="text" id="hol-name" placeholder="เช่น วันสงกรานต์" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
       </div>
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ชื่อ (ภาษาอังกฤษ, ไม่บังคับ)</label>
-        <input type="text" id="hol-name-en" placeholder="Songkran Festival" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">ชื่อ (ภาษาอังกฤษ, ไม่บังคับ)</label>
+        <input type="text" id="hol-name-en" placeholder="Songkran Festival" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
       </div>
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ประเภท</label>
-        <select id="hol-type" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">ประเภท</label>
+        <select id="hol-type" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
           <option value="national">วันหยุดนักขัตฤกษ์</option>
           <option value="royal">วันหยุดราชการพิเศษ</option>
           <option value="company">วันหยุดบริษัท</option>
@@ -78,7 +78,7 @@ export default {
       </div>
       <input type="hidden" id="hol-edit-id">
       <button onclick="holSave()" id="hol-save-btn"
-        class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-4 rounded-xl transition-all shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-4 rounded-xl transition-all shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2">
         <i class="fa-solid fa-save"></i> บันทึก
       </button>
     </div>
@@ -126,7 +126,7 @@ export default {
 
         function renderList(list) {
             const el = document.getElementById('hol-list'); if(!el) return;
-            if (!list.length) { el.innerHTML=`<div class="p-10 text-center text-zinc-300"><i class="fa-regular fa-calendar-xmark text-4xl mb-3 block"></i><p class="font-bold text-sm">ยังไม่มีวันหยุด</p></div>`; return; }
+            if (!list.length) { el.innerHTML=`<div class="p-10 text-center text-slate-300"><i class="fa-regular fa-calendar-xmark text-4xl mb-3 block"></i><p class="font-bold text-sm">ยังไม่มีวันหยุด</p></div>`; return; }
             // Group by year
             const grouped = {};
             list.forEach(h => {
@@ -136,33 +136,33 @@ export default {
             });
             let html = '';
             Object.keys(grouped).sort().forEach(yr => {
-                html += `<div class="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center gap-2">
-                    <i class="fa-solid fa-calendar-days text-yellow-500 text-sm"></i>
-                    <span class="font-black text-zinc-700 text-xs uppercase tracking-widest">ปี ${yr}</span>
-                    <span class="text-[10px] text-zinc-400 font-bold ml-auto">${grouped[yr].length} วัน</span>
+                html += `<div class="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days text-brand-500 text-sm"></i>
+                    <span class="font-black text-slate-700 text-xs uppercase tracking-widest">ปี ${yr}</span>
+                    <span class="text-[10px] text-slate-400 font-bold ml-auto">${grouped[yr].length} วัน</span>
                 </div>`;
                 grouped[yr].forEach(h => {
                     const d = parseDateTH(h.date);
                     const dayName = DAY_NAMES[d.getDay()];
                     const thDate = d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Bangkok'});
-                    const typeBadge = { national:'bg-red-100 text-red-700', royal:'bg-purple-100 text-purple-700', company:'bg-blue-100 text-blue-700', regional:'bg-orange-100 text-orange-700' }[h.type]||'bg-zinc-100 text-zinc-600';
-                    html += `<div class="flex items-center gap-4 px-5 py-4 hover:bg-zinc-50 transition-all group">
+                    const typeBadge = { national:'bg-red-100 text-red-700', royal:'bg-purple-100 text-purple-700', company:'bg-blue-100 text-blue-700', regional:'bg-orange-100 text-orange-700' }[h.type]||'bg-slate-100 text-slate-600';
+                    html += `<div class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-all group">
                       <div class="w-12 text-center shrink-0">
-                        <p class="text-lg font-black text-zinc-800">${d.getDate()}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold">${dayName}</p>
+                        <p class="text-lg font-black text-slate-800">${d.getDate()}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">${dayName}</p>
                       </div>
-                      <div class="w-px h-10 bg-zinc-200 shrink-0"></div>
+                      <div class="w-px h-10 bg-slate-200 shrink-0"></div>
                       <div class="flex-1 min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                          <p class="font-black text-zinc-800 text-sm">${h.name}</p>
-                          ${h.nameEn ? `<p class="text-xs text-zinc-400">${h.nameEn}</p>` : ''}
+                          <p class="font-black text-slate-800 text-sm">${h.name}</p>
+                          ${h.nameEn ? `<p class="text-xs text-slate-400">${h.nameEn}</p>` : ''}
                           <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${typeBadge}">${TYPE_MAP[h.type]||h.type}</span>
                         </div>
-                        <p class="text-xs text-zinc-400 mt-0.5">${thDate}</p>
+                        <p class="text-xs text-slate-400 mt-0.5">${thDate}</p>
                       </div>
                       <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                        <button onclick="holOpenModal('${h.id}')" class="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-yellow-400 flex items-center justify-center transition-all"><i class="fa-solid fa-pen text-xs"></i></button>
-                        <button onclick="holDelete('${h.id}')" class="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-red-400 hover:text-white flex items-center justify-center transition-all"><i class="fa-solid fa-trash text-xs"></i></button>
+                        <button onclick="holOpenModal('${h.id}')" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-brand-700 flex items-center justify-center transition-all"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="holDelete('${h.id}')" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-red-400 hover:text-white flex items-center justify-center transition-all"><i class="fa-solid fa-trash text-xs"></i></button>
                       </div>
                     </div>`;
                 });

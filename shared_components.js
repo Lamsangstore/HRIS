@@ -12,48 +12,48 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
 
     // 1. จัดการ Sidebar
     const sidebarHTML = `
-        <aside id="app-sidebar" class="w-64 bg-zinc-900 text-zinc-300 flex flex-col transition-all duration-300 shadow-xl z-20 h-full overflow-hidden shrink-0">
-            <div class="logo-container p-5 flex items-center justify-center border-b border-zinc-800 transition-all">
+        <aside id="app-sidebar" class="w-64 bg-panel-900 text-slate-300 flex flex-col transition-all duration-300 shadow-xl z-20 h-full overflow-hidden shrink-0">
+            <div class="logo-container p-5 flex items-center justify-center border-b border-panel-800 transition-all">
                 <img src="${logoUrl}" alt="Lamsang Logo" class="h-10 w-10 min-w-[2.5rem] object-contain rounded bg-white p-1 mr-3 shrink-0 transition-all">
                 <h1 class="text-lg font-bold tracking-wider truncate text-white sidebar-text">Lamsang Group</h1>
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
-                <a href="home.html" title="หน้าหลัก" data-page="home" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'home' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
+                <a href="home.html" title="หน้าหลัก" data-page="home" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors ${activePageId === 'home' ? 'bg-brand-600 text-white font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-house w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">หน้าหลัก</span>
                 </a>
                 
                 ${(isAdmin || isManager) ? `
-                <a href="#" title="แดชบอร์ดผู้บริหาร" data-page="executive" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'executive' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
+                <a href="#" title="แดชบอร์ดผู้บริหาร" data-page="executive" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors ${activePageId === 'executive' ? 'bg-brand-600 text-white font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-chart-line w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">แดชบอร์ดผู้บริหาร</span>
                 </a>` : ''}
 
-                <a href="time.html" title="เวลาทำงาน & กะ" data-page="time" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'time' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
+                <a href="time.html" title="เวลาทำงาน & กะ" data-page="time" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors ${activePageId === 'time' ? 'bg-brand-600 text-white font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-clock w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">เวลาทำงาน & กะ</span>
                 </a>
 
-                <a href="profile.html" title="โปรไฟล์ของฉัน" data-page="profile" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'profile' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
+                <a href="profile.html" title="โปรไฟล์ของฉัน" data-page="profile" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors ${activePageId === 'profile' ? 'bg-brand-600 text-white font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-id-badge w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">โปรไฟล์ของฉัน</span>
                 </a>
 
-                <a href="#" title="การอนุมัติ & วันลา" data-page="leave" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'leave' ? 'bg-yellow-500 text-zinc-900 font-semibold shadow-sm active-nav' : ''}">
+                <a href="#" title="การอนุมัติ & วันลา" data-page="leave" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors ${activePageId === 'leave' ? 'bg-brand-600 text-white font-semibold shadow-sm active-nav' : ''}">
                     <i class="fa-solid fa-calendar-check w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">การอนุมัติ & วันลา</span>
                 </a>
 
                 ${isAdmin ? `
-                <div class="space-y-2 mt-6 pt-6 border-t border-zinc-800">
-                    <p class="px-4 text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">Admin Panel</p>
-                    <a href="add-employee.html" title="เพิ่มพนักงานใหม่" data-page="add-employee" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors ${activePageId === 'add-employee' ? 'text-zinc-900 bg-yellow-500 font-bold active-nav' : 'text-yellow-500'}">
+                <div class="space-y-2 mt-6 pt-6 border-t border-panel-800">
+                    <p class="px-4 text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-bold admin-panel-text whitespace-nowrap">Admin Panel</p>
+                    <a href="add-employee.html" title="เพิ่มพนักงานใหม่" data-page="add-employee" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors ${activePageId === 'add-employee' ? 'text-white bg-brand-600 font-bold active-nav' : 'text-brand-500'}">
                         <i class="fa-solid fa-user-plus w-6 text-center shrink-0"></i> <span class="ml-3 sidebar-text whitespace-nowrap">เพิ่ม/แก้ไขพนักงาน</span>
                     </a>
-                    <a href="#" title="จัดการเงินเดือน" data-page="payroll" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
+                    <a href="#" title="จัดการเงินเดือน" data-page="payroll" class="nav-item flex items-center px-4 py-3 rounded-lg hover:bg-panel-800 hover:text-brand-400 transition-colors">
                         <i class="fa-solid fa-file-invoice-dollar w-6 text-center shrink-0"></i> <span class="ml-3 font-medium sidebar-text whitespace-nowrap">จัดการเงินเดือน</span>
                     </a>
                 </div>` : ''}
             </nav>
-            <div class="p-4 border-t border-zinc-800 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-medium footer-text whitespace-nowrap">
+            <div class="p-4 border-t border-panel-800 text-[10px] text-slate-600 text-center uppercase tracking-widest font-medium footer-text whitespace-nowrap">
                 &copy; 2026 Lamsang Group
             </div>
-            <div class="p-4 border-t border-zinc-800 text-[10px] text-zinc-600 text-center font-black hidden collapsed-footer-text">
+            <div class="p-4 border-t border-panel-800 text-[10px] text-slate-600 text-center font-black hidden collapsed-footer-text">
                 LSG
             </div>
         </aside>
@@ -61,27 +61,27 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
 
     // 2. จัดการ Topbar 
     const topbarHTML = `
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-zinc-200 shrink-0">
+        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 border-b border-slate-200 shrink-0">
             <div class="flex items-center">
-                <button onclick="window.toggleSidebar()" class="text-zinc-500 hover:text-yellow-500 hover:bg-zinc-100 p-2 rounded-lg mr-4 transition-colors focus:outline-none">
+                <button onclick="window.toggleSidebar()" class="text-slate-500 hover:text-brand-500 hover:bg-slate-100 p-2 rounded-lg mr-4 transition-colors focus:outline-none">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
-                <h2 id="topbar-title" class="text-lg font-bold text-zinc-800 uppercase tracking-tight hidden sm:block">${document.title.split(' - ')[0]}</h2>
+                <h2 id="topbar-title" class="text-lg font-bold text-slate-800 uppercase tracking-tight hidden sm:block">${document.title.split(' - ')[0]}</h2>
             </div>
             <div class="flex items-center space-x-4">
-                <button class="text-zinc-400 hover:text-yellow-500 relative transition-colors p-2">
+                <button class="text-slate-400 hover:text-brand-500 relative transition-colors p-2">
                     <i class="fa-regular fa-bell text-xl"></i>
                     <span class="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">3</span>
                 </button>
-                <div class="h-8 w-px bg-zinc-200 mx-2"></div>
-                <a href="profile.html" data-page="profile" class="nav-item flex items-center space-x-3 hover:bg-zinc-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-zinc-100 group">
-                    <img src="${avatarUrl}" id="topbar-avatar" class="w-8 h-8 rounded-full object-cover border-2 border-zinc-200 group-hover:border-yellow-500 transition-all">
+                <div class="h-8 w-px bg-slate-200 mx-2"></div>
+                <a href="profile.html" data-page="profile" class="nav-item flex items-center space-x-3 hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-slate-100 group">
+                    <img src="${avatarUrl}" id="topbar-avatar" class="w-8 h-8 rounded-full object-cover border-2 border-slate-200 group-hover:border-brand-500 transition-all">
                     <div class="text-sm leading-tight hidden md:block">
-                        <p class="font-bold text-zinc-800 group-hover:text-yellow-600 transition-colors" id="topbar-username">${userProfile.name}</p>
-                        <p class="text-[9px] text-zinc-400 font-black uppercase tracking-widest">${userProfile.role}</p>
+                        <p class="font-bold text-slate-800 group-hover:text-brand-600 transition-colors" id="topbar-username">${userProfile.name}</p>
+                        <p class="text-[9px] text-slate-400 font-black uppercase tracking-widest">${userProfile.role}</p>
                     </div>
                 </a>
-                <div class="h-8 w-px bg-zinc-200 mx-2 hidden md:block"></div>
+                <div class="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
                 <button onclick="window.handleLogout()" class="text-xs text-red-500 hover:text-red-700 font-black uppercase tracking-widest flex items-center transition-colors bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg">
                     <i class="fa-solid fa-power-off sm:mr-2"></i> <span class="hidden sm:inline">ออกจากระบบ</span>
                 </button>
@@ -107,8 +107,8 @@ export function renderUI(userProfile, activePageId, isInitialLoad = false) {
             if (!document.getElementById('content-transition-overlay')) {
                 const overlay = document.createElement('div');
                 overlay.id = 'content-transition-overlay';
-                overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center transition-opacity duration-300';
-                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Loading Workspace...</p>';
+                overlay.className = 'absolute inset-0 bg-[#f8fafc] z-50 flex flex-col items-center justify-center transition-opacity duration-300';
+                overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-brand-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Loading Workspace...</p>';
                 contentArea.appendChild(overlay);
             }
         } else {
@@ -168,12 +168,12 @@ function handleMenuClick(e) {
 
     // อัปเดต active state ทันที (ให้รู้สึก responsive)
     document.querySelectorAll('#app-sidebar a.nav-item').forEach(el => {
-        el.classList.remove('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm', 'active-nav');
-        el.classList.add('text-zinc-300');
+        el.classList.remove('bg-brand-600', 'text-white', 'font-semibold', 'shadow-sm', 'active-nav');
+        el.classList.add('text-slate-300');
     });
     if (e.currentTarget.closest('#app-sidebar')) {
-        e.currentTarget.classList.add('bg-yellow-500', 'text-zinc-900', 'font-semibold', 'shadow-sm', 'active-nav');
-        e.currentTarget.classList.remove('text-zinc-300', 'text-yellow-500');
+        e.currentTarget.classList.add('bg-brand-600', 'text-white', 'font-semibold', 'shadow-sm', 'active-nav');
+        e.currentTarget.classList.remove('text-slate-300', 'text-brand-500');
     }
 
     // แสดง loading overlay เฉพาะพื้นที่กลาง
@@ -181,8 +181,8 @@ function handleMenuClick(e) {
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'content-transition-overlay';
-        overlay.className = 'absolute inset-0 bg-[#fafafa] z-50 flex flex-col items-center justify-center';
-        overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-yellow-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Switching Tab...</p>';
+        overlay.className = 'absolute inset-0 bg-[#f8fafc] z-50 flex flex-col items-center justify-center';
+        overlay.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-5xl text-brand-500 mb-4 drop-shadow-md"></i><p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Switching Tab...</p>';
         contentArea.appendChild(overlay);
     }
     overlay.style.opacity = '1';

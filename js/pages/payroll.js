@@ -7,10 +7,10 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20261001a';
-import { workDaySetOn } from '../lib/work-days.js?v=20261001a';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20261004a';
+import { workDaySetOn } from '../lib/work-days.js?v=20261004a';
 import { calcMonthlyWHT, recordTaxLines, buildYTD, taxMonthsFor, whtSummary, ALLOWANCE_FIELDS }
-    from '../lib/wht.js?v=20261001a';
+    from '../lib/wht.js?v=20261004a';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -28,21 +28,21 @@ export default {
     title: '\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19',
     html: `
 <style>
-:root { --pr-gold:#eab308; --pr-dark:#18181b; }
+:root { --pr-gold:var(--ls-brand-600); --pr-dark:var(--ls-panel-900); }
 .pr-input {
-  width:100%; border:2px solid #f4f4f5; background:#fafafa; border-radius:.6rem;
-  padding:.55rem .85rem; font-size:.8rem; font-weight:600; color:#27272a;
+  width:100%; border:2px solid var(--ls-hover); background:var(--ls-bg); border-radius:.6rem;
+  padding:.55rem .85rem; font-size:.8rem; font-weight:600; color:var(--ls-text);
   outline:none; transition:all .18s; font-family:inherit;
 }
-.pr-input:focus { background:#fff; border-color:#eab308; box-shadow:0 0 0 3px rgba(234,179,8,.12); }
-.pr-input[readonly],.pr-input:read-only { background:#f4f4f5; color:#71717a; cursor:default; border-color:#e4e4e7; }
-.pr-lbl { display:block; font-size:.7rem; font-weight:700; color:#71717a; margin-bottom:.22rem; text-transform:uppercase; letter-spacing:.05em; }
-.pr-section { border-left:3px solid #eab308; padding-left:1rem; margin-bottom:1.5rem; }
-.pr-section-title { font-size:.68rem; font-weight:900; color:#a1a1aa; text-transform:uppercase; letter-spacing:.12em; margin-bottom:.7rem; }
+.pr-input:focus { background:#fff; border-color:var(--ls-brand-500); box-shadow:0 0 0 3px rgba(var(--ls-brand-rgb),.12); }
+.pr-input[readonly],.pr-input:read-only { background:var(--ls-hover); color:var(--ls-muted); cursor:default; border-color:var(--ls-border); }
+.pr-lbl { display:block; font-size:.7rem; font-weight:700; color:var(--ls-muted); margin-bottom:.22rem; text-transform:uppercase; letter-spacing:.05em; }
+.pr-section { border-left:3px solid var(--ls-brand-500); padding-left:1rem; margin-bottom:1.5rem; }
+.pr-section-title { font-size:.68rem; font-weight:900; color:var(--ls-faint); text-transform:uppercase; letter-spacing:.12em; margin-bottom:.7rem; }
 .pr-row-earn   { background:#f0fdf4; }
 .pr-row-deduct { background:#fef2f2; }
-.pr-row-net    { background:#fefce8; }
-.pr-badge-draft  { background:#fef9c3; color:#713f12; border:1px solid #fde047; }
+.pr-row-net    { background:var(--ls-brand-50); }
+.pr-badge-draft  { background:#fef3c7; color:#78350f; border:1px solid #fcd34d; }
 .pr-badge-final  { background:#dcfce7; color:#14532d; border:1px solid #86efac; }
 .pr-badge-paid   { background:#e0f2fe; color:#0c4a6e; border:1px solid #7dd3fc; }
 .pr-slide { animation:prSlide .2s ease forwards; }
@@ -54,34 +54,34 @@ export default {
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
       <div class="flex items-center gap-3 mb-1">
-        <div class="w-10 h-10 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-md">
-          <i class="fa-solid fa-file-invoice-dollar text-yellow-400"></i>
+        <div class="w-10 h-10 bg-panel-900 rounded-2xl flex items-center justify-center shadow-md">
+          <i class="fa-solid fa-file-invoice-dollar text-brand-400"></i>
         </div>
-        <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">Payroll Management</h2>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">Payroll Management</h2>
       </div>
-      <p class="text-sm text-zinc-400 font-medium">\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e25\u0e30\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19 Lamsang Group</p>
+      <p class="text-sm text-slate-400 font-medium">\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e25\u0e30\u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19 Lamsang Group</p>
     </div>
     <button onclick="prOpenCreate()"
-      class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-6 py-3 rounded-xl shadow-lg transition-all text-sm uppercase tracking-widest">
+      class="inline-flex items-center gap-2 bg-panel-900 hover:bg-panel-800 text-brand-400 font-black px-6 py-3 rounded-xl shadow-lg transition-all text-sm uppercase tracking-widest">
       <i class="fa-solid fa-plus"></i> \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14\u0e43\u0e2b\u0e21\u0e48
     </button>
   </div>
   <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
     <div class="xl:col-span-2">
-      <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
-        <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-          <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest flex items-center gap-2">
-            <i class="fa-solid fa-calendar-days text-yellow-500"></i> \u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="font-black text-slate-800 text-sm uppercase tracking-widest flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-brand-500"></i> \u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19
           </h3>
-          <span id="pr-cnt" class="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full">-</span>
+          <span id="pr-cnt" class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">-</span>
         </div>
-        <div id="pr-list" class="divide-y divide-zinc-100 max-h-[72vh] overflow-y-auto">
-          <div class="p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="text-sm font-bold">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>
+        <div id="pr-list" class="divide-y divide-slate-100 max-h-[72vh] overflow-y-auto">
+          <div class="p-8 text-center text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="text-sm font-bold">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>
         </div>
       </div>
     </div>
     <div class="xl:col-span-3" id="pr-panel">
-      <div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-72 text-zinc-300">
+      <div class="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center h-72 text-slate-300">
         <i class="fa-solid fa-arrow-left text-5xl mb-4 opacity-25"></i>
         <p class="font-bold text-sm">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e07\u0e27\u0e14\u0e08\u0e32\u0e01\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</p>
       </div>
@@ -112,40 +112,40 @@ export default {
     </div>
 
     <!-- Toolbar -->
-    <div class="px-6 py-3 border-b border-zinc-100 flex items-center gap-3 shrink-0 bg-zinc-50">
+    <div class="px-6 py-3 border-b border-slate-100 flex items-center gap-3 shrink-0 bg-slate-50">
       <label class="flex items-center gap-2 cursor-pointer select-none">
         <input type="checkbox" id="pr-line-all" onchange="prLineToggleAll(this.checked)"
           class="w-4 h-4 accent-[#06C755] cursor-pointer">
-        <span class="text-sm font-bold text-zinc-700">เลือกทั้งหมด</span>
+        <span class="text-sm font-bold text-slate-700">เลือกทั้งหมด</span>
       </label>
       <span id="pr-line-sel-cnt" class="text-xs font-black text-[#06C755] bg-green-50 px-3 py-1 rounded-full ml-auto">0 คน</span>
       <div class="relative">
-        <i class="fa-solid fa-search absolute left-3 top-2.5 text-zinc-400 text-xs"></i>
+        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
         <input type="text" id="pr-line-search" oninput="prLineFilter()"
-          placeholder="ค้นหา..." class="border-2 border-zinc-200 rounded-xl pl-8 pr-3 py-2 text-xs font-medium focus:border-[#06C755] focus:outline-none w-40">
+          placeholder="ค้นหา..." class="border-2 border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs font-medium focus:border-[#06C755] focus:outline-none w-40">
       </div>
     </div>
 
     <!-- Employee list -->
     <div class="flex-1 overflow-y-auto px-6 py-4">
       <div id="pr-line-list" class="space-y-2">
-        <div class="text-center py-10 text-zinc-300">
+        <div class="text-center py-10 text-slate-300">
           <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="px-6 py-4 border-t border-zinc-100 flex items-center gap-3 shrink-0 bg-white">
+    <div class="px-6 py-4 border-t border-slate-100 flex items-center gap-3 shrink-0 bg-white">
       <div class="flex-1">
-        <p class="text-xs text-zinc-500 font-medium">ส่งเฉพาะพนักงานที่มี LINE User ID เท่านั้น</p>
+        <p class="text-xs text-slate-500 font-medium">ส่งเฉพาะพนักงานที่มี LINE User ID เท่านั้น</p>
         <p id="pr-line-no-id-warn" class="text-[10px] text-amber-600 font-bold hidden">
           <i class="fa-solid fa-triangle-exclamation mr-1"></i>
           <span id="pr-line-no-id-cnt"></span> คนไม่มี LINE ID (จะไม่ถูกส่ง)
         </p>
       </div>
       <button onclick="prLineClose()"
-        class="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm transition-all">
+        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-xl text-sm transition-all">
         ยกเลิก
       </button>
       <button id="pr-line-send-btn" onclick="prLineSend()"
@@ -164,49 +164,49 @@ export default {
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="prBankClose()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
     <!-- Header -->
-    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between shrink-0">
+    <div class="bg-panel-900 px-7 py-5 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-green-500/20 rounded-2xl flex items-center justify-center">
           <i class="fa-solid fa-building-columns text-green-400 text-xl"></i>
         </div>
         <div>
           <h3 class="font-black text-white text-lg leading-tight">Export โอนเงินเดือน (KBIZ)</h3>
-          <p id="pr-bank-period-sub" class="text-zinc-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">กำลังโหลด...</p>
+          <p id="pr-bank-period-sub" class="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-0.5">กำลังโหลด...</p>
         </div>
       </div>
-      <button onclick="prBankClose()" class="text-zinc-400 hover:text-white transition-colors">
+      <button onclick="prBankClose()" class="text-slate-400 hover:text-white transition-colors">
         <i class="fa-solid fa-xmark text-xl"></i>
       </button>
     </div>
 
     <!-- Effective Date + Select All -->
-    <div class="px-6 pt-5 pb-3 border-b border-zinc-100 shrink-0 space-y-3">
+    <div class="px-6 pt-5 pb-3 border-b border-slate-100 shrink-0 space-y-3">
       <div class="flex items-center gap-4 flex-wrap">
         <div class="flex-1 min-w-[160px]">
           <label class="pr-lbl mb-1 block">วันที่เงินเข้าบัญชี (DD/MM/YYYY)</label>
           <input type="date" id="pr-bank-date" class="pr-input" />
         </div>
         <div class="flex items-center gap-2 pt-4">
-          <input type="checkbox" id="pr-bank-chk-all" class="w-4 h-4 accent-zinc-900 cursor-pointer" onchange="prBankToggleAll(this.checked)">
-          <label for="pr-bank-chk-all" class="text-xs font-black text-zinc-600 uppercase tracking-widest cursor-pointer select-none">เลือกทั้งหมด</label>
+          <input type="checkbox" id="pr-bank-chk-all" class="w-4 h-4 accent-slate-900 cursor-pointer" onchange="prBankToggleAll(this.checked)">
+          <label for="pr-bank-chk-all" class="text-xs font-black text-slate-600 uppercase tracking-widest cursor-pointer select-none">เลือกทั้งหมด</label>
         </div>
       </div>
-      <p class="text-[11px] text-zinc-400 font-medium">เลือกพนักงานที่ต้องการ Export — เฉพาะที่มีเลขบัญชีธนาคารเท่านั้น</p>
+      <p class="text-[11px] text-slate-400 font-medium">เลือกพนักงานที่ต้องการ Export — เฉพาะที่มีเลขบัญชีธนาคารเท่านั้น</p>
     </div>
 
     <!-- Employee List -->
-    <div id="pr-bank-list" class="flex-1 overflow-y-auto divide-y divide-zinc-100 px-2 py-2">
-      <div class="py-10 text-center text-zinc-400">
+    <div id="pr-bank-list" class="flex-1 overflow-y-auto divide-y divide-slate-100 px-2 py-2">
+      <div class="py-10 text-center text-slate-400">
         <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
         <p class="text-sm font-bold mt-2">กำลังโหลด...</p>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between gap-3 shrink-0">
-      <p class="text-xs text-zinc-400 font-bold"><span id="pr-bank-sel-count">0</span> คนที่เลือก</p>
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+      <p class="text-xs text-slate-400 font-bold"><span id="pr-bank-sel-count">0</span> คนที่เลือก</p>
       <div class="flex gap-2">
-        <button onclick="prBankClose()" class="px-5 py-2.5 rounded-xl text-xs font-black text-zinc-500 hover:text-zinc-800 border-2 border-zinc-200 hover:border-zinc-400 transition-all uppercase tracking-widest">
+        <button onclick="prBankClose()" class="px-5 py-2.5 rounded-xl text-xs font-black text-slate-500 hover:text-slate-800 border-2 border-slate-200 hover:border-slate-400 transition-all uppercase tracking-widest">
           ยกเลิก
         </button>
         <button onclick="prBankExport()" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
@@ -221,12 +221,12 @@ export default {
 <div id="pr-modal-create" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseCreate()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+    <div class="bg-panel-900 px-7 py-5 flex items-center justify-between">
       <div>
         <h3 class="font-black text-white text-lg">\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e43\u0e2b\u0e21\u0e48</h3>
-        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">New Payroll Period</p>
+        <p class="text-brand-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">New Payroll Period</p>
       </div>
-      <button onclick="prCloseCreate()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="prCloseCreate()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
     <div class="p-7 space-y-4">
       <div class="grid grid-cols-2 gap-4">
@@ -239,7 +239,7 @@ export default {
       </div>
       <div><label class="pr-lbl">\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38</label><input type="text" id="pr-note" class="pr-input" placeholder="\u0e40\u0e0a\u0e48\u0e19 \u0e40\u0e14\u0e37\u0e2d\u0e19\u0e21\u0e35\u0e19\u0e32\u0e04\u0e21 2568"></div>
       <button onclick="prDoCreate()" id="pr-create-btn"
-        class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-4 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md flex items-center justify-center gap-2">
+        class="w-full bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-4 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md flex items-center justify-center gap-2">
         <i class="fa-solid fa-plus-circle"></i> \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e07\u0e27\u0e14
       </button>
     </div>
@@ -250,26 +250,26 @@ export default {
 <div id="pr-modal-rec" class="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="prCloseRec()"></div>
   <div class="pr-rec-box relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[96vh] flex flex-col overflow-hidden">
-    <div class="bg-zinc-900 px-4 sm:px-7 py-4 flex items-center justify-between shrink-0">
+    <div class="bg-panel-900 px-4 sm:px-7 py-4 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-3 min-w-0">
-        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-zinc-700 shrink-0" onerror="handleImgError(this)">
+        <img id="pr-rec-av" src="" class="w-10 h-10 rounded-xl object-cover border border-panel-700 shrink-0" onerror="handleImgError(this)">
         <div class="min-w-0">
           <p id="pr-rec-name" class="font-black text-white text-sm truncate">-</p>
-          <p id="pr-rec-code" class="text-yellow-400 text-[10px] font-bold uppercase tracking-wide truncate">-</p>
+          <p id="pr-rec-code" class="text-brand-400 text-[10px] font-bold uppercase tracking-wide truncate">-</p>
         </div>
       </div>
-      <button onclick="prCloseRec()" class="text-zinc-400 hover:text-white shrink-0 ml-2"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="prCloseRec()" class="text-slate-400 hover:text-white shrink-0 ml-2"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
     <div class="overflow-y-auto flex-1 min-h-0 p-4 sm:p-7 space-y-5" id="pr-rec-body"></div>
-    <div class="shrink-0 px-4 sm:px-7 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
+    <div class="shrink-0 px-4 sm:px-7 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
       <div class="min-w-0">
-        <p class="text-[10px] text-zinc-400 font-bold uppercase">รวมรับ (สุทธิ)</p>
+        <p class="text-[10px] text-slate-400 font-bold uppercase">รวมรับ (สุทธิ)</p>
         <p class="text-xl sm:text-2xl font-black text-green-600 num" id="pr-net-prev">฿ -</p>
       </div>
       <div class="flex gap-2 sm:gap-3 shrink-0">
-        <button onclick="prCloseRec()" class="px-4 sm:px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl transition-all text-sm">ยกเลิก</button>
+        <button onclick="prCloseRec()" class="px-4 sm:px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-xl transition-all text-sm">ยกเลิก</button>
         <button onclick="prSaveRec()" id="pr-save-btn"
-          class="px-5 sm:px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl transition-all text-sm uppercase tracking-wide shadow-md flex items-center gap-2">
+          class="px-5 sm:px-8 py-3 bg-brand-600 hover:bg-brand-700 text-white font-black rounded-xl transition-all text-sm uppercase tracking-wide shadow-md flex items-center gap-2">
           <i class="fa-solid fa-save"></i> บันทึก
         </button>
       </div>
@@ -313,24 +313,24 @@ export default {
 
         function renderList() {
             const el = sEl('pr-list'); if(!el) return;
-            if(!periods.length){el.innerHTML=`<div class="p-10 text-center text-zinc-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><p class="font-bold text-sm">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19</p></div>`;return;}
+            if(!periods.length){el.innerHTML=`<div class="p-10 text-center text-slate-300"><i class="fa-regular fa-folder-open text-4xl mb-3 block"></i><p class="font-bold text-sm">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e07\u0e27\u0e14\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19</p></div>`;return;}
             el.innerHTML = periods.map(p=>{
                 const ia=p.id===activeId;
                 const [bc,bt]=badge(p.status);
-                return `<button onclick="prSel('${p.id}')" class="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-zinc-50 transition-all ${ia?'bg-yellow-50 border-l-4 border-yellow-500':''}">
-                  <div class="w-11 h-11 rounded-2xl ${ia?'bg-zinc-900':'bg-zinc-100'} flex flex-col items-center justify-center shrink-0">
-                    <span class="text-[9px] font-black ${ia?'text-yellow-400':'text-zinc-400'} uppercase leading-none">\u0e07\u0e27\u0e14</span>
-                    <span class="text-lg font-black ${ia?'text-white':'text-zinc-700'} leading-none">${p.periodNo}</span>
+                return `<button onclick="prSel('${p.id}')" class="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50 transition-all ${ia?'bg-brand-50 border-l-4 border-brand-500':''}">
+                  <div class="w-11 h-11 rounded-2xl ${ia?'bg-panel-900':'bg-slate-100'} flex flex-col items-center justify-center shrink-0">
+                    <span class="text-[9px] font-black ${ia?'text-brand-400':'text-slate-400'} uppercase leading-none">\u0e07\u0e27\u0e14</span>
+                    <span class="text-lg font-black ${ia?'text-white':'text-slate-700'} leading-none">${p.periodNo}</span>
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                      <span class="font-black text-zinc-800 text-sm">\u0e07\u0e27\u0e14 ${p.periodNo} / ${p.year}</span>
+                      <span class="font-black text-slate-800 text-sm">\u0e07\u0e27\u0e14 ${p.periodNo} / ${p.year}</span>
                       <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${bc}">${bt}</span>
                     </div>
-                    <p class="text-[11px] text-zinc-400 mt-0.5">${fmtD(p.startDate)} \u2013 ${fmtD(p.endDate)}</p>
-                    ${p.note?`<p class="text-[10px] text-zinc-400 truncate">${p.note}</p>`:''}
+                    <p class="text-[11px] text-slate-400 mt-0.5">${fmtD(p.startDate)} \u2013 ${fmtD(p.endDate)}</p>
+                    ${p.note?`<p class="text-[10px] text-slate-400 truncate">${p.note}</p>`:''}
                   </div>
-                  <i class="fa-solid fa-chevron-right text-zinc-300 text-xs shrink-0"></i>
+                  <i class="fa-solid fa-chevron-right text-slate-300 text-xs shrink-0"></i>
                 </button>`;
             }).join('');
         }
@@ -340,7 +340,7 @@ export default {
             if(unsubRec){unsubRec();unsubRec=null;}
             const period=periods.find(p=>p.id===pid); if(!period) return;
             const panel=sEl('pr-panel');
-            if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>`;
+            if(panel) panel.innerHTML=`<div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="font-bold text-sm">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</p></div>`;
             window.revealOnMobile?.(panel, 1280);   // จอแคบ รายละเอียดงวดอยู่ใต้รายการงวด
             unsubRec=onSnapshot(
                 query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),
@@ -357,39 +357,39 @@ export default {
             const tDed=records.reduce((s,r)=>s+(r.totalDeduct||0),0);
             const [bc,bt]=badge(p.status);
             panel.innerHTML=`<div class="pr-slide space-y-5">
-              <div class="bg-zinc-900 rounded-2xl p-6 text-white">
+              <div class="bg-panel-900 rounded-2xl p-6 text-white">
                 <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
                   <div class="flex items-center gap-3">
-                    <span class="text-5xl font-black text-yellow-400 leading-none">${p.periodNo}</span>
+                    <span class="text-5xl font-black text-brand-400 leading-none">${p.periodNo}</span>
                     <div>
                       <p class="font-black text-xl leading-tight">\u0e07\u0e27\u0e14\u0e17\u0e35\u0e48 ${p.periodNo} / ${p.year}</p>
-                      <p class="text-zinc-400 text-xs mt-0.5">${fmtD(p.startDate)} \u2013 ${fmtD(p.endDate)}</p>
-                      ${p.note?`<p class="text-zinc-500 text-xs">${p.note}</p>`:''}
+                      <p class="text-slate-400 text-xs mt-0.5">${fmtD(p.startDate)} \u2013 ${fmtD(p.endDate)}</p>
+                      ${p.note?`<p class="text-slate-500 text-xs">${p.note}</p>`:''}
                       <span class="mt-1 inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full ${bc}">${bt}</span>
                     </div>
                   </div>
                   <div class="text-right">
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase">\u0e22\u0e2d\u0e14\u0e2a\u0e38\u0e17\u0e18\u0e34\u0e23\u0e27\u0e21</p>
-                    <p class="text-3xl font-black text-yellow-400 num">\u0e3f${fmt(tNet)}</p>
-                    <p class="text-[10px] text-zinc-500 mt-1">${records.length} \u0e04\u0e19</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">\u0e22\u0e2d\u0e14\u0e2a\u0e38\u0e17\u0e18\u0e34\u0e23\u0e27\u0e21</p>
+                    <p class="text-3xl font-black text-brand-400 num">\u0e3f${fmt(tNet)}</p>
+                    <p class="text-[10px] text-slate-500 mt-1">${records.length} \u0e04\u0e19</p>
                   </div>
                 </div>
-                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-zinc-800">
-                  <div class="text-center"><p class="text-[10px] text-zinc-500 font-bold uppercase">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e23\u0e27\u0e21</p><p class="font-black text-green-400 num">\u0e3f${fmt(tEar)}</p></div>
-                  <div class="text-center border-x border-zinc-800"><p class="text-[10px] text-zinc-500 font-bold uppercase">\u0e2b\u0e31\u0e01\u0e23\u0e27\u0e21</p><p class="font-black text-red-400 num">\u0e3f${fmt(tDed)}</p></div>
-                  <div class="text-center"><p class="text-[10px] text-zinc-500 font-bold uppercase">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</p><p class="font-black text-white">${records.length} \u0e04\u0e19</p></div>
+                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-panel-800">
+                  <div class="text-center"><p class="text-[10px] text-slate-500 font-bold uppercase">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e23\u0e27\u0e21</p><p class="font-black text-green-400 num">\u0e3f${fmt(tEar)}</p></div>
+                  <div class="text-center border-x border-panel-800"><p class="text-[10px] text-slate-500 font-bold uppercase">\u0e2b\u0e31\u0e01\u0e23\u0e27\u0e21</p><p class="font-black text-red-400 num">\u0e3f${fmt(tDed)}</p></div>
+                  <div class="text-center"><p class="text-[10px] text-slate-500 font-bold uppercase">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</p><p class="font-black text-white">${records.length} \u0e04\u0e19</p></div>
                 </div>
               </div>
               <div class="flex flex-wrap gap-2 items-center">
                 ${isDraft?`
-                <button onclick="prGenAll('${p.id}')" class="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
+                <button onclick="prGenAll('${p.id}')" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
                   <i class="fa-solid fa-bolt"></i> \u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34
                 </button>
                 <button onclick="prFinal('${p.id}')" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
                   <i class="fa-solid fa-lock"></i> \u0e2a\u0e23\u0e38\u0e1b\u0e07\u0e27\u0e14
                 </button>`:''}
                 ${p.status==='final'?`<button onclick="prPaid('${p.id}')" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm"><i class="fa-solid fa-check-double"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e48\u0e32\u0e22</button>`:''}
-                ${!isDraft?`<button onclick="prReopen('${p.id}','${p.status}')" class="inline-flex items-center gap-2 border-2 border-zinc-200 hover:border-zinc-400 text-zinc-600 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all"><i class="fa-solid fa-unlock"></i> \u0e01\u0e25\u0e31\u0e1a\u0e44\u0e1b\u0e41\u0e01\u0e49</button>`:''}
+                ${!isDraft?`<button onclick="prReopen('${p.id}','${p.status}')" class="inline-flex items-center gap-2 border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all"><i class="fa-solid fa-unlock"></i> \u0e01\u0e25\u0e31\u0e1a\u0e44\u0e1b\u0e41\u0e01\u0e49</button>`:''}
                 <button onclick="prXLSX('${p.id}')" class="inline-flex items-center gap-2 border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all">
                   <i class="fa-solid fa-file-excel"></i> Export XLSX
                 </button>
@@ -401,26 +401,26 @@ export default {
                 </button>
                 ${isDraft?`<button onclick="prDel('${p.id}')" class="ml-auto inline-flex items-center gap-1.5 text-red-400 hover:text-red-600 font-black text-xs px-3 py-2 rounded-lg hover:bg-red-50 transition-all"><i class="fa-solid fa-trash-can"></i> \u0e25\u0e1a\u0e07\u0e27\u0e14</button>`:''}
               </div>
-              <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+              <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                   <table class="w-full text-sm fit-mobile">
-                    <thead><tr class="bg-zinc-50 border-b border-zinc-200">
-                      <th class="px-4 py-3 text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</th>
-                      <th class="hidden sm:table-cell px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</th>
-                      <th class="hidden sm:table-cell px-3 py-3 text-right text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e2b\u0e31\u0e01</th>
+                    <thead><tr class="bg-slate-50 border-b border-slate-200">
+                      <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">\u0e1e\u0e19\u0e31\u0e01\u0e07\u0e32\u0e19</th>
+                      <th class="hidden sm:table-cell px-3 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</th>
+                      <th class="hidden sm:table-cell px-3 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">\u0e2b\u0e31\u0e01</th>
                       <th class="px-3 py-3 text-right text-[10px] font-black text-green-600 uppercase tracking-widest">\u0e2a\u0e38\u0e17\u0e18\u0e34</th>
-                      <th class="px-3 py-3 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">\u0e41\u0e01\u0e49\u0e44\u0e02</th>
+                      <th class="px-3 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">\u0e41\u0e01\u0e49\u0e44\u0e02</th>
                     </tr></thead>
                     <tbody>${records.length ? records.map(r=>{
                         const av=r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
-                        return `<tr onclick="prOpenRec('${r.id}')" class="border-b border-zinc-100 hover:bg-zinc-50 active:bg-yellow-50 transition-all cursor-pointer">
-                          <td class="px-3 sm:px-4 py-3"><div class="flex items-center gap-2 sm:gap-3 max-w-[9rem] sm:max-w-none"><img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-xl object-cover border border-zinc-200 shrink-0"><div class="min-w-0"><p class="font-black text-zinc-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
-                          <td class="hidden sm:table-cell px-3 py-3 text-right num text-sm font-bold text-zinc-700">\u0e3f${fmt(r.totalEarning)}</td>
+                        return `<tr onclick="prOpenRec('${r.id}')" class="border-b border-slate-100 hover:bg-slate-50 active:bg-brand-50 transition-all cursor-pointer">
+                          <td class="px-3 sm:px-4 py-3"><div class="flex items-center gap-2 sm:gap-3 max-w-[9rem] sm:max-w-none"><img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0"><div class="min-w-0"><p class="font-black text-slate-800 text-sm truncate">${r.name}${r.nickname?` (${r.nickname})`:''}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${r.employeeCode||''}</p></div></div></td>
+                          <td class="hidden sm:table-cell px-3 py-3 text-right num text-sm font-bold text-slate-700">\u0e3f${fmt(r.totalEarning)}</td>
                           <td class="hidden sm:table-cell px-3 py-3 text-right num text-sm font-bold text-red-500">\u0e3f${fmt(r.totalDeduct)}</td>
                           <td class="px-2 sm:px-3 py-3 text-right num font-black text-green-600 whitespace-nowrap">\u0e3f${fmt(r.netPay)}</td>
-                          <td class="px-2 sm:px-3 py-3 text-center"><button onclick="event.stopPropagation();prOpenRec('${r.id}')" class="whitespace-nowrap text-xs font-black bg-zinc-100 hover:bg-zinc-900 hover:text-yellow-400 text-zinc-600 px-3 py-1.5 rounded-lg transition-all"><i class="fa-solid ${isDraft?'fa-pen-to-square':'fa-eye'} sm:mr-1"></i><span class="hidden sm:inline">${isDraft?'\u0e41\u0e01\u0e49\u0e44\u0e02':'\u0e14\u0e39'}</span></button></td>
+                          <td class="px-2 sm:px-3 py-3 text-center"><button onclick="event.stopPropagation();prOpenRec('${r.id}')" class="whitespace-nowrap text-xs font-black bg-slate-100 hover:bg-panel-900 hover:text-brand-400 text-slate-600 px-3 py-1.5 rounded-lg transition-all"><i class="fa-solid ${isDraft?'fa-pen-to-square':'fa-eye'} sm:mr-1"></i><span class="hidden sm:inline">${isDraft?'\u0e41\u0e01\u0e49\u0e44\u0e02':'\u0e14\u0e39'}</span></button></td>
                         </tr>`;
-                    }).join('') : `<tr><td colspan="5" class="text-center py-12 text-zinc-300"><i class="fa-solid fa-circle-exclamation text-3xl mb-3 block"></i><p class="font-bold text-sm">\u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</p></td></tr>`}
+                    }).join('') : `<tr><td colspan="5" class="text-center py-12 text-slate-300"><i class="fa-solid fa-circle-exclamation text-3xl mb-3 block"></i><p class="font-bold text-sm">\u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</p></td></tr>`}
                     </tbody>
                   </table>
                 </div>
@@ -480,19 +480,19 @@ export default {
         function prWhtDetailHtml(w){
             const Y=w.ytd, L=w.lines, row=(k,v,cls='')=>`<div class="flex justify-between gap-3 py-1 ${cls}"><span>${k}</span><span class="num font-bold whitespace-nowrap">${v}</span></div>`;
             const allow=ALLOWANCE_FIELDS.filter(([k])=>w.allowances[k]>0)
-                .map(([k,label])=>row(`&nbsp;&nbsp;· ${label}${k==='socialSecurity'&&w.ssoAuto?' (อัตโนมัติ)':''}`,fmt(w.allowances[k]),'text-zinc-400')).join('');
+                .map(([k,label])=>row(`&nbsp;&nbsp;· ${label}${k==='socialSecurity'&&w.ssoAuto?' (อัตโนมัติ)':''}`,fmt(w.allowances[k]),'text-slate-400')).join('');
             const steps=w.breakdown.filter(b=>b.amount>0)
-                .map(b=>row(`&nbsp;&nbsp;· ${fmt(b.from)} – ${b.to===Infinity?'ขึ้นไป':fmt(b.to)} (${b.rate?b.rate*100+'%':'ยกเว้น'})`,fmt(b.tax),'text-zinc-400')).join('');
-            return `<div class="text-xs text-zinc-600 divide-y divide-zinc-100">
+                .map(b=>row(`&nbsp;&nbsp;· ${fmt(b.from)} – ${b.to===Infinity?'ขึ้นไป':fmt(b.to)} (${b.rate?b.rate*100+'%':'ยกเว้น'})`,fmt(b.tax),'text-slate-400')).join('');
+            return `<div class="text-xs text-slate-600 divide-y divide-slate-100">
                 ${row('เงินได้ 40(1)',fmt(w.income401))}
-                <p class="text-[10px] text-zinc-400 pb-1 num">${fmt(Y.income401)} + (${fmt(L.salary)} × ${w.n}) + ${fmt(L.add401)} − ${fmt(L.sub401)}</p>
+                <p class="text-[10px] text-slate-400 pb-1 num">${fmt(Y.income401)} + (${fmt(L.salary)} × ${w.n}) + ${fmt(L.add401)} − ${fmt(L.sub401)}</p>
                 ${row('เงินได้ 40(2)',fmt(w.income402))}
                 ${row('รวมเงินได้ทั้งปี',fmt(w.totalIncome))}
                 ${row('หัก ค่าใช้จ่าย (50% ไม่เกิน 100,000)',fmt(w.expense))}
                 ${row('หัก ค่าลดหย่อน',fmt(w.allowanceTotal))}${allow}
                 ${row('เงินได้สุทธิ',fmt(w.netIncome))}${steps}
                 ${row('ภาษีต้องชำระทั้งปี',fmt(w.annualTax),'font-black')}
-                <p class="text-[10px] text-zinc-400 py-1 num">( ${fmt(w.annualTax)} − ${fmt(Y.taxWithheld)} ) บาท / ( ${w.taxMonths} − ${w.monthsPaid} ) เดือน</p>
+                <p class="text-[10px] text-slate-400 py-1 num">( ${fmt(w.annualTax)} − ${fmt(Y.taxWithheld)} ) บาท / ( ${w.taxMonths} − ${w.monthsPaid} ) เดือน</p>
                 ${row('ภาษีหัก ณ ที่จ่ายเดือนนี้',fmt(w.monthlyWHT),'font-black text-red-600')}
             </div>`;
         }
@@ -692,28 +692,28 @@ export default {
                   </select>
                 </div>
                 <div><label class="pr-lbl">หักภาษี (฿)</label><input id="rdt" type="number" class="pr-input num" value="${r.deductTax||0}" ${r.taxMode==='custom' ? (isDraft?'':'readonly') : 'readonly'} oninput="prRecalc()"></div>
-                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input readonly id="rdo" type="number" class="pr-input num bg-zinc-100" value="${r.otherDeduct||0}"></div>
+                <div><label class="pr-lbl">\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46 (\u0e3f)</label><input readonly id="rdo" type="number" class="pr-input num bg-slate-100" value="${r.otherDeduct||0}"></div>
               </div>
-              <details id="pr-wht-box" class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2" style="display:none">
-                <summary class="cursor-pointer text-xs font-black text-zinc-600 py-1"><i class="fa-solid fa-calculator mr-1 text-yellow-500"></i> \u0e27\u0e34\u0e18\u0e35\u0e04\u0e33\u0e19\u0e27\u0e13\u0e20\u0e32\u0e29\u0e35 (\u0e41\u0e1a\u0e1a PEAK)</summary>
+              <details id="pr-wht-box" class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2" style="display:none">
+                <summary class="cursor-pointer text-xs font-black text-slate-600 py-1"><i class="fa-solid fa-calculator mr-1 text-brand-500"></i> \u0e27\u0e34\u0e18\u0e35\u0e04\u0e33\u0e19\u0e27\u0e13\u0e20\u0e32\u0e29\u0e35 (\u0e41\u0e1a\u0e1a PEAK)</summary>
                 <div id="pr-wht-detail" class="pt-2"></div>
               </details>
-              <div class="mt-4 pt-3 border-t border-zinc-100">
+              <div class="mt-4 pt-3 border-t border-slate-100">
                 <div class="flex items-center justify-between mb-2">
                   <p class="pr-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2b\u0e31\u0e01\u0e2d\u0e37\u0e48\u0e19\u0e46</p>
                   ${isDraft ? `<button type="button" onclick="prOdAdd()"
-                    class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-lg transition-all text-[11px]">
-                    <i class="fa-solid fa-plus mr-1 text-zinc-500"></i> \u0e40\u0e1e\u0e34\u0e48\u0e21\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</button>` : ''}
+                    class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-all text-[11px]">
+                    <i class="fa-solid fa-plus mr-1 text-slate-500"></i> \u0e40\u0e1e\u0e34\u0e48\u0e21\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</button>` : ''}
                 </div>
                 <div id="pr-od-list" class="space-y-2"></div>
               </div>
             </div>
-            <div class="rounded-2xl overflow-hidden border border-zinc-200">
+            <div class="rounded-2xl overflow-hidden border border-slate-200">
               <table class="w-full text-sm">
                 <tbody>
                   <tr class="pr-row-earn border-b border-green-100"><td class="px-5 py-3 font-bold text-green-700">\u0e23\u0e27\u0e21\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49</td><td class="px-5 py-3 text-right font-black text-green-700 num" id="rte">\u0e3f${fmt(r.totalEarning)}</td></tr>
                   <tr class="pr-row-deduct border-b border-red-100"><td class="px-5 py-3 font-bold text-red-600">\u0e23\u0e27\u0e21\u0e2b\u0e31\u0e01</td><td class="px-5 py-3 text-right font-black text-red-600 num" id="rtd">\u0e3f${fmt(r.totalDeduct)}</td></tr>
-                  <tr class="pr-row-net"><td class="px-5 py-4 font-black text-zinc-800 text-base">\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a (\u0e2a\u0e38\u0e17\u0e18\u0e34)</td><td class="px-5 py-4 text-right font-black text-green-600 text-xl num" id="rtn">\u0e3f${fmt(r.netPay)}</td></tr>
+                  <tr class="pr-row-net"><td class="px-5 py-4 font-black text-slate-800 text-base">\u0e23\u0e27\u0e21\u0e23\u0e31\u0e1a (\u0e2a\u0e38\u0e17\u0e18\u0e34)</td><td class="px-5 py-4 text-right font-black text-green-600 text-xl num" id="rtn">\u0e3f${fmt(r.netPay)}</td></tr>
                 </tbody>
               </table>
             </div>`;
@@ -758,7 +758,7 @@ export default {
                     class="shrink-0 w-9 h-9 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-all">
                     <i class="fa-solid fa-trash-can text-xs"></i></button>`:''}
                 </div>`).join('')
-                || `<p class="text-[11px] text-zinc-400 font-medium py-2 text-center bg-zinc-50 rounded-lg border border-dashed border-zinc-200">
+                || `<p class="text-[11px] text-slate-400 font-medium py-2 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
                       ไม่มีรายการหักอื่นๆ${isDraft?' — ตั้งรายการประจำได้ที่ข้อมูลพนักงาน หรือกด "เพิ่มรายการ" สำหรับงวดนี้เท่านั้น':''}
                     </p>`;
             if(isDraft) box.querySelectorAll('.pr-od-amount').forEach(el=>el.addEventListener('input',prRecalc));
@@ -820,7 +820,7 @@ export default {
             if(whtBox){
                 whtBox.style.display = tm==='Yes' ? '' : 'none';
                 if(whtDet) whtDet.innerHTML = prWhtLast ? prWhtDetailHtml(prWhtLast)
-                    : `<p class="text-xs text-zinc-500 py-2">\u0e43\u0e1a\u0e19\u0e35\u0e49\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e22\u0e2d\u0e14\u0e2a\u0e30\u0e2a\u0e21\u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e1a\u0e1a PEAK \u2014 \u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e02\u0e2d\u0e07\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e43\u0e2b\u0e21\u0e48\u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07</p>`;
+                    : `<p class="text-xs text-slate-500 py-2">\u0e43\u0e1a\u0e19\u0e35\u0e49\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e22\u0e2d\u0e14\u0e2a\u0e30\u0e2a\u0e21\u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e04\u0e33\u0e19\u0e27\u0e13\u0e41\u0e1a\u0e1a PEAK \u2014 \u0e01\u0e14 "\u0e04\u0e33\u0e19\u0e27\u0e13\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34" \u0e02\u0e2d\u0e07\u0e07\u0e27\u0e14\u0e19\u0e35\u0e49\u0e43\u0e2b\u0e21\u0e48\u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07</p>`;
             }
             const tDed=gN('rdl')+gN('rds')+gN('rdt')+dOther;
             const net=tEar-tDed;
@@ -897,7 +897,7 @@ export default {
                 b.delete(doc(db,'artifacts',APP_ID,'public','data','payroll_periods',pid));
                 await b.commit(); activeId=null;
                 const panel=sEl('pr-panel');
-                if(panel)panel.innerHTML=`<div class="bg-white rounded-2xl border border-zinc-200 p-10 flex flex-col items-center justify-center h-72 text-zinc-300"><i class="fa-solid fa-trash-can text-4xl mb-3 opacity-30"></i><p class="font-bold text-sm">\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22</p></div>`;
+                if(panel)panel.innerHTML=`<div class="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center h-72 text-slate-300"><i class="fa-solid fa-trash-can text-4xl mb-3 opacity-30"></i><p class="font-bold text-sm">\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e40\u0e23\u0e35\u0e22\u0e1a\u0e23\u0e49\u0e2d\u0e22</p></div>`;
                 showToast('\u0e25\u0e1a\u0e07\u0e27\u0e14\u0e41\u0e25\u0e49\u0e27','info');
             }catch(err){showToast('\u274c '+err.message,'error');}
         };
@@ -1033,7 +1033,7 @@ export default {
             }
 
             const list = document.getElementById('pr-bank-list');
-            if (list) list.innerHTML = '<div class="py-10 text-center text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm font-bold mt-2">กำลังโหลด...</p></div>';
+            if (list) list.innerHTML = '<div class="py-10 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm font-bold mt-2">กำลังโหลด...</p></div>';
 
             // Use already-loaded records if same period
             _bankRecords = records.filter(r => r.periodId === pid || !r.periodId);
@@ -1057,28 +1057,28 @@ export default {
             const noBank   = _bankRecords.filter(r => !r.bankAccount || !r.bankAccount.trim());
 
             if (!_bankRecords.length) {
-                list.innerHTML = '<div class="py-10 text-center text-zinc-400"><i class="fa-solid fa-users-slash text-2xl mb-2"></i><p class="text-sm font-bold">ไม่มีข้อมูลพนักงาน</p></div>';
+                list.innerHTML = '<div class="py-10 text-center text-slate-400"><i class="fa-solid fa-users-slash text-2xl mb-2"></i><p class="text-sm font-bold">ไม่มีข้อมูลพนักงาน</p></div>';
                 return;
             }
 
             let html = '';
             if (withBank.length) {
-                html += `<div class="px-4 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 sticky top-0">มีบัญชีธนาคาร (${withBank.length} คน)</div>`;
+                html += `<div class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 sticky top-0">มีบัญชีธนาคาร (${withBank.length} คน)</div>`;
                 withBank.forEach(r => {
                     const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
                     const bankLabel = r.bankName || 'ธนาคาร';
                     const code = BANK_CODES[r.bankName] || '???';
                     const hasCode = BANK_CODES[r.bankName];
                     html += `<label class="flex items-center gap-4 px-4 py-3 hover:bg-blue-50 cursor-pointer transition-all">
-                        <input type="checkbox" class="pr-bank-chk w-4 h-4 accent-zinc-900 cursor-pointer shrink-0" value="${r.id}" checked onchange="prBankUpdateCount()">
-                        <img src="${av}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-zinc-200">
+                        <input type="checkbox" class="pr-bank-chk w-4 h-4 accent-slate-900 cursor-pointer shrink-0" value="${r.id}" checked onchange="prBankUpdateCount()">
+                        <img src="${av}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200">
                         <div class="flex-1 min-w-0">
-                            <p class="font-black text-zinc-800 text-sm truncate">${r.name || ''}</p>
-                            <p class="text-[11px] text-zinc-400 font-medium truncate">${bankLabel} ${hasCode ? `(${code})` : '<span class="text-red-400">ไม่รู้จักรหัสธนาคาร</span>'} · ${r.bankAccount || ''}</p>
+                            <p class="font-black text-slate-800 text-sm truncate">${r.name || ''}</p>
+                            <p class="text-[11px] text-slate-400 font-medium truncate">${bankLabel} ${hasCode ? `(${code})` : '<span class="text-red-400">ไม่รู้จักรหัสธนาคาร</span>'} · ${r.bankAccount || ''}</p>
                         </div>
                         <div class="text-right shrink-0">
-                            <p class="font-black text-sm text-zinc-800 num">฿${(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
-                            <p class="text-[10px] text-zinc-400">สุทธิ</p>
+                            <p class="font-black text-sm text-slate-800 num">฿${(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                            <p class="text-[10px] text-slate-400">สุทธิ</p>
                         </div>
                     </label>`;
                 });
@@ -1089,13 +1089,13 @@ export default {
                     const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=f4f4f5&color=27272a&bold=true`;
                     html += `<div class="flex items-center gap-4 px-4 py-3 opacity-40">
                         <div class="w-4 h-4 shrink-0"></div>
-                        <img src="${av}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-zinc-200">
+                        <img src="${av}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200">
                         <div class="flex-1 min-w-0">
-                            <p class="font-black text-zinc-800 text-sm truncate">${r.name || ''}</p>
+                            <p class="font-black text-slate-800 text-sm truncate">${r.name || ''}</p>
                             <p class="text-[11px] text-red-400 font-bold">ยังไม่ได้ระบุบัญชีธนาคาร</p>
                         </div>
                         <div class="text-right shrink-0">
-                            <p class="font-black text-sm text-zinc-500 num">฿${(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                            <p class="font-black text-sm text-slate-500 num">฿${(r.netPay||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
                         </div>
                     </div>`;
                 });
@@ -1264,7 +1264,7 @@ export default {
             // เปิด modal ก่อน แล้วค่อยโหลด
             document.getElementById('pr-line-modal')?.classList.remove('hidden');
             const list = document.getElementById('pr-line-list');
-            if (list) list.innerHTML = '<div class="py-10 text-center text-zinc-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm font-bold mt-2">กำลังโหลด...</p></div>';
+            if (list) list.innerHTML = '<div class="py-10 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm font-bold mt-2">กำลังโหลด...</p></div>';
 
             const sub = document.getElementById('pr-line-period-sub');
             if (sub) sub.textContent = `งวดที่ ${p.periodNo}/${p.year}  ·  ${fmtD(p.startDate)} – ${fmtD(p.endDate)}`;
@@ -1328,21 +1328,21 @@ export default {
             list.innerHTML = filtered.length ? filtered.map(r => {
                 const hasLine = !!r.lineId;
                 const av = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=06C755&color=fff&bold=true`;
-                return `<label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zinc-100 hover:border-[#06C755] cursor-pointer transition-all group ${hasLine ? '' : 'opacity-50 cursor-not-allowed'}" ${!hasLine ? 'title="ไม่มี LINE User ID"' : ''}>
+                return `<label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-slate-100 hover:border-[#06C755] cursor-pointer transition-all group ${hasLine ? '' : 'opacity-50 cursor-not-allowed'}" ${!hasLine ? 'title="ไม่มี LINE User ID"' : ''}>
                     <input type="checkbox" class="pr-line-cb w-4 h-4 accent-[#06C755] cursor-pointer shrink-0" data-rid="${r.id}" ${!hasLine ? 'disabled' : ''}>
-                    <img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-full object-cover border-2 border-zinc-200 group-hover:border-[#06C755] transition-all shrink-0">
+                    <img src="${av}" onerror="handleImgError(this)" class="w-9 h-9 rounded-full object-cover border-2 border-slate-200 group-hover:border-[#06C755] transition-all shrink-0">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold text-zinc-800 truncate">${r.name}${r.nickname ? ` <span class="text-zinc-400 font-normal">(${r.nickname})</span>` : ''}</p>
-                        <p class="text-[10px] text-zinc-400 font-medium truncate">${r.branch||''} · ${r.position||''}</p>
+                        <p class="text-sm font-bold text-slate-800 truncate">${r.name}${r.nickname ? ` <span class="text-slate-400 font-normal">(${r.nickname})</span>` : ''}</p>
+                        <p class="text-[10px] text-slate-400 font-medium truncate">${r.branch||''} · ${r.position||''}</p>
                     </div>
                     <div class="text-right shrink-0">
-                        <p class="text-sm font-black text-zinc-800 num">฿${fmt(r.netPay||0)}</p>
+                        <p class="text-sm font-black text-slate-800 num">฿${fmt(r.netPay||0)}</p>
                         ${hasLine
                             ? '<span class="text-[9px] font-black text-[#06C755] bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-wider">มี LINE</span>'
-                            : '<span class="text-[9px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full uppercase tracking-wider">ไม่มี LINE ID</span>'}
+                            : '<span class="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wider">ไม่มี LINE ID</span>'}
                     </div>
                 </label>`;
-            }).join('') : '<p class="text-center text-zinc-400 text-sm py-8">ไม่พบรายการ</p>';
+            }).join('') : '<p class="text-center text-slate-400 text-sm py-8">ไม่พบรายการ</p>';
             prLineUpdateCount();
         };
 
