@@ -6,7 +6,7 @@
 // ตัวช่วยที่ใช้ร่วมกับหน้าอื่นต้องอยู่บน window ถึงจะเรียกได้จากที่นี่
 // (tests/page-deps.test.mjs คอยตรวจให้ว่าไม่มีตัวไหนหลุด)
 
-import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20261001a';
+import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20261004a';
 
 export default {
     title: 'ประเมินผลงาน',
@@ -14,23 +14,23 @@ export default {
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ประเมินผลงาน</h2>
-      <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้างรอบประเมินและให้คะแนนพนักงาน</p>
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">ประเมินผลงาน</h2>
+      <p class="text-sm text-slate-400 font-medium mt-0.5">สร้างรอบประเมินและให้คะแนนพนักงาน</p>
     </div>
     <div class="flex gap-2 flex-wrap">
       <button id="rv-export-btn" onclick="rvExportExcel()" class="hidden border-2 border-green-200 hover:border-green-400 text-green-700 font-black px-4 py-2 rounded-xl text-xs uppercase">
         <i class="fa-solid fa-file-excel mr-1"></i> Export Excel
       </button>
-      <select id="rv-cycle" onchange="rvLoadCycle()" class="border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+      <select id="rv-cycle" onchange="rvLoadCycle()" class="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
         <option value="">— เลือกรอบประเมิน —</option>
       </select>
-      <button onclick="rvNewCycle()" class="bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-4 py-2 rounded-xl text-xs uppercase">
+      <button onclick="rvNewCycle()" class="bg-panel-900 hover:bg-panel-800 text-brand-400 font-black px-4 py-2 rounded-xl text-xs uppercase">
         <i class="fa-solid fa-plus mr-1"></i> รอบใหม่
       </button>
     </div>
   </div>
   <div id="rv-emp-list" class="space-y-3">
-    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-ranking-star text-5xl mb-3"></i><p class="font-bold text-sm">เลือกหรือสร้างรอบประเมินเพื่อเริ่มต้น</p></div>
+    <div class="text-center py-16 text-slate-300"><i class="fa-solid fa-ranking-star text-5xl mb-3"></i><p class="font-bold text-sm">เลือกหรือสร้างรอบประเมินเพื่อเริ่มต้น</p></div>
   </div>
 </div>
 
@@ -38,19 +38,19 @@ export default {
 <div id="rv-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="rvCloseModal()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-    <div class="bg-zinc-900 px-5 sm:px-7 py-4 sm:py-5">
+    <div class="bg-panel-900 px-5 sm:px-7 py-4 sm:py-5">
       <h3 class="font-black text-white text-base sm:text-lg" id="rv-modal-title">ประเมิน</h3>
-      <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5" id="rv-modal-sub">-</p>
+      <p class="text-brand-500 text-[10px] font-bold uppercase tracking-widest mt-0.5" id="rv-modal-sub">-</p>
     </div>
     <div class="p-4 sm:p-7 space-y-4 max-h-[75vh] overflow-y-auto">
       <div id="rv-criteria"></div>
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">ความเห็นเพิ่มเติม</label>
-        <textarea id="rv-comment" rows="3" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:border-yellow-500 focus:outline-none resize-none" placeholder="จุดเด่น สิ่งที่ควรพัฒนา..."></textarea>
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">ความเห็นเพิ่มเติม</label>
+        <textarea id="rv-comment" rows="3" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none resize-none" placeholder="จุดเด่น สิ่งที่ควรพัฒนา..."></textarea>
       </div>
       <div class="flex gap-3">
-        <button onclick="rvCloseModal()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm">ยกเลิก</button>
-        <button id="rv-save-btn" onclick="rvSave()" class="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black rounded-xl text-sm">บันทึกผลประเมิน</button>
+        <button onclick="rvCloseModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-xl text-sm">ยกเลิก</button>
+        <button id="rv-save-btn" onclick="rvSave()" class="flex-1 py-3 bg-brand-600 hover:bg-brand-700 text-white font-black rounded-xl text-sm">บันทึกผลประเมิน</button>
       </div>
     </div>
   </div>
@@ -60,12 +60,12 @@ export default {
 <div id="rv-detail-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="rvCloseDetail()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden">
-    <div class="bg-zinc-900 px-5 sm:px-7 py-4 sm:py-5 flex items-start justify-between gap-3">
+    <div class="bg-panel-900 px-5 sm:px-7 py-4 sm:py-5 flex items-start justify-between gap-3">
       <div class="min-w-0">
         <h3 class="font-black text-white text-base sm:text-lg" id="rv-detail-title">รายละเอียดผลประเมิน</h3>
-        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5 truncate" id="rv-detail-sub">-</p>
+        <p class="text-brand-500 text-[10px] font-bold uppercase tracking-widest mt-0.5 truncate" id="rv-detail-sub">-</p>
       </div>
-      <button onclick="rvCloseDetail()" class="text-zinc-400 hover:text-white shrink-0"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="rvCloseDetail()" class="text-slate-400 hover:text-white shrink-0"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
     <div class="p-4 sm:p-6 max-h-[75vh] overflow-y-auto" id="rv-detail-body"></div>
   </div>
@@ -146,10 +146,10 @@ export default {
             const el = document.getElementById('rv-emp-list');
             if (!el) return;
             if (!currentCycle) {
-                el.innerHTML = `<div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-ranking-star text-5xl mb-3"></i><p class="font-bold text-sm">เลือกหรือสร้างรอบประเมินเพื่อเริ่มต้น</p></div>`;
+                el.innerHTML = `<div class="text-center py-16 text-slate-300"><i class="fa-solid fa-ranking-star text-5xl mb-3"></i><p class="font-bold text-sm">เลือกหรือสร้างรอบประเมินเพื่อเริ่มต้น</p></div>`;
                 return;
             }
-            el.innerHTML = `<div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>`;
+            el.innerHTML = `<div class="text-center py-12 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>`;
             // โหลดผลประเมินของรอบนี้ (manager + self)
             // เก็บเฉพาะของพนักงานในขอบเขต (ตัด review ของหัวหน้าทีมอื่นออก)
             const visibleUids = new Set(employees.map(e => e.uid));
@@ -205,15 +205,15 @@ export default {
             // จำนวนคนที่ถูกประเมินแล้ว (อย่างน้อย 1 reviewer)
             const doneCount = list.filter(e => allReviewsOf(e.uid).length > 0).length;
             const selfCount = list.filter(e => selfReviews[e.uid]).length;
-            const header = `<div class="bg-zinc-900 rounded-2xl p-4 flex items-center justify-between text-white mb-1 flex-wrap gap-2">
+            const header = `<div class="bg-panel-900 rounded-2xl p-4 flex items-center justify-between text-white mb-1 flex-wrap gap-2">
                 <p class="font-black text-sm">${currentCycle.name}</p>
                 <div class="flex gap-3 text-xs font-bold">
-                    <span class="text-yellow-400"><i class="fa-solid fa-clipboard-check mr-1"></i>มีหัวหน้าประเมินแล้ว ${doneCount}/${list.length}</span>
+                    <span class="text-brand-400"><i class="fa-solid fa-clipboard-check mr-1"></i>มีหัวหน้าประเมินแล้ว ${doneCount}/${list.length}</span>
                     <span class="text-blue-300"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเองแล้ว ${selfCount}/${list.length}</span>
                 </div>
             </div>` + noTeamWarn;
             if (!list.length) {
-                el.innerHTML = header + `<div class="text-center py-12 text-zinc-300 bg-white rounded-2xl border border-zinc-200">
+                el.innerHTML = header + `<div class="text-center py-12 text-slate-300 bg-white rounded-2xl border border-slate-200">
                     <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
                     <p class="font-bold text-sm">ไม่มีพนักงานในขอบเขตของคุณ</p>
                 </div>`;
@@ -226,10 +226,10 @@ export default {
                 const sv = selfReviews[e.uid];
                 const isShared = !e.managerUid;     // พนักงานที่ไม่ได้ระบุหัวหน้า — หลายหัวหน้าประเมินได้
                 const avatar = e.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name)}&background=f4f4f5&color=27272a&bold=true`;
-                const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
+                const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-amber-600' : 'text-red-500';
                 const scoreCell = (v, label, title = '') => `<div class="text-right" title="${title}">
                          <p class="font-black text-lg ${scoreColor(v)}">${v.toFixed(1)}</p>
-                         <p class="text-[9px] text-zinc-400 font-bold uppercase">${label}</p>
+                         <p class="text-[9px] text-slate-400 font-bold uppercase">${label}</p>
                        </div>`;
                 // admin เห็นคะแนนจากหัวหน้าทุกคน, manager เห็นเฉพาะคะแนนของตัวเอง
                 const scoreBadge = isAdmin
@@ -240,36 +240,36 @@ export default {
                     : `<div class="flex gap-3 mr-2 shrink-0">
                     ${myR ? `<div class="text-right">
                          <p class="font-black text-lg ${scoreColor(myR.avg)}">${myR.avg.toFixed(1)}</p>
-                         <p class="text-[9px] text-zinc-400 font-bold uppercase">${isAdmin && myR.reviewedBy ? myR.reviewedBy.split(' ')[0] : 'คะแนนของคุณ'}</p>
+                         <p class="text-[9px] text-slate-400 font-bold uppercase">${isAdmin && myR.reviewedBy ? myR.reviewedBy.split(' ')[0] : 'คะแนนของคุณ'}</p>
                        </div>` : ''}
                     ${sv ? `<div class="text-right">
                          <p class="font-black text-lg ${scoreColor(sv.avg)}">${sv.avg.toFixed(1)}</p>
-                         <p class="text-[9px] text-zinc-400 font-bold uppercase">ตัวเอง</p>
+                         <p class="text-[9px] text-slate-400 font-bold uppercase">ตัวเอง</p>
                        </div>` : ''}
                 </div>`;
                 const sharedBadge = isShared
                     ? `<span class="text-[9px] font-black bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">หลายหัวหน้าประเมินได้</span>` : '';
                 const otherCount = otherRs.length;
                 const otherBadge = isAdmin
-                    ? (allRs.length > 1 ? `<span class="text-[9px] font-black bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">หัวหน้าประเมิน ${allRs.length} คน · เฉลี่ย ${avgOfAllReviews(e.uid).toFixed(1)}</span>` : '')
+                    ? (allRs.length > 1 ? `<span class="text-[9px] font-black bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">หัวหน้าประเมิน ${allRs.length} คน · เฉลี่ย ${avgOfAllReviews(e.uid).toFixed(1)}</span>` : '')
                     : otherCount > 0
-                    ? `<span class="text-[9px] font-black bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded" title="${otherRs.map(r=>r.reviewedBy||'').join(', ')}">หัวหน้าอื่นประเมินแล้ว ${otherCount}</span>`
+                    ? `<span class="text-[9px] font-black bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded" title="${otherRs.map(r=>r.reviewedBy||'').join(', ')}">หัวหน้าอื่นประเมินแล้ว ${otherCount}</span>`
                     : '';
                 const detailBtn = (allRs.length || sv)
                     ? `<button onclick="rvOpenDetail('${e.uid}')" title="ดูรายละเอียด"
-                          class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-black w-9 h-9 rounded-xl text-sm shrink-0">
+                          class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black w-9 h-9 rounded-xl text-sm shrink-0">
                           <i class="fa-solid fa-eye"></i>
                        </button>`
                     : '';
                 const scoreBtn = `<button onclick="rvOpenScore('${e.uid}')"
-                    class="${myR ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600' : 'bg-yellow-500 hover:bg-yellow-400 text-zinc-900'} font-black px-3 py-2 rounded-xl text-xs uppercase shrink-0">
+                    class="${myR ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-brand-600 hover:bg-brand-700 text-white'} font-black px-3 py-2 rounded-xl text-xs uppercase shrink-0">
                     ${myR ? '<i class="fa-solid fa-pen mr-1"></i>แก้ไข' : '<i class="fa-solid fa-star mr-1"></i>ประเมิน'}
                 </button>`;
-                return `<div class="bg-white rounded-2xl border border-zinc-200 p-4 flex items-center gap-2 flex-wrap">
-                    <img src="${avatar}" onerror="handleImgError(this)" data-name="${e.name}" class="w-11 h-11 rounded-2xl object-cover border border-zinc-200 shrink-0">
+                return `<div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-2 flex-wrap">
+                    <img src="${avatar}" onerror="handleImgError(this)" data-name="${e.name}" class="w-11 h-11 rounded-2xl object-cover border border-slate-200 shrink-0">
                     <div class="flex-1 min-w-0">
-                        <p class="font-black text-zinc-800 text-sm truncate">${e.name}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold">${e.position || ''} · ${e.branch || ''}</p>
+                        <p class="font-black text-slate-800 text-sm truncate">${e.name}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">${e.position || ''} · ${e.branch || ''}</p>
                         <div class="flex gap-1 mt-1 flex-wrap">${sharedBadge}${otherBadge}</div>
                     </div>
                     ${scoreBadge}
@@ -292,8 +292,8 @@ export default {
             if (sEl) sEl.textContent = currentCycle.name + (emp.position ? ' · ' + emp.position : '');
 
             const starsRow = (sc) => [1,2,3,4,5].map(n =>
-                `<i class="fa-solid fa-star text-base ${n <= sc ? 'text-yellow-500' : 'text-zinc-200'}"></i>`).join('');
-            const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-yellow-600' : 'text-red-500';
+                `<i class="fa-solid fa-star text-base ${n <= sc ? 'text-brand-500' : 'text-slate-200'}"></i>`).join('');
+            const scoreColor = v => v >= 4 ? 'text-green-600' : v >= 3 ? 'text-amber-600' : 'text-red-500';
 
             // ใช้ dimensions จาก review ที่มี หรือ default
             const dims = (allRs[0] && allRs[0].dimensions) || (sv && sv.dimensions) || REVIEW_DIMENSIONS;
@@ -304,15 +304,15 @@ export default {
                 : null;
 
             const summaryHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-                <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
-                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมิน ${allRs.length > 1 ? `(เฉลี่ย ${allRs.length} คน)` : ''}</p>
+                <div class="bg-brand-50 border border-brand-200 rounded-2xl p-4 text-center">
+                    <p class="text-[10px] font-black text-brand-700 uppercase mb-1"><i class="fa-solid fa-clipboard-check mr-1"></i>หัวหน้าประเมิน ${allRs.length > 1 ? `(เฉลี่ย ${allRs.length} คน)` : ''}</p>
                     ${mgrAvgOverall != null ? `<p class="text-3xl font-black ${scoreColor(mgrAvgOverall)}">${mgrAvgOverall.toFixed(1)}</p>
-                             <p class="text-[10px] text-zinc-500 mt-1">${allRs.map(r=>r.reviewedBy||'-').join(' · ')}</p>` : `<p class="text-sm font-bold text-zinc-400 py-3">— ยังไม่ประเมิน —</p>`}
+                             <p class="text-[10px] text-slate-500 mt-1">${allRs.map(r=>r.reviewedBy||'-').join(' · ')}</p>` : `<p class="text-sm font-bold text-slate-400 py-3">— ยังไม่ประเมิน —</p>`}
                 </div>
                 <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
                     <p class="text-[10px] font-black text-blue-700 uppercase mb-1"><i class="fa-solid fa-user-check mr-1"></i>ประเมินตัวเอง</p>
                     ${sv ? `<p class="text-3xl font-black ${scoreColor(sv.avg)}">${sv.avg.toFixed(1)}</p>
-                             <p class="text-[10px] text-zinc-500 mt-1">${sv.reviewedAt ? new Date(sv.reviewedAt).toLocaleDateString('th-TH',{timeZone:'Asia/Bangkok'}) : ''}</p>` : `<p class="text-sm font-bold text-zinc-400 py-3">— ยังไม่ประเมินตัวเอง —</p>`}
+                             <p class="text-[10px] text-slate-500 mt-1">${sv.reviewedAt ? new Date(sv.reviewedAt).toLocaleDateString('th-TH',{timeZone:'Asia/Bangkok'}) : ''}</p>` : `<p class="text-sm font-bold text-slate-400 py-3">— ยังไม่ประเมินตัวเอง —</p>`}
                 </div>
             </div>`;
 
@@ -329,17 +329,17 @@ export default {
                             ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-green-100 text-green-700">+${diff}</span>`
                             : diff < 0
                                 ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-orange-100 text-orange-700">${diff}</span>`
-                                : (diff === 0 ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-zinc-100 text-zinc-500">เท่ากัน</span>` : '');
+                                : (diff === 0 ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500">เท่ากัน</span>` : '');
                         return `<div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-[10px] font-black text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded shrink-0" title="${r.reviewedBy||''}">${(r.reviewedBy||'หัวหน้า').split(' ')[0]}</span>
+                            <span class="text-[10px] font-black text-brand-700 bg-brand-50 px-2 py-0.5 rounded shrink-0" title="${r.reviewedBy||''}">${(r.reviewedBy||'หัวหน้า').split(' ')[0]}</span>
                             <span class="flex gap-0.5">${starsRow(sc)}</span>
-                            <span class="text-xs font-black text-yellow-600">${sc}/5</span>
+                            <span class="text-xs font-black text-brand-600">${sc}/5</span>
                             ${diffBadge ? `<span class="ml-1">${diffBadge}</span>` : ''}
                         </div>`;
                     }).join('');
-                    return `<div class="py-3 border-b border-zinc-50 last:border-0">
-                        <p class="text-sm font-bold text-zinc-800">${it.name}</p>
-                        <p class="text-[10px] text-zinc-400 leading-snug mb-2">${it.desc||''}</p>
+                    return `<div class="py-3 border-b border-slate-50 last:border-0">
+                        <p class="text-sm font-bold text-slate-800">${it.name}</p>
+                        <p class="text-[10px] text-slate-400 leading-snug mb-2">${it.desc||''}</p>
                         <div class="space-y-1.5">
                             ${mgrRows}
                             ${sv ? `<div class="flex items-center gap-2 flex-wrap">
@@ -356,12 +356,12 @@ export default {
                 const sDimAvg = sv?.dimAvg?.[dim.id];
                 const dimSummary = (mDimAvg != null || sDimAvg != null)
                     ? `<div class="flex gap-2 text-[10px] font-black shrink-0 flex-wrap">
-                          ${mDimAvg != null ? `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg">หัวหน้า ${mDimAvg.toFixed(1)}</span>` : ''}
+                          ${mDimAvg != null ? `<span class="bg-brand-100 text-brand-700 px-2 py-1 rounded-lg">หัวหน้า ${mDimAvg.toFixed(1)}</span>` : ''}
                           ${sDimAvg != null ? `<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">ตัวเอง ${sDimAvg.toFixed(1)}</span>` : ''}
                       </div>`
                     : '';
                 return `<div class="mb-3">
-                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-zinc-50 border-zinc-200 text-zinc-700'} flex-wrap">
+                    <div class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl border ${dim.color||'bg-slate-50 border-slate-200 text-slate-700'} flex-wrap">
                         <div>
                             <p class="font-black text-xs">${dIdx+1}. ${dim.name}</p>
                             <p class="text-[10px] font-bold opacity-70">${dim.nameEn||''}</p>
@@ -373,13 +373,13 @@ export default {
             }).join('');
 
             const mgrCommentsHtml = allRs.filter(r => r.comment).map(r =>
-                `<div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                    <p class="text-[10px] font-black text-yellow-700 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจาก ${r.reviewedBy||'หัวหน้า'}</p>
-                    <p class="text-sm text-zinc-700">${r.comment}</p>
+                `<div class="mt-3 bg-brand-50 border border-brand-200 rounded-xl p-4">
+                    <p class="text-[10px] font-black text-brand-700 uppercase mb-1"><i class="fa-solid fa-comment mr-1"></i>ความเห็นจาก ${r.reviewedBy||'หัวหน้า'}</p>
+                    <p class="text-sm text-slate-700">${r.comment}</p>
                 </div>`).join('');
             const commentsHtml = mgrCommentsHtml + (sv?.comment ? `<div class="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p class="text-[10px] font-black text-blue-700 uppercase mb-1"><i class="fa-solid fa-comment-dots mr-1"></i>ความเห็นจากพนักงาน</p>
-                    <p class="text-sm text-zinc-700">${sv.comment}</p>
+                    <p class="text-sm text-slate-700">${sv.comment}</p>
                 </div>` : '');
 
             if (bEl) bEl.innerHTML = summaryHtml + dimsHtml + commentsHtml;
@@ -437,21 +437,21 @@ export default {
                     const cur = tempScores[key] || 0;
                     const stars = [1,2,3,4,5].map(n => `
                         <button type="button" onclick="rvSetScore('${key}',${n})"
-                            class="w-11 h-11 rounded-lg text-2xl transition-all active:scale-95 ${n <= cur ? 'text-yellow-500' : 'text-zinc-200 hover:text-yellow-300'}"
+                            class="w-11 h-11 rounded-lg text-2xl transition-all active:scale-95 ${n <= cur ? 'text-brand-500' : 'text-slate-200 hover:text-brand-300'}"
                             aria-label="ให้ ${n} ดาว">
                             <i class="fa-solid fa-star pointer-events-none"></i>
                         </button>`).join('');
-                    const scoreLabel = cur > 0 ? `<span class="text-xs font-black text-yellow-600">(${cur}/5)</span>` : '<span class="text-[10px] text-zinc-300 font-bold">ยังไม่ให้คะแนน</span>';
-                    return `<div class="py-3 border-b border-zinc-100 last:border-0">
-                        <p class="text-sm font-bold text-zinc-800">${it.name}</p>
-                        <p class="text-[11px] text-zinc-400 mt-0.5 mb-2 leading-snug">${it.desc}</p>
+                    const scoreLabel = cur > 0 ? `<span class="text-xs font-black text-brand-600">(${cur}/5)</span>` : '<span class="text-[10px] text-slate-300 font-bold">ยังไม่ให้คะแนน</span>';
+                    return `<div class="py-3 border-b border-slate-100 last:border-0">
+                        <p class="text-sm font-bold text-slate-800">${it.name}</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5 mb-2 leading-snug">${it.desc}</p>
                         <div class="flex items-center gap-1 flex-wrap">${stars}<span class="ml-2">${scoreLabel}</span></div>
                     </div>`;
                 }).join('');
 
                 const mgrToggle = dim.managerOnly
-                    ? `<label class="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 cursor-pointer">
-                         <input type="checkbox" ${showMgr?'checked':''} onchange="rvToggleManagerial(this.checked)" class="accent-yellow-500">
+                    ? `<label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                         <input type="checkbox" ${showMgr?'checked':''} onchange="rvToggleManagerial(this.checked)" class="accent-brand-600">
                          ประเมินมิตินี้
                        </label>`
                     : '';
@@ -464,7 +464,7 @@ export default {
                         </div>
                         ${mgrToggle}
                     </div>
-                    ${visible ? itemsHtml : '<p class="text-center py-3 text-[11px] text-zinc-400">ไม่ประเมินมิตินี้สำหรับพนักงานคนนี้</p>'}
+                    ${visible ? itemsHtml : '<p class="text-center py-3 text-[11px] text-slate-400">ไม่ประเมินมิตินี้สำหรับพนักงานคนนี้</p>'}
                 </div>`;
             }).join('');
 

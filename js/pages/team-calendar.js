@@ -6,13 +6,13 @@
 // วันหยุดตามประเพณี import จาก module ตรงๆ (ไม่ได้อยู่บน window)
 // ตัวช่วยเรื่องวันที่ (todayTH/parseDateTH/dateToTHStr/newDateTH) ยังเป็น global
 
-import { isPublicHoliday, getHolidayName } from '../lib/holidays.js?v=20261001a';
+import { isPublicHoliday, getHolidayName } from '../lib/holidays.js?v=20261004a';
 export default {
     title: 'ปฏิทินทีม',
     html: `
 <style>
-.tc-cell { min-height: 92px; border-radius: 0.75rem; padding: 6px; background: #fff; border: 1px solid #f4f4f5; }
-.tc-cell.tc-today { border-color: #eab308; border-width: 2px; }
+.tc-cell { min-height: 92px; border-radius: 0.75rem; padding: 6px; background: #fff; border: 1px solid var(--ls-hover); }
+.tc-cell.tc-today { border-color: var(--ls-brand-500); border-width: 2px; }
 .tc-cell.tc-hol { background: #fef2f2; }
 .tc-cell.tc-empty { background: transparent; border: none; }
 .tc-chip { display:flex; align-items:center; gap:3px; font-size:9px; font-weight:800; padding:1px 5px; border-radius:6px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -21,31 +21,31 @@ export default {
 <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
-      <h2 class="text-lg sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ปฏิทินทีม</h2>
-      <p class="text-xs sm:text-sm text-zinc-400 font-medium mt-0.5">ภาพรวมการลาและวันหยุดของทั้งทีมในแต่ละเดือน</p>
+      <h2 class="text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">ปฏิทินทีม</h2>
+      <p class="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">ภาพรวมการลาและวันหยุดของทั้งทีมในแต่ละเดือน</p>
     </div>
     <div class="flex items-center gap-2">
-      <select id="tc-branch" onchange="tcRender()" class="border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+      <select id="tc-branch" onchange="tcRender()" class="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
         <option value="">ทุกสาขา</option>
       </select>
-      <button onclick="tcPrev()" class="w-9 h-9 rounded-full bg-zinc-100 hover:bg-yellow-400 flex items-center justify-center"><i class="fa-solid fa-chevron-left text-sm"></i></button>
-      <h3 class="font-black text-zinc-800 w-36 text-center text-sm" id="tc-month-title">-</h3>
-      <button onclick="tcNext()" class="w-9 h-9 rounded-full bg-zinc-100 hover:bg-yellow-400 flex items-center justify-center"><i class="fa-solid fa-chevron-right text-sm"></i></button>
+      <button onclick="tcPrev()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-brand-700 flex items-center justify-center"><i class="fa-solid fa-chevron-left text-sm"></i></button>
+      <h3 class="font-black text-slate-800 w-36 text-center text-sm" id="tc-month-title">-</h3>
+      <button onclick="tcNext()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-brand-700 flex items-center justify-center"><i class="fa-solid fa-chevron-right text-sm"></i></button>
     </div>
   </div>
 
-  <div class="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-6">
-    <div class="grid grid-cols-7 text-center text-[10px] font-black text-zinc-400 uppercase mb-2">
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
+    <div class="grid grid-cols-7 text-center text-[10px] font-black text-slate-400 uppercase mb-2">
       <div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>
     </div>
     <div id="tc-grid" class="grid grid-cols-7 gap-1.5">
-      <div class="col-span-7 text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
+      <div class="col-span-7 text-center py-16 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
     </div>
-    <div class="mt-4 pt-4 border-t border-zinc-100 flex flex-wrap gap-x-4 gap-y-2 justify-center text-[11px] font-bold text-zinc-500">
+    <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-x-4 gap-y-2 justify-center text-[11px] font-bold text-slate-500">
       <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-400"></div> ลาป่วย</div>
       <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-blue-400"></div> ลากิจ</div>
       <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-green-400"></div> ลาพักร้อน</div>
-      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-zinc-400"></div> ลาอื่นๆ</div>
+      <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-slate-400"></div> ลาอื่นๆ</div>
       <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-amber-300"></div> รออนุมัติ</div>
       <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-100 border border-red-200"></div> วันหยุดนักขัตฤกษ์</div>
     </div>
@@ -125,14 +125,14 @@ export default {
                 if (isHol) cls += ' tc-hol';
                 const maxShow = 4;
                 const chips = items.slice(0, maxShow).map(it => {
-                    const c = it.status === 'pending' ? 'bg-amber-100 text-amber-700' : (typeColor[it.type] || 'bg-zinc-100 text-zinc-600');
+                    const c = it.status === 'pending' ? 'bg-amber-100 text-amber-700' : (typeColor[it.type] || 'bg-slate-100 text-slate-600');
                     const mark = it.status === 'pending' ? '?' : '';
                     return `<div class="tc-chip ${c}" title="${it.name}">${it.name}${mark}</div>`;
                 }).join('');
-                const more = items.length > maxShow ? `<div class="tc-chip bg-zinc-100 text-zinc-500">+${items.length-maxShow} คน</div>` : '';
+                const more = items.length > maxShow ? `<div class="tc-chip bg-slate-100 text-slate-500">+${items.length-maxShow} คน</div>` : '';
                 html += `<div class="${cls}">
                     <div class="flex justify-between items-start">
-                        <span class="text-xs font-black ${isHol?'text-red-600':'text-zinc-700'}">${d}</span>
+                        <span class="text-xs font-black ${isHol?'text-red-600':'text-slate-700'}">${d}</span>
                         ${isHol ? `<span class="text-[8px] font-bold text-red-400 text-right leading-tight max-w-[70%] truncate" title="${holName}">${holName}</span>` : ''}
                     </div>
                     ${chips}${more}

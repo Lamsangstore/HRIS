@@ -10,41 +10,41 @@ export default {
     html: `
 <div class="p-6 lg:p-8 max-w-3xl mx-auto">
   <div class="mb-8">
-    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">หนังสือรับรอง</h2>
-    <p class="text-sm text-zinc-400 font-medium mt-0.5">ออกหนังสือรับรองการทำงาน / เงินเดือน แล้วพิมพ์หรือบันทึกเป็น PDF</p>
+    <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">หนังสือรับรอง</h2>
+    <p class="text-sm text-slate-400 font-medium mt-0.5">ออกหนังสือรับรองการทำงาน / เงินเดือน แล้วพิมพ์หรือบันทึกเป็น PDF</p>
   </div>
 
-  <div class="bg-white rounded-2xl border border-zinc-200 p-6 mb-6">
-    <label class="block text-sm font-bold text-zinc-700 mb-3">เลือกประเภทหนังสือรับรอง</label>
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+    <label class="block text-sm font-bold text-slate-700 mb-3">เลือกประเภทหนังสือรับรอง</label>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <button id="cert-type-work" onclick="certSelect('work')"
-        class="p-4 rounded-xl border-2 border-yellow-500 bg-yellow-50 text-left transition-all">
-        <i class="fa-solid fa-briefcase text-yellow-600 mb-1 block text-lg"></i>
-        <p class="text-sm font-black text-zinc-800">หนังสือรับรองการทำงาน</p>
-        <p class="text-xs text-zinc-400 mt-0.5">ระบุตำแหน่ง วันที่เริ่มงาน (ไม่ระบุเงินเดือน)</p>
+        class="p-4 rounded-xl border-2 border-brand-500 bg-brand-50 text-left transition-all">
+        <i class="fa-solid fa-briefcase text-brand-600 mb-1 block text-lg"></i>
+        <p class="text-sm font-black text-slate-800">หนังสือรับรองการทำงาน</p>
+        <p class="text-xs text-slate-400 mt-0.5">ระบุตำแหน่ง วันที่เริ่มงาน (ไม่ระบุเงินเดือน)</p>
       </button>
       <button id="cert-type-salary" onclick="certSelect('salary')"
-        class="p-4 rounded-xl border-2 border-zinc-200 text-left transition-all hover:border-yellow-400">
-        <i class="fa-solid fa-money-bill-wave text-zinc-400 mb-1 block text-lg"></i>
-        <p class="text-sm font-black text-zinc-800">หนังสือรับรองเงินเดือน</p>
-        <p class="text-xs text-zinc-400 mt-0.5">ระบุตำแหน่ง + อัตราเงินเดือนปัจจุบัน</p>
+        class="p-4 rounded-xl border-2 border-slate-200 text-left transition-all hover:border-brand-400">
+        <i class="fa-solid fa-money-bill-wave text-slate-400 mb-1 block text-lg"></i>
+        <p class="text-sm font-black text-slate-800">หนังสือรับรองเงินเดือน</p>
+        <p class="text-xs text-slate-400 mt-0.5">ระบุตำแหน่ง + อัตราเงินเดือนปัจจุบัน</p>
       </button>
     </div>
     <div class="mt-4">
-      <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วัตถุประสงค์ (แสดงท้ายหนังสือ — ไม่บังคับ)</label>
+      <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">วัตถุประสงค์ (แสดงท้ายหนังสือ — ไม่บังคับ)</label>
       <input type="text" id="cert-purpose" placeholder="เช่น เพื่อใช้ประกอบการยื่นขอสินเชื่อ"
-        class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
     </div>
     <button onclick="certPrint()"
-      class="mt-5 w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3.5 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
+      class="mt-5 w-full bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-3.5 rounded-xl transition-all text-sm uppercase tracking-widest shadow-md">
       <i class="fa-solid fa-print mr-2"></i> พิมพ์ / บันทึกเป็น PDF
     </button>
-    <p class="text-[10px] text-zinc-400 text-center mt-2">ในหน้าต่างพิมพ์ เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์</p>
+    <p class="text-[10px] text-slate-400 text-center mt-2">ในหน้าต่างพิมพ์ เลือก "Save as PDF" เพื่อบันทึกเป็นไฟล์</p>
   </div>
 
-  <div class="bg-zinc-50 rounded-2xl border border-zinc-200 p-4">
-    <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-eye mr-1"></i> ตัวอย่าง</p>
-    <div id="cert-preview" class="bg-white border border-zinc-200 rounded-xl p-6 sm:p-10 text-sm leading-7 text-zinc-800 shadow-inner"></div>
+  <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4">
+    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-eye mr-1"></i> ตัวอย่าง</p>
+    <div id="cert-preview" class="bg-white border border-slate-200 rounded-xl p-6 sm:p-10 text-sm leading-7 text-slate-800 shadow-inner"></div>
   </div>
 </div>`,
 
@@ -103,8 +103,8 @@ export default {
             certType = type;
             const w = document.getElementById('cert-type-work');
             const s = document.getElementById('cert-type-salary');
-            const on  = ['border-yellow-500','bg-yellow-50'];
-            const off = ['border-zinc-200'];
+            const on  = ['border-brand-500','bg-brand-50'];
+            const off = ['border-slate-200'];
             if (w && s) {
                 if (type === 'work') {
                     w.classList.add(...on); w.classList.remove(...off);

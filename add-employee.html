@@ -15,37 +15,61 @@
 
     <!-- Tailwind CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // ธีมกลาง Lamsang (LAMSANG-THEME.md) — ค่าเดียวกับตัวแปร --ls-* ใน <style> ด้านล่าง
+                        brand: { 50:'#faf6ec', 100:'#f3ead4', 200:'#e7d5a8', 300:'#d9bf7d', 400:'#ccac60', 500:'#bf9c4f', 600:'#a8853f', 700:'#886a32', 800:'#6b5329', 900:'#4a3a1d' },
+                        panel: { 700:'#3a3833', 800:'#2a2825', 900:'#1c1b19' },
+                    },
+                    fontFamily: { sans: ['Noto Sans Thai', 'system-ui', '-apple-system', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #fafafa; }
+        /* ธีมกลาง Lamsang — ค่าตรงกับ LAMSANG-THEME.md (สีแบรนด์ซ้ำกับ tailwind.config ด้านบน แก้คู่กัน) */
+        :root {
+            --ls-font: 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
+            --ls-brand-50:#faf6ec; --ls-brand-100:#f3ead4; --ls-brand-200:#e7d5a8; --ls-brand-300:#d9bf7d; --ls-brand-400:#ccac60;
+            --ls-brand-500:#bf9c4f; --ls-brand-600:#a8853f; --ls-brand-700:#886a32; --ls-brand-800:#6b5329; --ls-brand-900:#4a3a1d;
+            --ls-brand-rgb: 168,133,63;   /* brand-600 สำหรับ rgba() */
+            --ls-panel-900:#1c1b19; --ls-panel-800:#2a2825; --ls-panel-700:#3a3833;   /* แถบมืด: เมนูข้าง / แถบหัว */
+            --ls-bg:#f8fafc; --ls-card:#ffffff; --ls-border:#e2e8f0; --ls-border-strong:#cbd5e1; --ls-hover:#f1f5f9;
+            --ls-text:#0f172a; --ls-text-body:#334155; --ls-muted:#64748b; --ls-faint:#94a3b8;
+        }
+        body { font-family: var(--ls-font); background-color: var(--ls-bg); }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--ls-border-strong); border-radius: 10px; }
         /* สไตล์สำหรับซ่อน/แสดงเนื้อหาตามแท็บ */
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .input-field { width: 100%; border: 2px solid #f4f4f5; background-color: #fafafa; border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.875rem; outline: none; transition: all 0.2s; font-weight: 500; color: #27272a; }
-        .input-field:focus { background-color: #ffffff; border-color: #eab308; box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.1); }
-        .input-label { display: block; font-size: 0.9rem; font-weight: 600; color: #3f3f46; margin-bottom: 0.4rem; }
-        .section-title { font-size: 1.1rem; font-weight: 800; color: #27272a; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 2px solid #f4f4f5; display: flex; align-items: center; }
-        .section-title i { color: #eab308; margin-right: 0.75rem; }
+        .input-field { width: 100%; border: 2px solid var(--ls-hover); background-color: var(--ls-bg); border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.875rem; outline: none; transition: all 0.2s; font-weight: 500; color: var(--ls-text); }
+        .input-field:focus { background-color: #ffffff; border-color: var(--ls-brand-500); box-shadow: 0 0 0 4px rgba(var(--ls-brand-rgb), 0.1); }
+        .input-label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--ls-text-body); margin-bottom: 0.4rem; }
+        .section-title { font-size: 1.1rem; font-weight: 800; color: var(--ls-text); margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--ls-hover); display: flex; align-items: center; }
+        .section-title i { color: var(--ls-brand-500); margin-right: 0.75rem; }
 
         /* ปรับแต่งดีไซน์ Dropdown ของที่อยู่ให้เข้ากับธีม Lamsang Group */
         .twitter-typeahead { width: 100%; }
-        .tt-hint { color: #a1a1aa !important; }
-        .tt-menu { width: 100%; background-color: #ffffff; border: 2px solid #f4f4f5; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); margin-top: 4px; padding: 0.5rem 0; z-index: 50 !important; }
-        .tt-suggestion { padding: 0.5rem 1rem; font-size: 0.875rem; color: #3f3f46; cursor: pointer; transition: background-color 0.1s; }
-        .tt-suggestion:hover, .tt-suggestion.tt-cursor { background-color: #fefce8 !important; color: #a16207 !important; font-weight: 600; }
+        .tt-hint { color: var(--ls-faint) !important; }
+        .tt-menu { width: 100%; background-color: #ffffff; border: 2px solid var(--ls-hover); border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); margin-top: 4px; padding: 0.5rem 0; z-index: 50 !important; }
+        .tt-suggestion { padding: 0.5rem 1rem; font-size: 0.875rem; color: var(--ls-text-body); cursor: pointer; transition: background-color 0.1s; }
+        .tt-suggestion:hover, .tt-suggestion.tt-cursor { background-color: var(--ls-brand-50) !important; color: var(--ls-brand-700) !important; font-weight: 600; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden text-zinc-800">
+<body class="flex h-screen overflow-hidden text-slate-800">
 
     <div id="sidebar-placeholder"></div>
 
-    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
         <div id="topbar-placeholder"></div>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-8">
@@ -53,15 +77,15 @@
             <!-- ส่วนหัวและเมนู Tabs -->
             <div class="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-2xl font-black text-zinc-800 uppercase tracking-tight">Employee Management</h2>
-                    <p class="text-sm text-zinc-500 font-medium">จัดการข้อมูลและประวัติพนักงาน Lamsang Group</p>
+                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight">Employee Management</h2>
+                    <p class="text-sm text-slate-500 font-medium">จัดการข้อมูลและประวัติพนักงาน Lamsang Group</p>
                 </div>
                 
-                <div class="flex p-1 bg-zinc-200 rounded-xl w-full md:w-auto shadow-inner">
-                    <button id="btn-tab-add" onclick="switchTab('add')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-zinc-800 shadow-sm">
+                <div class="flex p-1 bg-slate-200 rounded-xl w-full md:w-auto shadow-inner">
+                    <button id="btn-tab-add" onclick="switchTab('add')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-slate-800 shadow-sm">
                         <i class="fa-solid fa-user-plus mr-2"></i>เพิ่มพนักงานใหม่
                     </button>
-                    <button id="btn-tab-manage" onclick="switchTab('manage')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-zinc-500 hover:text-zinc-800">
+                    <button id="btn-tab-manage" onclick="switchTab('manage')" class="flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800">
                         <i class="fa-solid fa-users-gear mr-2"></i>รายชื่อ & แก้ไขข้อมูล
                     </button>
                 </div>
@@ -70,22 +94,22 @@
             <div class="max-w-6xl mx-auto relative">
 
                 <!-- TAB 1 & EDIT MODE -->
-                <div id="tab-form" class="tab-content active bg-white rounded-[2rem] shadow-lg border border-zinc-100 overflow-hidden">
+                <div id="tab-form" class="tab-content active bg-white rounded-[2rem] shadow-lg border border-slate-100 overflow-hidden">
                     
-                    <div id="form-header" class="bg-zinc-900 px-8 py-6 text-white flex items-center justify-between">
+                    <div id="form-header" class="bg-panel-900 px-8 py-6 text-white flex items-center justify-between">
                         <div>
                             <span class="font-black text-xl tracking-tight" id="form-title">ลงทะเบียนพนักงานใหม่</span>
-                            <span class="block text-[11px] text-yellow-500 font-bold uppercase tracking-[0.1em]" id="form-subtitle">Create New Employee Profile</span>
+                            <span class="block text-[11px] text-brand-500 font-bold uppercase tracking-[0.1em]" id="form-subtitle">Create New Employee Profile</span>
                         </div>
-                        <i class="fa-solid fa-user-plus text-yellow-500 text-3xl" id="form-icon"></i>
+                        <i class="fa-solid fa-user-plus text-brand-500 text-3xl" id="form-icon"></i>
                     </div>
                     
                     <form id="employee-form" class="p-8 lg:p-10">
-                        <div id="account-notice" class="mb-10 bg-yellow-50 border-l-4 border-yellow-500 p-5 rounded-xl">
-                            <div class="flex items-center mb-1 text-yellow-900">
+                        <div id="account-notice" class="mb-10 bg-amber-50 border-l-4 border-amber-500 p-5 rounded-xl">
+                            <div class="flex items-center mb-1 text-amber-900">
                                 <i class="fa-solid fa-key mr-2"></i><span class="font-bold text-sm">ระบบสร้างบัญชีล็อกอินอัตโนมัติ</span>
                             </div>
-                            <p class="text-xs text-yellow-800">ใช้อีเมลเป็น Username และรหัสผ่านเริ่มต้นคือ <span class="bg-yellow-200 px-1.5 py-0.5 rounded font-black text-zinc-900">123456</span></p>
+                            <p class="text-xs text-amber-800">ใช้อีเมลเป็น Username และรหัสผ่านเริ่มต้นคือ <span class="bg-amber-200 px-1.5 py-0.5 rounded font-black text-slate-900">123456</span></p>
                         </div>
 
                         <input type="hidden" id="emp-uid">
@@ -216,11 +240,11 @@
                         </div>
 
                         <!-- ปุ่มบันทึก -->
-                        <div class="mt-12 flex justify-end space-x-4 pt-6 border-t-2 border-zinc-100">
-                            <button type="button" id="btn-cancel-edit" onclick="switchTab('manage')" class="hidden px-8 py-3 bg-zinc-100 text-zinc-600 font-bold hover:bg-zinc-200 rounded-xl transition-all uppercase tracking-wider text-sm">
+                        <div class="mt-12 flex justify-end space-x-4 pt-6 border-t-2 border-slate-100">
+                            <button type="button" id="btn-cancel-edit" onclick="switchTab('manage')" class="hidden px-8 py-3 bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-all uppercase tracking-wider text-sm">
                                 ยกเลิกการแก้ไข
                             </button>
-                            <button type="submit" id="submit-btn" class="px-10 py-4 bg-yellow-500 text-zinc-900 rounded-xl hover:bg-yellow-400 transition-all font-black shadow-lg uppercase tracking-wider flex items-center">
+                            <button type="submit" id="submit-btn" class="px-10 py-4 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-all font-black shadow-lg uppercase tracking-wider flex items-center">
                                 <span id="submit-btn-text">บันทึกและสร้างบัญชีใหม่</span> <i class="fa-solid fa-check-circle ml-3 text-lg"></i>
                             </button>
                         </div>
@@ -228,21 +252,21 @@
                 </div>
 
                 <!-- TAB 2: รายชื่อพนักงาน (Directory) -->
-                <div id="tab-list" class="tab-content bg-white rounded-[2rem] shadow-sm border border-zinc-100 overflow-hidden min-h-[500px]">
-                    <div class="p-8 border-b border-zinc-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50">
+                <div id="tab-list" class="tab-content bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden min-h-[500px]">
+                    <div class="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-50">
                         <div>
-                            <h3 class="text-xl font-black text-zinc-800 uppercase tracking-tight">รายชื่อพนักงานทั้งหมด</h3>
-                            <p class="text-xs text-zinc-500 font-medium mt-1">คลิกที่ไอคอนดินสอเพื่อแก้ไขข้อมูล</p>
+                            <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">รายชื่อพนักงานทั้งหมด</h3>
+                            <p class="text-xs text-slate-500 font-medium mt-1">คลิกที่ไอคอนดินสอเพื่อแก้ไขข้อมูล</p>
                         </div>
                         <div class="relative w-full md:w-80">
-                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"></i>
-                            <input type="text" id="search-emp" onkeyup="filterEmployees()" placeholder="ค้นหาชื่อ หรือรหัสพนักงาน..." class="w-full pl-12 pr-6 py-3 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm font-medium shadow-sm transition-all">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="search-emp" onkeyup="filterEmployees()" placeholder="ค้นหาชื่อ หรือรหัสพนักงาน..." class="w-full pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-medium shadow-sm transition-all">
                         </div>
                     </div>
                     
                     <div class="overflow-x-auto">
                         <table class="w-full text-left" id="employee-table">
-                            <thead class="bg-zinc-100 text-[10px] font-black text-zinc-500 uppercase tracking-widest border-y border-zinc-200">
+                            <thead class="bg-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest border-y border-slate-200">
                                 <tr>
                                     <th class="px-6 py-4">ข้อมูลพนักงาน</th>
                                     <th class="px-4 py-4">รหัส / ตำแหน่ง</th>
@@ -251,8 +275,8 @@
                                     <th class="px-6 py-4 text-center">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-zinc-100" id="employee-list">
-                                <tr><td colspan="5" class="px-8 py-16 text-center text-zinc-400 font-medium"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>กำลังดึงข้อมูล...</td></tr>
+                            <tbody class="divide-y divide-slate-100" id="employee-list">
+                                <tr><td colspan="5" class="px-8 py-16 text-center text-slate-400 font-medium"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>กำลังดึงข้อมูล...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -296,14 +320,14 @@
             const btnManage = document.getElementById('btn-tab-manage');
             
             if(tabName === 'add') {
-                btnAdd.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-zinc-800 shadow-sm";
-                btnManage.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-zinc-500 hover:text-zinc-800";
+                btnAdd.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-slate-800 shadow-sm";
+                btnManage.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800";
                 document.getElementById('tab-form').classList.add('active');
                 document.getElementById('tab-list').classList.remove('active');
                 resetEmployeeForm();
             } else if (tabName === 'manage') {
-                btnManage.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-zinc-800 shadow-sm";
-                btnAdd.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-zinc-500 hover:text-zinc-800";
+                btnManage.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-slate-800 shadow-sm";
+                btnAdd.className = "flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800";
                 document.getElementById('tab-list').classList.add('active');
                 document.getElementById('tab-form').classList.remove('active');
                 if(allEmployees.length === 0) loadEmployeeList();
@@ -338,24 +362,24 @@
                     else if(emp.status === 'probation') statusBadge = '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[10px] font-bold">Probation</span>';
 
                     html += `
-                        <tr class="hover:bg-zinc-50 transition-all border-b border-zinc-100">
+                        <tr class="hover:bg-slate-50 transition-all border-b border-slate-100">
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
-                                    <img src="${avatar}" class="w-10 h-10 rounded-full border border-zinc-200 mr-3 object-cover">
+                                    <img src="${avatar}" class="w-10 h-10 rounded-full border border-slate-200 mr-3 object-cover">
                                     <div>
-                                        <p class="font-bold text-zinc-800 text-sm leading-tight">${emp.name}</p>
-                                        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-tight">${emp.email}</p>
+                                        <p class="font-bold text-slate-800 text-sm leading-tight">${emp.name}</p>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${emp.email}</p>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-4 py-4">
-                                <p class="text-xs font-black text-zinc-600">${emp.employeeCode || '-'}</p>
-                                <p class="text-[10px] text-zinc-400">${emp.position || emp.role}</p>
+                                <p class="text-xs font-black text-slate-600">${emp.employeeCode || '-'}</p>
+                                <p class="text-[10px] text-slate-400">${emp.position || emp.role}</p>
                             </td>
-                            <td class="px-4 py-4 text-xs font-medium text-zinc-600">${emp.branch || '-'}</td>
+                            <td class="px-4 py-4 text-xs font-medium text-slate-600">${emp.branch || '-'}</td>
                             <td class="px-4 py-4">${statusBadge}</td>
                             <td class="px-6 py-4 text-center">
-                                <button onclick="prepareEdit('${emp.uid}')" class="text-zinc-500 bg-zinc-100 hover:bg-yellow-500 hover:text-zinc-900 px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm">
+                                <button onclick="prepareEdit('${emp.uid}')" class="text-slate-500 bg-slate-100 hover:bg-brand-600 hover:text-white px-3 py-1.5 rounded-lg transition-all text-xs font-bold shadow-sm">
                                     <i class="fa-solid fa-pen mr-1"></i> แก้ไข
                                 </button>
                             </td>
@@ -430,10 +454,10 @@
             emailInput.readOnly = true;
             emailInput.classList.add('opacity-50', 'cursor-not-allowed');
 
-            document.getElementById('form-header').classList.replace('bg-zinc-900', 'bg-zinc-800');
+            document.getElementById('form-header').classList.replace('bg-panel-900', 'bg-panel-800');
             document.getElementById('form-title').textContent = "แก้ไขข้อมูลพนักงาน";
             document.getElementById('form-subtitle').textContent = `Editing profile of: ${emp.name}`;
-            document.getElementById('form-icon').className = "fa-solid fa-user-pen text-yellow-500 text-3xl";
+            document.getElementById('form-icon').className = "fa-solid fa-user-pen text-brand-500 text-3xl";
             document.getElementById('submit-btn-text').textContent = "บันทึกการเปลี่ยนแปลง";
             document.getElementById('account-notice').classList.add('hidden');
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
@@ -454,10 +478,10 @@
             emailInput.readOnly = false;
             emailInput.classList.remove('opacity-50', 'cursor-not-allowed');
 
-            document.getElementById('form-header').classList.replace('bg-zinc-800', 'bg-zinc-900');
+            document.getElementById('form-header').classList.replace('bg-panel-800', 'bg-panel-900');
             document.getElementById('form-title').textContent = "ลงทะเบียนพนักงานใหม่";
             document.getElementById('form-subtitle').textContent = "Create New Employee Profile";
-            document.getElementById('form-icon').className = "fa-solid fa-user-plus text-yellow-500 text-3xl";
+            document.getElementById('form-icon').className = "fa-solid fa-user-plus text-brand-500 text-3xl";
             document.getElementById('submit-btn-text').textContent = "บันทึกและสร้างบัญชีใหม่";
             document.getElementById('account-notice').classList.remove('hidden');
             document.getElementById('btn-cancel-edit').classList.add('hidden');

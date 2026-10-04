@@ -11,26 +11,26 @@ export default {
 <style>
 .tr-card { transition: all .18s; }
 .tr-card:hover { box-shadow: 0 6px 20px -4px rgba(0,0,0,.1); }
-.tr-tab.active { background:#18181b; color:#eab308; }
+.tr-tab.active { background:var(--ls-panel-900); color:var(--ls-brand-500); }
 </style>
 <div class="p-6 lg:p-8 max-w-4xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ชี้แจง / แก้ไขเวลา</h2>
-      <p class="text-sm text-zinc-400 font-medium mt-0.5">ยื่นคำขอกรณีลืมลงเวลา หรือต้องการแก้ไขเวลาที่ผิดพลาด</p>
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">ชี้แจง / แก้ไขเวลา</h2>
+      <p class="text-sm text-slate-400 font-medium mt-0.5">ยื่นคำขอกรณีลืมลงเวลา หรือต้องการแก้ไขเวลาที่ผิดพลาด</p>
     </div>
     <button onclick="trOpenModal(null)"
-      class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black px-5 py-3 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
+      class="inline-flex items-center gap-2 bg-panel-900 hover:bg-panel-800 text-brand-400 font-black px-5 py-3 rounded-xl shadow-md transition-all text-sm uppercase tracking-widest">
       <i class="fa-solid fa-plus"></i> ยื่นคำขอใหม่
     </button>
   </div>
   <!-- Tabs -->
-  <div class="flex gap-2 mb-6 bg-zinc-100 p-1 rounded-xl w-fit">
+  <div class="flex gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
     <button onclick="trTab('explain')" class="tr-tab active text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg transition-all">ชี้แจง (ลืมลงเวลา)</button>
-    <button onclick="trTab('fix')" class="tr-tab text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg transition-all text-zinc-500">ขอแก้ไขเวลา</button>
+    <button onclick="trTab('fix')" class="tr-tab text-xs font-black uppercase tracking-widest px-5 py-2 rounded-lg transition-all text-slate-500">ขอแก้ไขเวลา</button>
   </div>
   <div id="tr-list" class="space-y-3">
-    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+    <div class="text-center py-16 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
   </div>
 </div>
 
@@ -38,63 +38,63 @@ export default {
 <div id="tr-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="trCloseModal()"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-    <div class="bg-zinc-900 px-7 py-5 flex items-center justify-between">
+    <div class="bg-panel-900 px-7 py-5 flex items-center justify-between">
       <div>
         <h3 id="tr-modal-title" class="font-black text-white text-lg">ยื่นคำขอ</h3>
-        <p class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Time Adjustment Request</p>
+        <p class="text-brand-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Time Adjustment Request</p>
       </div>
-      <button onclick="trCloseModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <button onclick="trCloseModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
     </div>
     <div class="p-7 space-y-4">
       <!-- ประเภท -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-2 uppercase tracking-widest">ประเภทคำขอ</label>
+        <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">ประเภทคำขอ</label>
         <div class="grid grid-cols-2 gap-3">
           <button onclick="trSetType('explain')" id="tr-type-explain"
-            class="p-3 rounded-xl border-2 border-yellow-500 bg-yellow-50 text-left transition-all">
-            <i class="fa-solid fa-comment-dots text-yellow-600 mb-1 block"></i>
-            <p class="text-xs font-black text-zinc-800">ชี้แจงไม่ได้บันทึก</p>
-            <p class="text-[10px] text-zinc-500">ลืม Clock In/Out</p>
+            class="p-3 rounded-xl border-2 border-brand-500 bg-brand-50 text-left transition-all">
+            <i class="fa-solid fa-comment-dots text-brand-600 mb-1 block"></i>
+            <p class="text-xs font-black text-slate-800">ชี้แจงไม่ได้บันทึก</p>
+            <p class="text-[10px] text-slate-500">ลืม Clock In/Out</p>
           </button>
           <button onclick="trSetType('fix')" id="tr-type-fix"
-            class="p-3 rounded-xl border-2 border-zinc-200 text-left transition-all hover:border-zinc-400">
-            <i class="fa-solid fa-pen-to-square text-zinc-400 mb-1 block"></i>
-            <p class="text-xs font-black text-zinc-800">ขอแก้ไขเวลา</p>
-            <p class="text-[10px] text-zinc-500">เวลาผิดพลาด</p>
+            class="p-3 rounded-xl border-2 border-slate-200 text-left transition-all hover:border-slate-400">
+            <i class="fa-solid fa-pen-to-square text-slate-400 mb-1 block"></i>
+            <p class="text-xs font-black text-slate-800">ขอแก้ไขเวลา</p>
+            <p class="text-[10px] text-slate-500">เวลาผิดพลาด</p>
           </button>
         </div>
       </div>
       <!-- วันที่ -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">วันที่</label>
-        <input type="date" id="tr-date" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">วันที่</label>
+        <input type="date" id="tr-date" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
       </div>
       <!-- เวลาที่ขอ -->
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เวลาเข้างาน</label>
-          <input type="time" id="tr-time-in" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">เวลาเข้างาน</label>
+          <input type="time" id="tr-time-in" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เวลาออกงาน</label>
-          <input type="time" id="tr-time-out" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">เวลาออกงาน</label>
+          <input type="time" id="tr-time-out" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
         </div>
       </div>
       <!-- สำหรับ fix: เวลาเดิม -->
       <div id="tr-original-section" class="hidden">
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เวลาเดิม (ที่ต้องการแก้)</label>
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">เวลาเดิม (ที่ต้องการแก้)</label>
         <div class="grid grid-cols-2 gap-4">
-          <input type="time" id="tr-orig-in" placeholder="เวลาเข้าเดิม" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
-          <input type="time" id="tr-orig-out" placeholder="เวลาออกเดิม" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          <input type="time" id="tr-orig-in" placeholder="เวลาเข้าเดิม" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
+          <input type="time" id="tr-orig-out" placeholder="เวลาออกเดิม" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
         </div>
       </div>
       <!-- เหตุผล -->
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">เหตุผล / รายละเอียด *</label>
-        <textarea id="tr-reason" rows="3" placeholder="อธิบายสาเหตุ..." class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">เหตุผล / รายละเอียด *</label>
+        <textarea id="tr-reason" rows="3" placeholder="อธิบายสาเหตุ..." class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none resize-none"></textarea>
       </div>
       <button onclick="trSubmit()" id="tr-submit-btn"
-        class="w-full bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-4 rounded-xl transition-all shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-4 rounded-xl transition-all shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2">
         <i class="fa-solid fa-paper-plane"></i> ส่งคำขอ
       </button>
     </div>
@@ -117,9 +117,9 @@ export default {
             const el = document.getElementById('tr-list'); if(!el) return;
             const filtered = allReqs.filter(r => r.reqType === activeTab);
             if (!filtered.length) {
-                el.innerHTML = `<div class="text-center py-16 text-zinc-300"><i class="fa-regular fa-calendar-xmark text-5xl mb-3"></i><p class="font-bold text-sm">ยังไม่มีคำขอ</p></div>`; return;
+                el.innerHTML = `<div class="text-center py-16 text-slate-300"><i class="fa-regular fa-calendar-xmark text-5xl mb-3"></i><p class="font-bold text-sm">ยังไม่มีคำขอ</p></div>`; return;
             }
-            const ST = { pending:{label:'รออนุมัติ',cls:'bg-yellow-100 text-yellow-800 border border-yellow-200',icon:'fa-clock'},
+            const ST = { pending:{label:'รออนุมัติ',cls:'bg-amber-100 text-amber-800 border border-amber-200',icon:'fa-clock'},
                          approved:{label:'อนุมัติแล้ว',cls:'bg-green-100 text-green-800 border border-green-200',icon:'fa-circle-check'},
                          rejected:{label:'ไม่อนุมัติ',cls:'bg-red-100 text-red-700 border border-red-200',icon:'fa-circle-xmark'} };
             el.innerHTML = filtered.map(r => {
@@ -127,17 +127,17 @@ export default {
                 const timeStr = r.reqType === 'explain'
                     ? `เข้า ${r.timeIn||'-'} · ออก ${r.timeOut||'-'}`
                     : `เดิม ${r.origIn||'-'}/${r.origOut||'-'} → ใหม่ ${r.timeIn||'-'}/${r.timeOut||'-'}`;
-                return `<div class="tr-card bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div class="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center shrink-0">
-                    <i class="fa-solid ${r.reqType==='explain'?'fa-comment-dots text-yellow-500':'fa-pen-to-square text-blue-500'} text-lg"></i>
+                return `<div class="tr-card bg-white rounded-2xl border border-slate-200 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0">
+                    <i class="fa-solid ${r.reqType==='explain'?'fa-comment-dots text-brand-500':'fa-pen-to-square text-blue-500'} text-lg"></i>
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex flex-wrap items-center gap-2 mb-1">
-                      <span class="font-black text-zinc-800 text-sm">${r.reqType==='explain'?'ชี้แจงไม่ได้บันทึก':'ขอแก้ไขเวลา'}</span>
+                      <span class="font-black text-slate-800 text-sm">${r.reqType==='explain'?'ชี้แจงไม่ได้บันทึก':'ขอแก้ไขเวลา'}</span>
                       <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.cls}"><i class="fa-solid ${st.icon} mr-1"></i>${st.label}</span>
                     </div>
-                    <p class="text-sm text-zinc-600 font-medium">${r.date} · ${timeStr}</p>
-                    <p class="text-xs text-zinc-400 truncate mt-0.5">${r.reason}</p>
+                    <p class="text-sm text-slate-600 font-medium">${r.date} · ${timeStr}</p>
+                    <p class="text-xs text-slate-400 truncate mt-0.5">${r.reason}</p>
                     ${r.approverNote ? `<p class="text-xs text-red-500 mt-1 font-bold"><i class="fa-solid fa-comment mr-1"></i>${r.approverNote}</p>` : ''}
                   </div>
                   ${r.status==='pending' ? `<button onclick="trCancel('${r.id}')" class="shrink-0 text-[10px] text-red-500 font-black bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all">ยกเลิก</button>` : ''}
@@ -150,19 +150,19 @@ export default {
             document.querySelectorAll('.tr-tab').forEach((b,i) => {
                 const isA = (i===0&&tab==='explain')||(i===1&&tab==='fix');
                 b.classList.toggle('active', isA);
-                b.classList.toggle('text-zinc-500', !isA);
+                b.classList.toggle('text-slate-500', !isA);
             });
             renderList();
         };
 
         window.trSetType = (t) => {
             selectedType = t;
-            document.getElementById('tr-type-explain')?.classList.toggle('border-yellow-500', t==='explain');
-            document.getElementById('tr-type-explain')?.classList.toggle('bg-yellow-50', t==='explain');
-            document.getElementById('tr-type-explain')?.classList.toggle('border-zinc-200', t!=='explain');
-            document.getElementById('tr-type-fix')?.classList.toggle('border-yellow-500', t==='fix');
-            document.getElementById('tr-type-fix')?.classList.toggle('bg-yellow-50', t==='fix');
-            document.getElementById('tr-type-fix')?.classList.toggle('border-zinc-200', t!=='fix');
+            document.getElementById('tr-type-explain')?.classList.toggle('border-brand-500', t==='explain');
+            document.getElementById('tr-type-explain')?.classList.toggle('bg-brand-50', t==='explain');
+            document.getElementById('tr-type-explain')?.classList.toggle('border-slate-200', t!=='explain');
+            document.getElementById('tr-type-fix')?.classList.toggle('border-brand-500', t==='fix');
+            document.getElementById('tr-type-fix')?.classList.toggle('bg-brand-50', t==='fix');
+            document.getElementById('tr-type-fix')?.classList.toggle('border-slate-200', t!=='fix');
             document.getElementById('tr-original-section')?.classList.toggle('hidden', t!=='fix');
         };
 

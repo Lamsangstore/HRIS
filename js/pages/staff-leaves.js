@@ -5,9 +5,9 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261001a';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20261001a';
-import { STATUS_MAP } from '../lib/status-map.js?v=20261001a';
+import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261004a';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20261004a';
+import { STATUS_MAP } from '../lib/status-map.js?v=20261004a';
 
 export default {
     title: 'ประวัติการลา (ทีม)',
@@ -15,34 +15,34 @@ export default {
 <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
-      <h2 class="text-lg sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ประวัติการลาของทีม</h2>
-      <p class="text-xs sm:text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบประวัติการลาของพนักงานทุกคน</p>
+      <h2 class="text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">ประวัติการลาของทีม</h2>
+      <p class="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">ตรวจสอบประวัติการลาของพนักงานทุกคน</p>
     </div>
   </div>
 
   <!-- Filters -->
-  <div class="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
     <div>
-      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">พนักงาน</label>
-      <select id="sl-emp" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">พนักงาน</label>
+      <select id="sl-emp" class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-brand-500 focus:outline-none">
         <option value="">— ทุกคน —</option>
       </select>
     </div>
     <div>
-      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">สาขา</label>
-      <select id="sl-branch" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">สาขา</label>
+      <select id="sl-branch" class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-brand-500 focus:outline-none">
         <option value="">— ทุกสาขา —</option>
       </select>
     </div>
     <div>
-      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ประเภท</label>
-      <select id="sl-type" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">ประเภท</label>
+      <select id="sl-type" class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-brand-500 focus:outline-none">
         <option value="">— ทุกประเภท —</option>
       </select>
     </div>
     <div>
-      <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">สถานะ</label>
-      <select id="sl-status" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+      <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">สถานะ</label>
+      <select id="sl-status" class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-brand-500 focus:outline-none">
         <option value="">— ทุกสถานะ —</option>
         <option value="pending">รอการอนุมัติ</option>
         <option value="approved">อนุมัติแล้ว</option>
@@ -52,23 +52,23 @@ export default {
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <div>
-        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ตั้งแต่</label>
-        <input type="date" id="sl-from" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">ตั้งแต่</label>
+        <input type="date" id="sl-from" class="w-full border-2 border-slate-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-brand-500 focus:outline-none">
       </div>
       <div>
-        <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ถึง</label>
-        <input type="date" id="sl-to" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-yellow-500 focus:outline-none">
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">ถึง</label>
+        <input type="date" id="sl-to" class="w-full border-2 border-slate-200 rounded-xl px-2 py-2 text-xs font-medium focus:border-brand-500 focus:outline-none">
       </div>
     </div>
     <div class="sm:col-span-2 lg:col-span-5 flex flex-wrap gap-2 justify-end">
-      <button onclick="slSetRange('year')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">ปีนี้</button>
-      <button onclick="slSetRange('quarter')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">3 เดือนล่าสุด</button>
-      <button onclick="slSetRange('month')" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">เดือนนี้</button>
-      <button onclick="slClearRange()" class="text-xs font-bold bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg">ทั้งหมด</button>
-      <button onclick="slApply()" class="text-xs font-black bg-zinc-900 hover:bg-zinc-800 text-yellow-400 px-4 py-1.5 rounded-lg">
+      <button onclick="slSetRange('year')" class="text-xs font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">ปีนี้</button>
+      <button onclick="slSetRange('quarter')" class="text-xs font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">3 เดือนล่าสุด</button>
+      <button onclick="slSetRange('month')" class="text-xs font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">เดือนนี้</button>
+      <button onclick="slClearRange()" class="text-xs font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">ทั้งหมด</button>
+      <button onclick="slApply()" class="text-xs font-black bg-panel-900 hover:bg-panel-800 text-brand-400 px-4 py-1.5 rounded-lg">
         <i class="fa-solid fa-magnifying-glass mr-1"></i> ค้นหา
       </button>
-      <button onclick="slExport()" class="text-xs font-black bg-yellow-500 hover:bg-yellow-400 text-zinc-900 px-4 py-1.5 rounded-lg">
+      <button onclick="slExport()" class="text-xs font-black bg-brand-600 hover:bg-brand-700 text-white px-4 py-1.5 rounded-lg">
         <i class="fa-solid fa-file-arrow-down mr-1"></i> Export CSV
       </button>
     </div>
@@ -76,21 +76,21 @@ export default {
 
   <!-- Stats -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
-      <p class="text-2xl font-black text-zinc-800" id="sl-stat-total">-</p>
-      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">คำขอทั้งหมด</p>
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
+      <p class="text-2xl font-black text-slate-800" id="sl-stat-total">-</p>
+      <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">คำขอทั้งหมด</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
-      <p class="text-2xl font-black text-yellow-600" id="sl-stat-pending">-</p>
-      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">รออนุมัติ</p>
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
+      <p class="text-2xl font-black text-brand-600" id="sl-stat-pending">-</p>
+      <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">รออนุมัติ</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
       <p class="text-2xl font-black text-green-600" id="sl-stat-approved">-</p>
-      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">อนุมัติแล้ว</p>
+      <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">อนุมัติแล้ว</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-4 text-center">
-      <p class="text-2xl font-black text-yellow-700" id="sl-stat-hours">-</p>
-      <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1">ชั่วโมงลา (อนุมัติ)</p>
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 text-center">
+      <p class="text-2xl font-black text-brand-700" id="sl-stat-hours">-</p>
+      <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">ชั่วโมงลา (อนุมัติ)</p>
     </div>
   </div>
 
@@ -99,7 +99,7 @@ export default {
 
   <!-- Results -->
   <div id="sl-list" class="space-y-3">
-    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+    <div class="text-center py-16 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
   </div>
 </div>`,
 
@@ -192,8 +192,8 @@ export default {
             const emp = empMap[uid];
             if (!emp) { box.classList.add('hidden'); return; }
             box.classList.remove('hidden');
-            box.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
-                <div class="flex items-center gap-2 mb-3 text-zinc-400 text-xs">
+            box.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 p-5">
+                <div class="flex items-center gap-2 mb-3 text-slate-400 text-xs">
                     <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดโควต้าของ ${emp.name}...
                 </div>
             </div>`;
@@ -212,21 +212,21 @@ export default {
                 const remH   = Math.max(0, totalH - usedH);
                 const pct    = totalH > 0 ? Math.min(100, Math.round(usedH/totalH*100)) : 0;
                 const barColor = pct >= 100 ? 'bg-red-400' : pct > 80 ? 'bg-orange-400' : 'bg-green-400';
-                return `<div class="border border-zinc-200 rounded-xl p-3.5">
+                return `<div class="border border-slate-200 rounded-xl p-3.5">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg ${cv.badge}">
                             <i class="fa-solid ${t.icon} text-xs"></i>
                         </span>
-                        <span class="font-black text-xs text-zinc-700">${t.label}</span>
+                        <span class="font-black text-xs text-slate-700">${t.label}</span>
                     </div>
-                    <div class="flex justify-between text-[11px] text-zinc-400 font-bold mb-1">
+                    <div class="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
                         <span>คงเหลือ</span>
-                        <span class="text-zinc-700">${balanceToDisplay(remH, sched)}</span>
+                        <span class="text-slate-700">${balanceToDisplay(remH, sched)}</span>
                     </div>
-                    <div class="w-full bg-zinc-100 rounded-full h-1.5 mb-1.5">
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 mb-1.5">
                         <div class="h-1.5 rounded-full ${barColor} transition-all" style="width:${pct}%"></div>
                     </div>
-                    <div class="flex justify-between text-[10px] text-zinc-400 font-medium">
+                    <div class="flex justify-between text-[10px] text-slate-400 font-medium">
                         <span>ใช้ ${balanceToDisplay(usedH, sched)}</span>
                         <span>จาก ${balanceToDisplay(totalH, sched)}</span>
                     </div>
@@ -234,14 +234,14 @@ export default {
             }).join('');
 
             const avatar = emp.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=f4f4f5&color=27272a&bold=true`;
-            box.innerHTML = `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
-                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-zinc-100">
-                    <img src="${avatar}" onerror="handleImgError(this)" data-name="${emp.name}" class="w-10 h-10 rounded-2xl object-cover border border-zinc-200">
+            box.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 p-5">
+                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+                    <img src="${avatar}" onerror="handleImgError(this)" data-name="${emp.name}" class="w-10 h-10 rounded-2xl object-cover border border-slate-200">
                     <div class="min-w-0 flex-1">
-                        <p class="font-black text-zinc-800 text-sm truncate">${emp.name}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${emp.employeeCode || ''} · ${emp.branch || ''}</p>
+                        <p class="font-black text-slate-800 text-sm truncate">${emp.name}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${emp.employeeCode || ''} · ${emp.branch || ''}</p>
                     </div>
-                    <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest"><i class="fa-solid fa-calendar-check mr-1 text-yellow-500"></i> โควต้าวันลาคงเหลือ</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-calendar-check mr-1 text-brand-500"></i> โควต้าวันลาคงเหลือ</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">${cards}</div>
             </div>`;
@@ -290,7 +290,7 @@ export default {
             const el = document.getElementById('sl-list');
             if (!el) return;
             if (!list.length) {
-                el.innerHTML = `<div class="text-center py-16 text-zinc-300 bg-white rounded-2xl border border-zinc-200">
+                el.innerHTML = `<div class="text-center py-16 text-slate-300 bg-white rounded-2xl border border-slate-200">
                     <i class="fa-regular fa-folder-open text-5xl mb-3"></i>
                     <p class="font-bold text-sm">ไม่พบประวัติการลา</p>
                 </div>`; return;
@@ -305,14 +305,14 @@ export default {
                 const hrsDisplay = hoursToDisplay(r.totalHours, sched);
                 const avatar = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.employeeName||'?')}&background=f4f4f5&color=27272a&bold=true`;
                 return `
-                <div class="bg-white rounded-2xl border border-zinc-200 p-4 lg:p-5">
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 lg:p-5">
                   <div class="flex flex-col lg:flex-row gap-3">
                     <div class="flex items-center gap-3 lg:w-56 shrink-0">
-                      <img src="${avatar}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-10 h-10 rounded-2xl object-cover border border-zinc-200">
+                      <img src="${avatar}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-10 h-10 rounded-2xl object-cover border border-slate-200">
                       <div class="min-w-0">
-                        <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName||'-'}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p>
-                        <p class="text-[10px] text-zinc-400">${r.branch||''}</p>
+                        <p class="font-black text-slate-800 text-sm truncate">${r.employeeName||'-'}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${r.employeeCode||''}</p>
+                        <p class="text-[10px] text-slate-400">${r.branch||''}</p>
                       </div>
                     </div>
                     <div class="flex-1 min-w-0">
@@ -323,25 +323,25 @@ export default {
                         <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.badge}">
                           <i class="fa-solid ${st.icon} mr-1"></i>${st.label}
                         </span>
-                        <span class="ml-auto font-black text-zinc-800 text-sm">${hrsDisplay}</span>
+                        <span class="ml-auto font-black text-slate-800 text-sm">${hrsDisplay}</span>
                       </div>
-                      <p class="text-sm font-bold text-zinc-600">${dateRange}${timeRange}</p>
-                      <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${r.reason||''}</p>
-                      ${r.attachment ? `<a href="${r.attachment}" target="_blank" class="text-xs text-yellow-600 hover:text-yellow-700 font-bold mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> ดูเอกสารแนบ</a>` : ''}
-                      ${r.approverNote ? `<p class="text-xs text-zinc-500 mt-1 bg-zinc-50 px-3 py-1.5 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-zinc-400"></i>${r.approverNote}</p>` : ''}
+                      <p class="text-sm font-bold text-slate-600">${dateRange}${timeRange}</p>
+                      <p class="text-xs text-slate-400 mt-1 line-clamp-2">${r.reason||''}</p>
+                      ${r.attachment ? `<a href="${r.attachment}" target="_blank" class="text-xs text-brand-600 hover:text-brand-700 font-bold mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> ดูเอกสารแนบ</a>` : ''}
+                      ${r.approverNote ? `<p class="text-xs text-slate-500 mt-1 bg-slate-50 px-3 py-1.5 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-slate-400"></i>${r.approverNote}</p>` : ''}
                     </div>
                     <div class="shrink-0 text-right text-xs lg:w-40">
                       ${(r.status==='approved'||r.status==='rejected') ? `
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.status==='approved'?'อนุมัติโดย':'ดำเนินการโดย'}</p>
-                        <p class="font-bold text-zinc-600 text-xs">${r.approvedBy||'-'}</p>
-                        <p class="text-[10px] text-zinc-400">${r.approvedAt?fmtDate(r.approvedAt):''}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${r.status==='approved'?'อนุมัติโดย':'ดำเนินการโดย'}</p>
+                        <p class="font-bold text-slate-600 text-xs">${r.approvedBy||'-'}</p>
+                        <p class="text-[10px] text-slate-400">${r.approvedAt?fmtDate(r.approvedAt):''}</p>
                       ` : r.status==='cancelled' ? `
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">ยกเลิกโดย</p>
-                        <p class="font-bold text-zinc-600 text-xs">${r.cancelledBy||r.employeeName||'-'}</p>
-                        <p class="text-[10px] text-zinc-400">${r.cancelledAt?fmtDate(r.cancelledAt):''}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">ยกเลิกโดย</p>
+                        <p class="font-bold text-slate-600 text-xs">${r.cancelledBy||r.employeeName||'-'}</p>
+                        <p class="text-[10px] text-slate-400">${r.cancelledAt?fmtDate(r.cancelledAt):''}</p>
                       ` : `
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">ขอเมื่อ</p>
-                        <p class="font-bold text-zinc-600 text-xs">${r.createdAt?fmtDate(r.createdAt):'-'}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">ขอเมื่อ</p>
+                        <p class="font-bold text-slate-600 text-xs">${r.createdAt?fmtDate(r.createdAt):'-'}</p>
                       `}
                     </div>
                   </div>

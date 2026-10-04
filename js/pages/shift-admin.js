@@ -5,60 +5,60 @@
 //
 // ใช้ showToast / navigateTo ซึ่งยังเป็น global บน window เรียกได้ตรงๆ
 
-import { workDaySetOn } from '../lib/work-days.js?v=20261001a';
+import { workDaySetOn } from '../lib/work-days.js?v=20261004a';
 
 export default {
     title: 'จัดการกะงาน',
     html: `
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="mb-8">
-    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">จัดการกะงาน</h2>
-    <p class="text-sm text-zinc-400 font-medium mt-0.5">สร้างกะงานและกำหนดกะให้พนักงานแต่ละวันในสัปดาห์</p>
+    <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">จัดการกะงาน</h2>
+    <p class="text-sm text-slate-400 font-medium mt-0.5">สร้างกะงานและกำหนดกะให้พนักงานแต่ละวันในสัปดาห์</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Shift templates -->
-    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
-      <h3 class="font-black text-zinc-800 mb-4 text-sm uppercase tracking-widest">
-        <i class="fa-solid fa-layer-group text-yellow-500 mr-2"></i> กะงานทั้งหมด
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 class="font-black text-slate-800 mb-4 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-layer-group text-brand-500 mr-2"></i> กะงานทั้งหมด
       </h3>
       <div id="sh-list" class="space-y-2 mb-4">
-        <div class="text-center py-6 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
+        <div class="text-center py-6 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
       </div>
-      <div class="border-t border-zinc-100 pt-4 space-y-3">
-        <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest">เพิ่มกะใหม่</p>
+      <div class="border-t border-slate-100 pt-4 space-y-3">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">เพิ่มกะใหม่</p>
         <input type="text" id="sh-name" placeholder="ชื่อกะ เช่น กะเช้า / กะบ่าย / กะดึก"
-          class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+          class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-brand-500 focus:outline-none">
         <div class="grid grid-cols-3 gap-2">
           <div>
-            <label class="block text-[9px] font-black text-zinc-400 uppercase mb-1">เข้า</label>
-            <input type="time" id="sh-start" value="08:00" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-sm focus:border-yellow-500 focus:outline-none">
+            <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">เข้า</label>
+            <input type="time" id="sh-start" value="08:00" class="w-full border-2 border-slate-200 rounded-xl px-2 py-2 text-sm focus:border-brand-500 focus:outline-none">
           </div>
           <div>
-            <label class="block text-[9px] font-black text-zinc-400 uppercase mb-1">ออก</label>
-            <input type="time" id="sh-end" value="17:00" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-sm focus:border-yellow-500 focus:outline-none">
+            <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">ออก</label>
+            <input type="time" id="sh-end" value="17:00" class="w-full border-2 border-slate-200 rounded-xl px-2 py-2 text-sm focus:border-brand-500 focus:outline-none">
           </div>
           <div>
-            <label class="block text-[9px] font-black text-zinc-400 uppercase mb-1">พัก (นาที)</label>
-            <input type="number" id="sh-break" value="60" min="0" step="15" class="w-full border-2 border-zinc-200 rounded-xl px-2 py-2 text-sm focus:border-yellow-500 focus:outline-none">
+            <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">พัก (นาที)</label>
+            <input type="number" id="sh-break" value="60" min="0" step="15" class="w-full border-2 border-slate-200 rounded-xl px-2 py-2 text-sm focus:border-brand-500 focus:outline-none">
           </div>
         </div>
-        <button onclick="shAdd()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-2.5 rounded-xl text-xs uppercase">
+        <button onclick="shAdd()" class="w-full bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-2.5 rounded-xl text-xs uppercase">
           <i class="fa-solid fa-plus mr-1"></i> เพิ่มกะ
         </button>
       </div>
     </div>
 
     <!-- Assign per employee -->
-    <div class="bg-white rounded-2xl border border-zinc-200 p-6">
-      <h3 class="font-black text-zinc-800 mb-4 text-sm uppercase tracking-widest">
-        <i class="fa-solid fa-user-clock text-yellow-500 mr-2"></i> กำหนดกะให้พนักงาน
+    <div class="bg-white rounded-2xl border border-slate-200 p-6">
+      <h3 class="font-black text-slate-800 mb-4 text-sm uppercase tracking-widest">
+        <i class="fa-solid fa-user-clock text-brand-500 mr-2"></i> กำหนดกะให้พนักงาน
       </h3>
-      <select id="sh-emp" onchange="shLoadEmp()" class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-yellow-500 focus:outline-none mb-4">
+      <select id="sh-emp" onchange="shLoadEmp()" class="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-brand-500 focus:outline-none mb-4">
         <option value="">— เลือกพนักงาน —</option>
       </select>
       <div id="sh-assign" class="space-y-2">
-        <p class="text-center py-8 text-zinc-300 text-sm font-bold">เลือกพนักงานเพื่อกำหนดกะ</p>
+        <p class="text-center py-8 text-slate-300 text-sm font-bold">เลือกพนักงานเพื่อกำหนดกะ</p>
       </div>
     </div>
   </div>
@@ -95,14 +95,14 @@ export default {
             const el = document.getElementById('sh-list');
             if (!el) return;
             if (!shifts.length) {
-                el.innerHTML = '<p class="text-center py-4 text-zinc-300 text-sm font-bold">ยังไม่มีกะงาน</p>';
+                el.innerHTML = '<p class="text-center py-4 text-slate-300 text-sm font-bold">ยังไม่มีกะงาน</p>';
                 return;
             }
             el.innerHTML = shifts.map(s => `
-                <div class="flex items-center justify-between bg-zinc-50 rounded-xl px-4 py-3 border border-zinc-100">
+                <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                     <div>
-                        <p class="font-black text-zinc-800 text-sm">${s.name}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold">${s.start} – ${s.end} · พัก ${s.breakMinutes ?? 60} นาที</p>
+                        <p class="font-black text-slate-800 text-sm">${s.name}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">${s.start} – ${s.end} · พัก ${s.breakMinutes ?? 60} นาที</p>
                     </div>
                     <button onclick="shDelete('${s.id}')" class="text-red-400 hover:text-red-600 px-2"><i class="fa-solid fa-trash text-xs"></i></button>
                 </div>`).join('');
@@ -141,10 +141,10 @@ export default {
             const el = document.getElementById('sh-assign');
             if (!el) return;
             if (!uid) {
-                el.innerHTML = '<p class="text-center py-8 text-zinc-300 text-sm font-bold">เลือกพนักงานเพื่อกำหนดกะ</p>';
+                el.innerHTML = '<p class="text-center py-8 text-slate-300 text-sm font-bold">เลือกพนักงานเพื่อกำหนดกะ</p>';
                 return;
             }
-            el.innerHTML = '<div class="text-center py-6 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+            el.innerHTML = '<div class="text-center py-6 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
             const snap = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', uid));
             selEmpSched = snap.exists() ? snap.data() : {};
             const shiftByDay = selEmpSched.shiftByDay || {};
@@ -153,12 +153,12 @@ export default {
                 shifts.map(s => `<option value="${s.id}" ${cur===s.id?'selected':''}>${s.name} (${s.start}–${s.end})</option>`).join('');
             el.innerHTML = DOW_FULL.map((d, i) => `
                 <div class="flex items-center gap-3 ${!workDaySet.has(i)?'opacity-40':''}">
-                    <span class="w-16 text-xs font-black ${!workDaySet.has(i)?'text-zinc-400':'text-zinc-700'}">${d}${!workDaySet.has(i)?' (หยุด)':''}</span>
-                    <select id="sh-day-${i}" class="flex-1 border-2 border-zinc-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:border-yellow-500 focus:outline-none" ${!workDaySet.has(i)?'disabled':''}>
+                    <span class="w-16 text-xs font-black ${!workDaySet.has(i)?'text-slate-400':'text-slate-700'}">${d}${!workDaySet.has(i)?' (หยุด)':''}</span>
+                    <select id="sh-day-${i}" class="flex-1 border-2 border-slate-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:border-brand-500 focus:outline-none" ${!workDaySet.has(i)?'disabled':''}>
                         ${opts(shiftByDay[i] || '')}
                     </select>
                 </div>`).join('') + `
-                <button onclick="shSaveAssign()" class="w-full mt-3 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-2.5 rounded-xl text-xs uppercase">
+                <button onclick="shSaveAssign()" class="w-full mt-3 bg-brand-600 hover:bg-brand-700 text-white font-black py-2.5 rounded-xl text-xs uppercase">
                     <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการกำหนดกะ
                 </button>`;
         };

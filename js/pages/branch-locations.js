@@ -10,8 +10,8 @@ export default {
     html: `
 <div class="p-6 lg:p-8 max-w-4xl mx-auto">
   <div class="mb-8">
-    <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">พิกัดสาขา & GPS</h2>
-    <p class="text-sm text-zinc-400 font-medium mt-0.5">กำหนดตำแหน่งและรัศมีที่อนุญาตให้ลงเวลาของแต่ละสาขา</p>
+    <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">พิกัดสาขา & GPS</h2>
+    <p class="text-sm text-slate-400 font-medium mt-0.5">กำหนดตำแหน่งและรัศมีที่อนุญาตให้ลงเวลาของแต่ละสาขา</p>
   </div>
   <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-800 font-medium">
     <i class="fa-solid fa-circle-info mr-1"></i>
@@ -19,7 +19,7 @@ export default {
     — หาพิกัดได้จาก Google Maps: คลิกขวาบนแผนที่ → คัดลอกตัวเลขพิกัด
   </div>
   <div id="bl-list" class="space-y-4">
-    <div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
+    <div class="text-center py-12 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>
   </div>
 </div>`,
 
@@ -38,44 +38,44 @@ export default {
             const el = document.getElementById('bl-list');
             if (!el) return;
             if (!branches.length) {
-                el.innerHTML = '<div class="text-center py-12 text-zinc-300 font-bold text-sm">ยังไม่มีสาขาในระบบ</div>';
+                el.innerHTML = '<div class="text-center py-12 text-slate-300 font-bold text-sm">ยังไม่มีสาขาในระบบ</div>';
                 return;
             }
             el.innerHTML = branches.map((b, i) => {
                 const loc = locMap[b] || {};
                 const hasLoc = loc.lat != null && loc.lng != null;
-                return `<div class="bg-white rounded-2xl border border-zinc-200 p-5">
+                return `<div class="bg-white rounded-2xl border border-slate-200 p-5">
                   <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl ${hasLoc?'bg-green-100 text-green-600':'bg-zinc-100 text-zinc-400'} flex items-center justify-center">
+                      <div class="w-10 h-10 rounded-xl ${hasLoc?'bg-green-100 text-green-600':'bg-slate-100 text-slate-400'} flex items-center justify-center">
                         <i class="fa-solid fa-building"></i>
                       </div>
                       <div>
-                        <p class="font-black text-zinc-800">${b}</p>
-                        <p class="text-[10px] font-bold ${hasLoc?'text-green-600':'text-zinc-400'} uppercase">
+                        <p class="font-black text-slate-800">${b}</p>
+                        <p class="text-[10px] font-bold ${hasLoc?'text-green-600':'text-slate-400'} uppercase">
                           ${hasLoc ? '✓ ตั้งพิกัดแล้ว' : 'ใช้พิกัดเริ่มต้น (สำนักงานใหญ่)'}
                         </p>
                       </div>
                     </div>
-                    ${hasLoc ? `<a href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank" class="text-xs font-bold text-yellow-600 hover:text-yellow-700"><i class="fa-solid fa-map-location-dot mr-1"></i>ดูแผนที่</a>` : ''}
+                    ${hasLoc ? `<a href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank" class="text-xs font-bold text-brand-600 hover:text-brand-700"><i class="fa-solid fa-map-location-dot mr-1"></i>ดูแผนที่</a>` : ''}
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div class="sm:col-span-2">
-                      <label class="block text-[10px] font-black text-zinc-500 uppercase mb-1">พิกัด (lat, lng) — วางจาก Google Maps ได้เลย</label>
+                      <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">พิกัด (lat, lng) — วางจาก Google Maps ได้เลย</label>
                       <input type="text" id="bl-coord-${i}" value="${hasLoc ? loc.lat+', '+loc.lng : ''}" placeholder="16.4132778, 100.1666111"
-                        class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-mono focus:border-yellow-500 focus:outline-none">
+                        class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none">
                     </div>
                     <div>
-                      <label class="block text-[10px] font-black text-zinc-500 uppercase mb-1">รัศมี (เมตร)</label>
+                      <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">รัศมี (เมตร)</label>
                       <input type="number" id="bl-radius-${i}" value="${loc.radius || 100}" min="20" step="10"
-                        class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-mono focus:border-yellow-500 focus:outline-none">
+                        class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none">
                     </div>
                     <div class="flex items-end gap-2">
-                      <button onclick="blSave(${i})" class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-2 rounded-xl text-xs uppercase">บันทึก</button>
+                      <button onclick="blSave(${i})" class="flex-1 bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-2 rounded-xl text-xs uppercase">บันทึก</button>
                       ${hasLoc ? `<button onclick="blClear(${i})" title="ลบพิกัด" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </div>
                   </div>
-                  <button onclick="blUseHere(${i})" class="mt-2 text-[10px] font-bold text-zinc-400 hover:text-yellow-600">
+                  <button onclick="blUseHere(${i})" class="mt-2 text-[10px] font-bold text-slate-400 hover:text-brand-600">
                     <i class="fa-solid fa-location-crosshairs mr-1"></i> ใช้ตำแหน่งปัจจุบันของฉัน
                   </button>
                 </div>`;

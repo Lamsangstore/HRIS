@@ -5,16 +5,16 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20261001a';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20261001a';
-import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20261001a';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20261004a';
+import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20261004a';
+import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20261004a';
 
 export default {
     title: 'ตั้งค่าการลา',
     html: `
 <style>
 .day-toggle { transition: all .15s; }
-.day-toggle.selected { background:#18181b; color:#eab308; border-color:#18181b; }
+.day-toggle.selected { background:var(--ls-panel-900); color:var(--ls-brand-500); border-color:var(--ls-panel-900); }
 /* ปุ่มวันทำงาน 7 ปุ่ม: จอใหญ่ขนาดคงที่ / มือถือแบ่งเท่ากันให้อยู่แถวเดียว (เดิม ส. ตกบรรทัด)
    เขียนเองแทน w-full sm:w-10 เพราะ Tailwind CDN เรียงกฎไม่แน่นอน sm: อาจแพ้ */
 .wd-chips { display:flex; flex-wrap:wrap; gap:.5rem; }
@@ -28,60 +28,60 @@ export default {
 
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">ตั้งค่าการลา</h2>
-      <p class="text-sm text-zinc-400 font-medium mt-0.5">จัดการตารางงาน โควต้าวันลา และวันหยุดของพนักงานแต่ละคน</p>
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">ตั้งค่าการลา</h2>
+      <p class="text-sm text-slate-400 font-medium mt-0.5">จัดการตารางงาน โควต้าวันลา และวันหยุดของพนักงานแต่ละคน</p>
     </div>
     <!-- Search -->
     <div class="relative w-full sm:w-72">
-      <i class="fa-solid fa-search absolute left-3 top-3 text-zinc-400 text-sm"></i>
+      <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-sm"></i>
       <input id="admin-emp-search" oninput="filterAdminEmpList()" type="text" placeholder="ค้นหาพนักงาน..."
-        class="w-full border-2 border-zinc-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium focus:border-yellow-500 focus:outline-none">
+        class="w-full border-2 border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium focus:border-brand-500 focus:outline-none">
     </div>
   </div>
 
   <!-- Backfill: ซ่อมชั่วโมงลาที่คำนวณด้วยสูตรเก่า (หักพักตามสัดส่วน) -->
-  <div class="bg-white rounded-2xl border border-zinc-200 p-5 mb-6">
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-6">
     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
       <div class="flex-1">
-        <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest flex items-center gap-2">
-          <i class="fa-solid fa-wrench text-yellow-500"></i> ซ่อมชั่วโมงลาย้อนหลัง
+        <h3 class="font-black text-slate-800 text-sm uppercase tracking-widest flex items-center gap-2">
+          <i class="fa-solid fa-wrench text-brand-500"></i> ซ่อมชั่วโมงลาย้อนหลัง
         </h3>
-        <p class="text-[11px] text-zinc-400 font-medium mt-1">
+        <p class="text-[11px] text-slate-400 font-medium mt-1">
           ใบลาที่บันทึกก่อนหน้านี้ถูกหักเวลาพักตามสัดส่วน (เช่น ลาเช้า 08:00–12:00 ได้ 3.56 แทน 4)
           กด "ดูผล" เพื่อตรวจก่อน แล้วค่อยกด "เขียนจริง" — ทำครั้งเดียวพอ
         </p>
       </div>
       <div class="flex gap-2 shrink-0">
         <button onclick="backfillLeaveHours(false)" id="backfill-dry-btn"
-          class="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black py-2.5 px-4 rounded-xl transition-all text-sm border-2 border-zinc-200">
-          <i class="fa-solid fa-magnifying-glass mr-2 text-zinc-500"></i> ดูผล (ไม่เขียน)
+          class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-2.5 px-4 rounded-xl transition-all text-sm border-2 border-slate-200">
+          <i class="fa-solid fa-magnifying-glass mr-2 text-slate-500"></i> ดูผล (ไม่เขียน)
         </button>
         <button onclick="backfillLeaveHours(true)" id="backfill-apply-btn"
-          class="bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-2.5 px-4 rounded-xl transition-all text-sm">
+          class="bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-2.5 px-4 rounded-xl transition-all text-sm">
           <i class="fa-solid fa-database mr-2"></i> เขียนจริง
         </button>
       </div>
     </div>
-    <div id="backfill-result" class="hidden mt-4 pt-4 border-t border-zinc-100"></div>
+    <div id="backfill-result" class="hidden mt-4 pt-4 border-t border-slate-100"></div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
     <!-- Employee List (left) -->
     <div class="lg:col-span-2">
-      <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
-        <div class="px-5 py-4 border-b border-zinc-100">
-          <h3 class="font-black text-zinc-800 text-sm uppercase tracking-widest">รายชื่อพนักงาน</h3>
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100">
+          <h3 class="font-black text-slate-800 text-sm uppercase tracking-widest">รายชื่อพนักงาน</h3>
         </div>
-        <div id="admin-emp-list" class="divide-y divide-zinc-100 max-h-[65vh] overflow-y-auto">
-          <div class="p-6 text-center text-zinc-400 text-sm">กำลังโหลด...</div>
+        <div id="admin-emp-list" class="divide-y divide-slate-100 max-h-[65vh] overflow-y-auto">
+          <div class="p-6 text-center text-slate-400 text-sm">กำลังโหลด...</div>
         </div>
       </div>
     </div>
 
     <!-- Settings Panel (right) -->
     <div class="lg:col-span-3" id="admin-right-panel">
-      <div class="bg-white rounded-2xl border border-zinc-200 p-8 flex flex-col items-center justify-center h-48 text-zinc-400">
+      <div class="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col items-center justify-center h-48 text-slate-400">
         <i class="fa-solid fa-arrow-left text-3xl mb-3 opacity-40"></i>
         <p class="font-bold text-sm">เลือกพนักงานจากรายการ</p>
         <p class="text-xs mt-1">เพื่อตั้งค่าตารางงานและโควต้า</p>
@@ -108,19 +108,19 @@ export default {
         function renderEmpList(list) {
             const el = document.getElementById('admin-emp-list');
             if (!el) return;
-            if (!list.length) { el.innerHTML = `<div class="p-6 text-center text-zinc-400 text-sm">ไม่พบพนักงาน</div>`; return; }
+            if (!list.length) { el.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">ไม่พบพนักงาน</div>`; return; }
             el.innerHTML = list.map(e => {
                 const av = e.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name)}&background=f4f4f5&color=27272a&bold=true`;
                 const isActive = e.uid === selectedEmpUid;
                 return `
-                <button onclick="selectAdminEmp('${e.uid}')" class="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all hover:bg-zinc-50 ${isActive ? 'bg-yellow-50 border-l-4 border-yellow-500' : ''}">
-                  <img src="${av}" onerror="handleImgError(this)" class="w-10 h-10 rounded-xl object-cover border border-zinc-200 shrink-0">
+                <button onclick="selectAdminEmp('${e.uid}')" class="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all hover:bg-slate-50 ${isActive ? 'bg-brand-50 border-l-4 border-brand-500' : ''}">
+                  <img src="${av}" onerror="handleImgError(this)" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0">
                   <div class="min-w-0">
-                    <p class="font-bold text-zinc-800 text-sm truncate">${e.name}</p>
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase">${e.employeeCode || e.role}</p>
-                    <p class="text-[10px] text-zinc-400 truncate">${e.branch || ''}</p>
+                    <p class="font-bold text-slate-800 text-sm truncate">${e.name}</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">${e.employeeCode || e.role}</p>
+                    <p class="text-[10px] text-slate-400 truncate">${e.branch || ''}</p>
                   </div>
-                  <i class="fa-solid fa-chevron-right text-zinc-300 ml-auto shrink-0 text-xs"></i>
+                  <i class="fa-solid fa-chevron-right text-slate-300 ml-auto shrink-0 text-xs"></i>
                 </button>`;
             }).join('');
         }
@@ -187,80 +187,80 @@ export default {
 
             panel.innerHTML = `
             <!-- Employee card -->
-            <div class="bg-zinc-900 text-white rounded-2xl p-5 flex items-center gap-4 mb-5">
-              <img src="${av}" onerror="handleImgError(this)" class="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-700">
+            <div class="bg-panel-900 text-white rounded-2xl p-5 flex items-center gap-4 mb-5">
+              <img src="${av}" onerror="handleImgError(this)" class="w-14 h-14 rounded-2xl object-cover border-2 border-panel-700">
               <div>
                 <p class="font-black text-lg">${emp.name}</p>
-                <p class="text-yellow-400 text-xs font-bold uppercase">${emp.employeeCode || ''} · ${emp.position || emp.role}</p>
-                <p class="text-zinc-400 text-xs">${emp.branch || ''}</p>
+                <p class="text-brand-400 text-xs font-bold uppercase">${emp.employeeCode || ''} · ${emp.position || emp.role}</p>
+                <p class="text-slate-400 text-xs">${emp.branch || ''}</p>
               </div>
             </div>
 
             <!-- Work Schedule -->
-            <div class="bg-white rounded-2xl border border-zinc-200 p-6 mb-5">
-              <h4 class="font-black text-zinc-800 mb-5 flex items-center gap-2 uppercase text-sm tracking-widest">
-                <i class="fa-solid fa-calendar-days text-yellow-500"></i> ตารางการทำงาน
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-5">
+              <h4 class="font-black text-slate-800 mb-5 flex items-center gap-2 uppercase text-sm tracking-widest">
+                <i class="fa-solid fa-calendar-days text-brand-500"></i> ตารางการทำงาน
               </h4>
               <div class="space-y-5">
                 <div>
-                  <p class="text-xs font-bold text-zinc-500 mb-1 uppercase tracking-widest">วันทำงาน</p>
-                  <p class="text-[11px] text-zinc-400 mb-3 font-medium">
+                  <p class="text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">วันทำงาน</p>
+                  <p class="text-[11px] text-slate-400 mb-3 font-medium">
                     เปลี่ยนวันหยุด (เช่น พฤ. → อ.) ให้กด "เปลี่ยนวันทำงานตั้งแต่วันที่" แล้วใส่วันที่มีผล —
                     วันก่อนหน้านั้นยังคิดขาดงาน/โอที/ชั่วโมงลาตามวันทำงานชุดเดิม
                   </p>
                   <div id="wd-hist" class="space-y-3"></div>
                   <button onclick="addWorkDayChange()" type="button"
-                    class="mt-3 text-xs font-black text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border-2 border-yellow-200 rounded-xl px-3 py-2">
+                    class="mt-3 text-xs font-black text-brand-700 bg-brand-50 hover:bg-brand-100 border-2 border-brand-200 rounded-xl px-3 py-2">
                     <i class="fa-solid fa-plus mr-1"></i> เปลี่ยนวันทำงานตั้งแต่วันที่
                   </button>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
-                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาเข้างาน</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">เวลาเข้างาน</label>
                     <input type="time" id="sched-start" value="${sched.workStart || '08:00'}"
-                      class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                      class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เวลาออกงาน</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">เวลาออกงาน</label>
                     <input type="time" id="sched-end" value="${sched.workEnd || '17:00'}"
-                      class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                      class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">เริ่มพัก</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">เริ่มพัก</label>
                     <input type="time" id="sched-break-start" value="${sched.breakStart || '12:00'}"
-                      class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                      class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">พัก (นาที)</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">พัก (นาที)</label>
                     <input type="number" id="sched-break" value="${sched.breakMinutes ?? 60}" min="0" max="240"
-                      class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+                      class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
                   </div>
                 </div>
                 <!-- Daily work hours preview -->
-                <div class="bg-zinc-50 rounded-xl p-3 flex items-center gap-3 border border-zinc-200">
-                  <i class="fa-solid fa-clock text-yellow-500"></i>
-                  <p class="text-sm font-bold text-zinc-600">
-                    ชั่วโมงงาน/วัน: <span id="daily-hrs-preview" class="text-yellow-600">${hpd.toFixed(1)} ชม.</span>
+                <div class="bg-slate-50 rounded-xl p-3 flex items-center gap-3 border border-slate-200">
+                  <i class="fa-solid fa-clock text-brand-500"></i>
+                  <p class="text-sm font-bold text-slate-600">
+                    ชั่วโมงงาน/วัน: <span id="daily-hrs-preview" class="text-brand-600">${hpd.toFixed(1)} ชม.</span>
                   </p>
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">วันหยุดพิเศษ (กรอก YYYY-MM-DD คั่นด้วย ,)</label>
+                  <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">วันหยุดพิเศษ (กรอก YYYY-MM-DD คั่นด้วย ,)</label>
                   <textarea id="sched-holidays" rows="2" placeholder="2026-04-06, 2026-04-07, ..."
-                    class="w-full border-2 border-zinc-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-yellow-500 focus:outline-none resize-none">${(sched.holidays||[]).join(', ')}</textarea>
+                    class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-brand-500 focus:outline-none resize-none">${(sched.holidays||[]).join(', ')}</textarea>
                 </div>
-                <button onclick="saveSchedule()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-yellow-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest">
+                <button onclick="saveSchedule()" class="w-full bg-panel-900 hover:bg-panel-800 text-brand-400 font-black py-3 rounded-xl transition-all text-sm uppercase tracking-widest">
                   <i class="fa-solid fa-save mr-2"></i> บันทึกตารางงาน
                 </button>
               </div>
             </div>
 
             <!-- Leave Quota -->
-            <div class="bg-white rounded-2xl border border-zinc-200 p-6">
-              <h4 class="font-black text-zinc-800 mb-1 flex items-center gap-2 uppercase text-sm tracking-widest">
-                <i class="fa-solid fa-sliders text-yellow-500"></i> โควต้าวันลาประจำปี
+            <div class="bg-white rounded-2xl border border-slate-200 p-6">
+              <h4 class="font-black text-slate-800 mb-1 flex items-center gap-2 uppercase text-sm tracking-widest">
+                <i class="fa-solid fa-sliders text-brand-500"></i> โควต้าวันลาประจำปี
               </h4>
-              <p class="text-[11px] text-zinc-400 mb-5 font-medium">
-                คำนวณจาก <span class="font-black text-yellow-600">${hpd.toFixed(1)} ชม./วัน</span>
+              <p class="text-[11px] text-slate-400 mb-5 font-medium">
+                คำนวณจาก <span class="font-black text-brand-600">${hpd.toFixed(1)} ชม./วัน</span>
                 (${sched.workStart||'08:00'} – ${sched.workEnd||'17:00'} พัก ${sched.breakStart||'12:00'} ${sched.breakMinutes??60} นาที)
               </p>
               <div class="space-y-4" id="quota-form">
@@ -273,44 +273,44 @@ export default {
                     const totalDays = Math.round(totalHrs / hpd * 10) / 10;
                     const remHrs    = Math.max(0, totalHrs - usedHrs);
                     return `
-                    <div class="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <div class="flex items-center gap-3 mb-2">
                         <div class="w-9 h-9 rounded-xl ${cv.bg} flex items-center justify-center shrink-0">
                           <i class="fa-solid ${t.icon} ${cv.text} text-sm"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                          <p class="font-bold text-zinc-800 text-sm">${t.label}</p>
-                          <div class="flex gap-3 text-[10px] text-zinc-400 mt-0.5 flex-wrap">
-                            <span>ใช้ <span class="font-black text-zinc-600">${balanceToDisplay(usedHrs, sched)}</span></span>
+                          <p class="font-bold text-slate-800 text-sm">${t.label}</p>
+                          <div class="flex gap-3 text-[10px] text-slate-400 mt-0.5 flex-wrap">
+                            <span>ใช้ <span class="font-black text-slate-600">${balanceToDisplay(usedHrs, sched)}</span></span>
                             <span>คงเหลือ <span class="font-black ${remHrs <= 0 ? 'text-red-500' : 'text-green-600'}">${balanceToDisplay(remHrs, sched)}</span></span>
                             <span>จาก <span class="font-black">${balanceToDisplay(totalHrs, sched)}</span></span>
                           </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                          <label class="text-xs text-zinc-500 font-bold whitespace-nowrap">สิทธิ์ (วัน)</label>
+                          <label class="text-xs text-slate-500 font-bold whitespace-nowrap">สิทธิ์ (วัน)</label>
                           <input type="number" id="quota-${t.id}"
                             value="${totalDays}"
                             min="0" step="0.5"
-                            class="w-20 border-2 border-zinc-200 rounded-lg px-2 py-1.5 text-sm font-black text-center focus:border-yellow-500 focus:outline-none">
+                            class="w-20 border-2 border-slate-200 rounded-lg px-2 py-1.5 text-sm font-black text-center focus:border-brand-500 focus:outline-none">
                         </div>
                       </div>
                       ${totalHrs > 0 ? (() => {
                         const pct2 = Math.min(100, Math.round(usedHrs/totalHrs*100));
                         const barC = pct2 >= 100 ? 'bg-red-400' : pct2 >= 80 ? 'bg-orange-400' : 'bg-green-400';
-                        return `<div class="w-full bg-zinc-200 rounded-full h-1.5"><div class="h-1.5 rounded-full ${barC}" style="width:${pct2}%"></div></div>
-                                <p class="text-right text-[9px] text-zinc-400 font-bold mt-0.5">${pct2}% ใช้แล้ว</p>`;
+                        return `<div class="w-full bg-slate-200 rounded-full h-1.5"><div class="h-1.5 rounded-full ${barC}" style="width:${pct2}%"></div></div>
+                                <p class="text-right text-[9px] text-slate-400 font-bold mt-0.5">${pct2}% ใช้แล้ว</p>`;
                       })() : ''}
                     </div>`;
                 }).join('')}
               </div>
-              <p class="text-[10px] text-zinc-400 mt-3 text-center font-medium">
+              <p class="text-[10px] text-slate-400 mt-3 text-center font-medium">
                 กรอกเป็น "วัน" — ระบบแปลงเป็นชั่วโมงอัตโนมัติตาม schedule
               </p>
               <div class="mt-4 flex gap-3">
-                <button onclick="recalcUsedHours()" class="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black py-3 rounded-xl transition-all text-sm border-2 border-zinc-200">
-                  <i class="fa-solid fa-rotate mr-2 text-zinc-500"></i> คำนวณจากประวัติการลา
+                <button onclick="recalcUsedHours()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-3 rounded-xl transition-all text-sm border-2 border-slate-200">
+                  <i class="fa-solid fa-rotate mr-2 text-slate-500"></i> คำนวณจากประวัติการลา
                 </button>
-                <button onclick="saveQuota()" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-zinc-900 font-black py-3 rounded-xl transition-all text-sm shadow-md">
+                <button onclick="saveQuota()" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-black py-3 rounded-xl transition-all text-sm shadow-md">
                   <i class="fa-solid fa-save mr-2"></i> บันทึกโควต้าวันลา
                 </button>
               </div>
@@ -345,19 +345,19 @@ export default {
             });
             el.innerHTML = wdHist.map((h, i) => {
                 const chips = [0,1,2,3,4,5,6].map(d => `<button type="button" onclick="toggleWorkDay(${i},${d})"
-                    class="day-toggle h-10 rounded-xl border-2 border-zinc-200 font-black text-xs text-zinc-500 ${h.workDays.includes(d) ? 'selected' : ''}">
+                    class="day-toggle h-10 rounded-xl border-2 border-slate-200 font-black text-xs text-slate-500 ${h.workDays.includes(d) ? 'selected' : ''}">
                     ${DAY_NAMES[d]}</button>`).join('');
                 const isCurrent = i === currentIdx;
                 const label = i === 0
-                    ? `<span class="text-xs font-black text-zinc-600">ตั้งแต่เริ่มงาน</span>`
-                    : `<span class="text-xs font-black text-zinc-600">ตั้งแต่</span>
+                    ? `<span class="text-xs font-black text-slate-600">ตั้งแต่เริ่มงาน</span>`
+                    : `<span class="text-xs font-black text-slate-600">ตั้งแต่</span>
                        <input type="date" value="${h.from}" onchange="setWorkDayFrom(${i}, this.value)"
-                         class="border-2 border-zinc-200 rounded-lg px-2 py-1 text-xs font-bold focus:border-yellow-500 focus:outline-none">
+                         class="border-2 border-slate-200 rounded-lg px-2 py-1 text-xs font-bold focus:border-brand-500 focus:outline-none">
                        <button type="button" onclick="removeWorkDayChange(${i})" title="ลบช่วงนี้"
-                         class="ml-auto text-zinc-400 hover:text-red-500 text-sm"><i class="fa-solid fa-trash-can"></i></button>`;
-                return `<div class="p-3 rounded-xl border-2 ${isCurrent ? 'border-yellow-300 bg-yellow-50/40' : 'border-zinc-200'}">
+                         class="ml-auto text-slate-400 hover:text-red-500 text-sm"><i class="fa-solid fa-trash-can"></i></button>`;
+                return `<div class="p-3 rounded-xl border-2 ${isCurrent ? 'border-brand-300 bg-brand-50/40' : 'border-slate-200'}">
                     <div class="flex items-center gap-2 mb-2 flex-wrap">${label}
-                      ${isCurrent ? '<span class="text-[9px] font-black bg-yellow-400 text-zinc-900 px-1.5 py-0.5 rounded">ใช้อยู่ตอนนี้</span>' : ''}
+                      ${isCurrent ? '<span class="text-[9px] font-black bg-brand-500 text-slate-900 px-1.5 py-0.5 rounded">ใช้อยู่ตอนนี้</span>' : ''}
                     </div>
                     <div class="wd-chips">${chips}</div>
                 </div>`;
@@ -480,7 +480,7 @@ export default {
             } catch(e) {
                 showToast('❌ ' + e.message, 'error');
             } finally {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2 text-zinc-500"></i> คำนวณจากประวัติการลา'; }
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate mr-2 text-slate-500"></i> คำนวณจากประวัติการลา'; }
             }
         };
 
@@ -542,24 +542,24 @@ export default {
 
                 // ตารางสรุป
                 const rows = diffs.map(x => `
-                    <tr class="border-b border-zinc-100">
-                      <td class="py-2 pr-3 font-bold text-zinc-700">${x.name}</td>
-                      <td class="py-2 pr-3 text-zinc-500">${x.date} ${x.time}</td>
-                      <td class="py-2 pr-3 text-zinc-400">${x.status}</td>
+                    <tr class="border-b border-slate-100">
+                      <td class="py-2 pr-3 font-bold text-slate-700">${x.name}</td>
+                      <td class="py-2 pr-3 text-slate-500">${x.date} ${x.time}</td>
+                      <td class="py-2 pr-3 text-slate-400">${x.status}</td>
                       <td class="py-2 pr-3 text-right text-red-500 font-bold">${x.old.toFixed(2)}</td>
                       <td class="py-2 pr-3 text-right text-emerald-600 font-black">${x.fresh.toFixed(2)}</td>
                     </tr>`).join('');
                 if (out) {
                     out.classList.remove('hidden');
                     out.innerHTML = `
-                      <p class="text-sm font-black text-zinc-700 mb-2">
+                      <p class="text-sm font-black text-slate-700 mb-2">
                         ${apply ? 'เขียนแล้ว' : 'จะแก้'} ${diffs.length} ใบ (จากทั้งหมด ${reqSnap.size} ใบ)
-                        ${apply ? '' : '<span class="text-zinc-400 font-medium">— ยังไม่ได้เขียนลงฐานข้อมูล</span>'}
+                        ${apply ? '' : '<span class="text-slate-400 font-medium">— ยังไม่ได้เขียนลงฐานข้อมูล</span>'}
                       </p>
                       <div class="overflow-x-auto max-h-64 overflow-y-auto">
                         <table class="w-full text-xs">
-                          <thead class="text-[10px] uppercase text-zinc-400 font-black">
-                            <tr class="border-b-2 border-zinc-200">
+                          <thead class="text-[10px] uppercase text-slate-400 font-black">
+                            <tr class="border-b-2 border-slate-200">
                               <th class="text-left py-2 pr-3">พนักงาน</th>
                               <th class="text-left py-2 pr-3">วันที่/เวลา</th>
                               <th class="text-left py-2 pr-3">สถานะ</th>
@@ -574,16 +574,16 @@ export default {
 
                 if (skipped.length && out) {
                     out.innerHTML += `
-                      <div class="mt-4 pt-3 border-t border-zinc-100">
+                      <div class="mt-4 pt-3 border-t border-slate-100">
                         <p class="text-xs font-black text-orange-600 mb-1">
                           <i class="fa-solid fa-triangle-exclamation mr-1"></i>
                           ข้าม ${skipped.length} ใบ — ตารางงานถูกแก้หลังวันที่ลา
                         </p>
-                        <p class="text-[11px] text-zinc-400 font-medium mb-2">
+                        <p class="text-[11px] text-slate-400 font-medium mb-2">
                           ระบบไม่ได้เก็บตารางงานย้อนหลัง จึงคำนวณใบพวกนี้ใหม่ไม่ได้อย่างถูกต้อง
                           ถ้าตัวเลขเดิมผิดจริง ให้แก้มือในหน้าอนุมัติการลา
                         </p>
-                        <div class="text-[11px] text-zinc-500 space-y-0.5">
+                        <div class="text-[11px] text-slate-500 space-y-0.5">
                           ${skipped.map(x => `<div>${x.name} · ${x.date} ${x.time} · เดิม ${x.old.toFixed(2)} → คำนวณใหม่ได้ ${x.fresh.toFixed(2)}</div>`).join('')}
                         </div>
                       </div>`;

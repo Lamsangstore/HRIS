@@ -11,10 +11,10 @@ export default {
 <div class="p-6 lg:p-8 max-w-5xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติคำขอเวลา</h2>
-      <p class="text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบคำขอชี้แจงและแก้ไขเวลาของพนักงาน</p>
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">อนุมัติคำขอเวลา</h2>
+      <p class="text-sm text-slate-400 font-medium mt-0.5">ตรวจสอบคำขอชี้แจงและแก้ไขเวลาของพนักงาน</p>
     </div>
-    <select id="ta-filter" onchange="taFilter()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+    <select id="ta-filter" onchange="taFilter()" class="border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
       <option value="pending">รออนุมัติ</option>
       <option value="approved">อนุมัติแล้ว</option>
       <option value="rejected">ไม่อนุมัติ</option>
@@ -22,21 +22,21 @@ export default {
     </select>
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
-      <p class="text-3xl font-black text-yellow-600" id="ta-stat-p">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">รออนุมัติ</p>
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 text-center">
+      <p class="text-3xl font-black text-brand-600" id="ta-stat-p">-</p>
+      <p class="text-xs text-slate-400 font-bold uppercase mt-1">รออนุมัติ</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 text-center">
       <p class="text-3xl font-black text-green-600" id="ta-stat-a">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">อนุมัติแล้ว</p>
+      <p class="text-xs text-slate-400 font-bold uppercase mt-1">อนุมัติแล้ว</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 text-center">
       <p class="text-3xl font-black text-red-600" id="ta-stat-r">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">ไม่อนุมัติ</p>
+      <p class="text-xs text-slate-400 font-bold uppercase mt-1">ไม่อนุมัติ</p>
     </div>
   </div>
   <div id="ta-list" class="space-y-4">
-    <div class="text-center py-12 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i></div>
+    <div class="text-center py-12 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i></div>
   </div>
 </div>
 
@@ -48,13 +48,13 @@ export default {
       <h3 id="ta-action-title" class="font-black text-white text-lg">-</h3>
     </div>
     <div class="p-7 space-y-4">
-      <div id="ta-action-detail" class="bg-zinc-50 rounded-xl p-4 text-sm space-y-1.5 border border-zinc-200"></div>
+      <div id="ta-action-detail" class="bg-slate-50 rounded-xl p-4 text-sm space-y-1.5 border border-slate-200"></div>
       <div>
-        <label class="block text-xs font-bold text-zinc-500 mb-1 uppercase">หมายเหตุ (ถึงพนักงาน)</label>
-        <textarea id="ta-action-note" rows="2" class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">หมายเหตุ (ถึงพนักงาน)</label>
+        <textarea id="ta-action-note" rows="2" class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none resize-none"></textarea>
       </div>
       <div class="flex gap-3">
-        <button onclick="taCloseAction()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl text-sm">ยกเลิก</button>
+        <button onclick="taCloseAction()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-xl text-sm">ยกเลิก</button>
         <button id="ta-confirm-btn" onclick="taConfirm()" class="flex-1 py-3 font-black rounded-xl text-sm text-white">ยืนยัน</button>
       </div>
     </div>
@@ -94,11 +94,11 @@ export default {
 
         function renderList(list) {
             const el = document.getElementById('ta-list'); if(!el) return;
-            if (!list.length) { el.innerHTML=`<div class="text-center py-16 text-zinc-300"><i class="fa-regular fa-folder-open text-5xl mb-3"></i><p class="font-bold text-sm">ไม่มีคำขอในหมวดนี้</p></div>`; return; }
-            const ST = { pending:{label:'รออนุมัติ',cls:'bg-yellow-100 text-yellow-800 border border-yellow-200',icon:'fa-clock'},
+            if (!list.length) { el.innerHTML=`<div class="text-center py-16 text-slate-300"><i class="fa-regular fa-folder-open text-5xl mb-3"></i><p class="font-bold text-sm">ไม่มีคำขอในหมวดนี้</p></div>`; return; }
+            const ST = { pending:{label:'รออนุมัติ',cls:'bg-amber-100 text-amber-800 border border-amber-200',icon:'fa-clock'},
                          approved:{label:'อนุมัติแล้ว',cls:'bg-green-100 text-green-800 border border-green-200',icon:'fa-circle-check'},
                          rejected:{label:'ไม่อนุมัติ',cls:'bg-red-100 text-red-700 border border-red-200',icon:'fa-circle-xmark'},
-                         cancelled:{label:'ยกเลิก',cls:'bg-zinc-100 text-zinc-500 border border-zinc-200',icon:'fa-ban'} };
+                         cancelled:{label:'ยกเลิก',cls:'bg-slate-100 text-slate-500 border border-slate-200',icon:'fa-ban'} };
             const av = r => r.photoURL||`https://ui-avatars.com/api/?name=${encodeURIComponent(r.employeeName)}&background=f4f4f5&color=27272a&bold=true`;
             el.innerHTML = list.map(r => {
                 const st = ST[r.status]||ST.pending;
@@ -107,24 +107,24 @@ export default {
                 const timeInfo = r.reqType==='explain'
                     ? `เข้า ${r.timeIn||'-'} · ออก ${r.timeOut||'-'}`
                     : `เดิม ${r.origIn||'-'}/${r.origOut||'-'} → ใหม่ ${r.timeIn||'-'}/${r.timeOut||'-'}`;
-                return `<div class="tr-card bg-white rounded-2xl border border-zinc-200 p-5">
+                return `<div class="tr-card bg-white rounded-2xl border border-slate-200 p-5">
                   <div class="flex flex-col lg:flex-row gap-4">
                     <div class="flex items-center gap-3 lg:w-48 shrink-0">
-                      <img src="${av(r)}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
+                      <img src="${av(r)}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-12 h-12 rounded-2xl object-cover border border-slate-200">
                       <div class="min-w-0">
-                        <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode||''}</p>
-                        <p class="text-[10px] text-zinc-400">${r.branch||''}</p>
+                        <p class="font-black text-slate-800 text-sm truncate">${r.employeeName}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${r.employeeCode||''}</p>
+                        <p class="text-[10px] text-slate-400">${r.branch||''}</p>
                       </div>
                     </div>
                     <div class="flex-1">
                       <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span class="font-bold text-zinc-800 text-sm">${typeLabel}</span>
+                        <span class="font-bold text-slate-800 text-sm">${typeLabel}</span>
                         <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.cls}"><i class="fa-solid ${st.icon} mr-1"></i>${st.label}</span>
                       </div>
-                      <p class="text-sm font-bold text-zinc-600">📅 ${r.date} · ${timeInfo}</p>
-                      <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${r.reason}</p>
-                      ${r.approverNote ? `<p class="text-xs text-zinc-500 mt-1 bg-zinc-50 px-3 py-1 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-zinc-400"></i>${r.approverNote}</p>` : ''}
+                      <p class="text-sm font-bold text-slate-600">📅 ${r.date} · ${timeInfo}</p>
+                      <p class="text-xs text-slate-400 mt-1 line-clamp-2">${r.reason}</p>
+                      ${r.approverNote ? `<p class="text-xs text-slate-500 mt-1 bg-slate-50 px-3 py-1 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-slate-400"></i>${r.approverNote}</p>` : ''}
                     </div>
                     ${isPending ? `<div class="flex lg:flex-col gap-2 shrink-0 justify-end">
                       <button onclick="taOpenAction('${r.id}','approve')" class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow-sm">
@@ -134,7 +134,7 @@ export default {
                         <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
                       </button>
                     </div>` : `<div class="shrink-0 text-right text-xs">
-                      <p class="text-zinc-400">โดย ${r.approvedBy||'-'}</p>
+                      <p class="text-slate-400">โดย ${r.approvedBy||'-'}</p>
                     </div>`}
                   </div>
                 </div>`;
@@ -151,10 +151,10 @@ export default {
             if(title) title.textContent = isApp ? '✅ อนุมัติคำขอ' : '❌ ไม่อนุมัติคำขอ';
             const det = document.getElementById('ta-action-detail');
             if(det) det.innerHTML = `
-                <div class="flex justify-between"><span class="text-zinc-400">พนักงาน</span><span class="font-bold">${r.employeeName}</span></div>
-                <div class="flex justify-between"><span class="text-zinc-400">ประเภท</span><span class="font-bold">${r.reqType==='explain'?'ชี้แจงไม่ได้บันทึก':'ขอแก้ไขเวลา'}</span></div>
-                <div class="flex justify-between"><span class="text-zinc-400">วันที่</span><span class="font-bold">${r.date}</span></div>
-                <div class="flex justify-between"><span class="text-zinc-400">เวลา</span><span class="font-bold">${r.timeIn||'-'} – ${r.timeOut||'-'}</span></div>`;
+                <div class="flex justify-between"><span class="text-slate-400">พนักงาน</span><span class="font-bold">${r.employeeName}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">ประเภท</span><span class="font-bold">${r.reqType==='explain'?'ชี้แจงไม่ได้บันทึก':'ขอแก้ไขเวลา'}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">วันที่</span><span class="font-bold">${r.date}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">เวลา</span><span class="font-bold">${r.timeIn||'-'} – ${r.timeOut||'-'}</span></div>`;
             const btn = document.getElementById('ta-confirm-btn');
             if(btn) { btn.className = `flex-1 py-3 font-black rounded-xl text-sm text-white ${isApp?'bg-green-500 hover:bg-green-400':'bg-red-500 hover:bg-red-400'}`; btn.textContent = isApp ? 'ยืนยันอนุมัติ' : 'ยืนยันไม่อนุมัติ'; }
             document.getElementById('ta-action-note').value = '';

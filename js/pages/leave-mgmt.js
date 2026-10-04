@@ -5,9 +5,9 @@
 //
 // scheduleCache / balanceCache เป็นแคชเฉพาะหน้านี้ (ไม่มีใครนอกหน้าใช้) จึงย้ายมาด้วยได้
 
-import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261001a';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours, calcLeaveHours } from '../lib/leave-hours.js?v=20261001a';
-import { STATUS_MAP } from '../lib/status-map.js?v=20261001a';
+import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261004a';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours, calcLeaveHours } from '../lib/leave-hours.js?v=20261004a';
+import { STATUS_MAP } from '../lib/status-map.js?v=20261004a';
 
 export default {
     title: 'อนุมัติการลา',
@@ -19,17 +19,17 @@ export default {
 <div class="p-6 lg:p-8 max-w-7xl mx-auto">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
-      <h2 class="text-xl sm:text-2xl font-black text-zinc-800 uppercase tracking-tight">อนุมัติการลา</h2>
-      <p class="text-sm text-zinc-400 font-medium mt-0.5">ตรวจสอบและอนุมัติคำขอลาของพนักงาน</p>
+      <h2 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">อนุมัติการลา</h2>
+      <p class="text-sm text-slate-400 font-medium mt-0.5">ตรวจสอบและอนุมัติคำขอลาของพนักงาน</p>
     </div>
     <div class="flex gap-2">
-      <select id="filter-status" onchange="filterRequests()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+      <select id="filter-status" onchange="filterRequests()" class="border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
         <option value="pending">รอการอนุมัติ</option>
         <option value="approved">อนุมัติแล้ว</option>
         <option value="rejected">ไม่อนุมัติ</option>
         <option value="all">ทั้งหมด</option>
       </select>
-      <select id="filter-branch" onchange="filterRequests()" class="border-2 border-zinc-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-yellow-500 focus:outline-none">
+      <select id="filter-branch" onchange="filterRequests()" class="border-2 border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:border-brand-500 focus:outline-none">
         <option value="">ทุกสาขา</option>
         <option>สำนักงานใหญ่</option>
         <option>สาขาพิจิตร (เนินปอ)</option>
@@ -37,21 +37,21 @@ export default {
     </div>
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
-      <p class="text-3xl font-black text-yellow-600" id="stat-pending">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">รอการอนุมัติ</p>
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 text-center">
+      <p class="text-3xl font-black text-brand-600" id="stat-pending">-</p>
+      <p class="text-xs text-slate-400 font-bold uppercase mt-1">รอการอนุมัติ</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 text-center">
       <p class="text-3xl font-black text-green-600" id="stat-approved">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">อนุมัติแล้ว (เดือนนี้)</p>
+      <p class="text-xs text-slate-400 font-bold uppercase mt-1">อนุมัติแล้ว (เดือนนี้)</p>
     </div>
-    <div class="bg-white rounded-2xl border border-zinc-200 p-5 text-center">
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 text-center">
       <p class="text-3xl font-black text-red-600" id="stat-rejected">-</p>
-      <p class="text-xs text-zinc-400 font-bold uppercase mt-1">ไม่อนุมัติ (เดือนนี้)</p>
+      <p class="text-xs text-slate-400 font-bold uppercase mt-1">ไม่อนุมัติ (เดือนนี้)</p>
     </div>
   </div>
   <div id="mgmt-request-list" class="space-y-4">
-    <div class="text-center py-16 text-zinc-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
+    <div class="text-center py-16 text-slate-300"><i class="fa-solid fa-spinner fa-spin text-4xl mb-3"></i><p class="font-bold text-sm">กำลังโหลด...</p></div>
   </div>
 </div>
 
@@ -64,13 +64,13 @@ export default {
       <p id="action-modal-sub" class="text-[10px] font-bold uppercase tracking-widest mt-0.5">-</p>
     </div>
     <div class="p-8 space-y-4">
-      <div id="action-detail-box" class="bg-zinc-50 rounded-xl p-4 text-sm space-y-1.5 border border-zinc-200"></div>
+      <div id="action-detail-box" class="bg-slate-50 rounded-xl p-4 text-sm space-y-1.5 border border-slate-200"></div>
       <div>
-        <label class="block text-sm font-bold text-zinc-700 mb-1">หมายเหตุ (ถึงพนักงาน)</label>
-        <textarea id="action-note" rows="2" placeholder="เหตุผลการอนุมัติ/ไม่อนุมัติ..." class="w-full border-2 border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+        <label class="block text-sm font-bold text-slate-700 mb-1">หมายเหตุ (ถึงพนักงาน)</label>
+        <textarea id="action-note" rows="2" placeholder="เหตุผลการอนุมัติ/ไม่อนุมัติ..." class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none resize-none"></textarea>
       </div>
       <div class="flex gap-3">
-        <button onclick="closeActionModal()" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black rounded-xl transition-all text-sm">ยกเลิก</button>
+        <button onclick="closeActionModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-xl transition-all text-sm">ยกเลิก</button>
         <button id="action-confirm-btn" class="flex-1 py-3 font-black rounded-xl transition-all text-sm text-white" onclick="confirmAction()">ยืนยัน</button>
       </div>
     </div>
@@ -161,7 +161,7 @@ export default {
             const el = document.getElementById('mgmt-request-list');
             if (!el) return;
             if (!list.length) {
-                el.innerHTML = `<div class="text-center py-16 text-zinc-300">
+                el.innerHTML = `<div class="text-center py-16 text-slate-300">
                     <i class="fa-regular fa-folder-open text-5xl mb-3"></i>
                     <p class="font-bold text-sm">ไม่มีคำขอในหมวดนี้</p>
                 </div>`; return;
@@ -175,14 +175,14 @@ export default {
                 const dateRange = r.startDate === r.endDate ? fmtDate(r.startDate) : `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}`;
                 const timeRange = r.isHourly ? ` เวลา ${r.startTime}–${r.endTime}` : ' (เต็มวัน)';
                 return `
-                <div class="req-card bg-white rounded-2xl border border-zinc-200 p-5 lg:p-6">
+                <div class="req-card bg-white rounded-2xl border border-slate-200 p-5 lg:p-6">
                   <div class="flex flex-col lg:flex-row gap-4">
                     <div class="flex items-center gap-4 lg:w-56 shrink-0">
-                      <img src="${avatarUrl(r)}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-12 h-12 rounded-2xl object-cover border border-zinc-200">
+                      <img src="${avatarUrl(r)}" onerror="handleImgError(this)" data-name="${r.employeeName||''}" class="w-12 h-12 rounded-2xl object-cover border border-slate-200">
                       <div class="min-w-0">
-                        <p class="font-black text-zinc-800 text-sm truncate">${r.employeeName}</p>
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">${r.employeeCode || ''}</p>
-                        <p class="text-[10px] text-zinc-400">${r.branch || ''}</p>
+                        <p class="font-black text-slate-800 text-sm truncate">${r.employeeName}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${r.employeeCode || ''}</p>
+                        <p class="text-[10px] text-slate-400">${r.branch || ''}</p>
                       </div>
                     </div>
                     <div class="flex-1">
@@ -193,12 +193,12 @@ export default {
                         <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${st.badge}">
                           <i class="fa-solid ${st.icon} mr-1"></i>${st.label}
                         </span>
-                        <span class="ml-auto font-black text-zinc-800">${dispHoursForReq(r)}</span>
+                        <span class="ml-auto font-black text-slate-800">${dispHoursForReq(r)}</span>
                       </div>
-                      <p class="text-sm font-bold text-zinc-600">${dateRange}${timeRange}</p>
-                      <p class="text-xs text-zinc-400 mt-1 line-clamp-2">${r.reason}</p>
-                      ${r.attachment ? `<a href="${r.attachment}" target="_blank" class="text-xs text-yellow-600 hover:text-yellow-700 font-bold mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> ดูเอกสารแนบ</a>` : ''}
-                      ${r.approverNote ? `<p class="text-xs text-zinc-500 mt-1 bg-zinc-50 px-3 py-1.5 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-zinc-400"></i>${r.approverNote}</p>` : ''}
+                      <p class="text-sm font-bold text-slate-600">${dateRange}${timeRange}</p>
+                      <p class="text-xs text-slate-400 mt-1 line-clamp-2">${r.reason}</p>
+                      ${r.attachment ? `<a href="${r.attachment}" target="_blank" class="text-xs text-brand-600 hover:text-brand-700 font-bold mt-1 inline-flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> ดูเอกสารแนบ</a>` : ''}
+                      ${r.approverNote ? `<p class="text-xs text-slate-500 mt-1 bg-slate-50 px-3 py-1.5 rounded-lg border"><i class="fa-solid fa-comment mr-1 text-slate-400"></i>${r.approverNote}</p>` : ''}
                     </div>
                     ${isPending ? `
                     <div class="flex lg:flex-col gap-2 shrink-0 justify-end">
@@ -213,9 +213,9 @@ export default {
                     </div>` : r.status === 'approved' ? `
                     <div class="flex lg:flex-col gap-2 shrink-0 justify-end items-end">
                       <div class="text-right">
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase">อนุมัติโดย</p>
-                        <p class="text-xs font-bold text-zinc-600">${r.approvedBy || '-'}</p>
-                        <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt) : ''}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">อนุมัติโดย</p>
+                        <p class="text-xs font-bold text-slate-600">${r.approvedBy || '-'}</p>
+                        <p class="text-[10px] text-slate-400">${r.approvedAt ? fmtDate(r.approvedAt) : ''}</p>
                       </div>
                       <button onclick="mgrCancelLeave('${r.id}')"
                         class="inline-flex items-center gap-1.5 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border-2 border-orange-200 hover:border-orange-500 font-black px-4 py-2 rounded-xl text-[10px] transition-all uppercase tracking-widest">
@@ -223,9 +223,9 @@ export default {
                       </button>
                     </div>` : `
                     <div class="shrink-0 text-right">
-                      <p class="text-[10px] text-zinc-400 font-bold uppercase">ดำเนินการโดย</p>
-                      <p class="text-xs font-bold text-zinc-600">${r.approvedBy || '-'}</p>
-                      <p class="text-[10px] text-zinc-400">${r.approvedAt ? fmtDate(r.approvedAt) : ''}</p>
+                      <p class="text-[10px] text-slate-400 font-bold uppercase">ดำเนินการโดย</p>
+                      <p class="text-xs font-bold text-slate-600">${r.approvedBy || '-'}</p>
+                      <p class="text-[10px] text-slate-400">${r.approvedAt ? fmtDate(r.approvedAt) : ''}</p>
                     </div>`}
                   </div>
                 </div>`;
@@ -250,11 +250,11 @@ export default {
                 const sched = scheduleCache[r.uid] || null;
                 const reqHrsDisplay = dispHoursForReq(r);
                 box.innerHTML = `
-                    <div class="flex justify-between"><span class="text-zinc-400">พนักงาน</span><span class="font-bold">${r.employeeName}</span></div>
-                    <div class="flex justify-between"><span class="text-zinc-400">ประเภท</span><span class="font-bold">${r.typeName}</span></div>
-                    <div class="flex justify-between"><span class="text-zinc-400">วันที่</span><span class="font-bold">${fmtDate(r.startDate)}${r.startDate !== r.endDate ? ' – '+fmtDate(r.endDate) : ''}</span></div>
-                    <div class="flex justify-between"><span class="text-zinc-400">จำนวนที่ขอ</span><span class="font-bold text-yellow-600">${reqHrsDisplay}</span></div>
-                    <div id="quota-loading" class="text-center py-2 text-zinc-400 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังโหลดโควต้า...</div>`;
+                    <div class="flex justify-between"><span class="text-slate-400">พนักงาน</span><span class="font-bold">${r.employeeName}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">ประเภท</span><span class="font-bold">${r.typeName}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">วันที่</span><span class="font-bold">${fmtDate(r.startDate)}${r.startDate !== r.endDate ? ' – '+fmtDate(r.endDate) : ''}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">จำนวนที่ขอ</span><span class="font-bold text-brand-600">${reqHrsDisplay}</span></div>
+                    <div id="quota-loading" class="text-center py-2 text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังโหลดโควต้า...</div>`;
 
                 // โหลด balance แบบ async แล้วอัปเดต
                 try {
@@ -277,29 +277,29 @@ export default {
                         const barColor   = willExceed ? 'bg-red-400' : pct > 80 ? 'bg-orange-400' : 'bg-green-400';
 
                         loadingEl.outerHTML = `
-                            <div class="mt-2 pt-2 border-t border-zinc-200 space-y-1.5">
-                              <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">โควต้า${r.typeName}</p>
+                            <div class="mt-2 pt-2 border-t border-slate-200 space-y-1.5">
+                              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">โควต้า${r.typeName}</p>
                               <div class="flex justify-between text-xs">
-                                <span class="text-zinc-500">ใช้ไปแล้ว</span>
+                                <span class="text-slate-500">ใช้ไปแล้ว</span>
                                 <span class="font-bold">${balanceToDisplay(usedH, sched)}</span>
                               </div>
                               <div class="flex justify-between text-xs">
-                                <span class="text-zinc-500">คงเหลือก่อนอนุมัติ</span>
+                                <span class="text-slate-500">คงเหลือก่อนอนุมัติ</span>
                                 <span class="font-bold ${willExceed ? 'text-red-600' : 'text-green-600'}">${balanceToDisplay(remH, sched)}</span>
                               </div>
-                              <div class="w-full bg-zinc-200 rounded-full h-1.5 my-1">
+                              <div class="w-full bg-slate-200 rounded-full h-1.5 my-1">
                                 <div class="h-1.5 rounded-full ${barColor} transition-all" style="width:${pct}%"></div>
                               </div>
                               <div class="flex justify-between text-xs">
-                                <span class="text-zinc-500">หลังอนุมัติจะเหลือ</span>
-                                <span class="font-black ${willExceed ? 'text-red-600' : 'text-zinc-800'}">${balanceToDisplay(afterH, sched)}</span>
+                                <span class="text-slate-500">หลังอนุมัติจะเหลือ</span>
+                                <span class="font-black ${willExceed ? 'text-red-600' : 'text-slate-800'}">${balanceToDisplay(afterH, sched)}</span>
                               </div>
                               ${willExceed ? `<div class="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
                                 <p class="text-xs text-red-700 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>โควต้าไม่พอ! ขาดอีก ${balanceToDisplay(reqH - remH, sched)}</p>
                               </div>` : ''}
                             </div>`;
                     } else {
-                        loadingEl.outerHTML = `<p class="text-xs text-zinc-400 text-center pt-1">ประเภทนี้ไม่นับโควต้า</p>`;
+                        loadingEl.outerHTML = `<p class="text-xs text-slate-400 text-center pt-1">ประเภทนี้ไม่นับโควต้า</p>`;
                     }
                 } catch(e) {
                     const loadingEl = document.getElementById('quota-loading');
