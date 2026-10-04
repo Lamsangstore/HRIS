@@ -5,7 +5,7 @@
 //
 // เกณฑ์ประเมิน import จาก module / isManagerialEmp กับ showToast เป็น global
 
-import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20261004a';
+import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from '../lib/review-dimensions.js?v=20261004b';
 export default {
     title: 'ผลประเมินของฉัน',
     html: `
