@@ -893,18 +893,18 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20261004a';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20261004a';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20261004a';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20261004a';
-        import { distanceMeters } from './js/lib/geo.js?v=20261004a';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20261004c';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20261004c';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20261004c';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20261004c';
+        import { distanceMeters } from './js/lib/geo.js?v=20261004c';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20261004a';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20261004a';
-        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20261004a';
+        } from './js/lib/leave-hours.js?v=20261004c';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20261004c';
+        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20261004c';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1189,7 +1189,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20261004a';
+        const ASSET_V = '20261004c';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
