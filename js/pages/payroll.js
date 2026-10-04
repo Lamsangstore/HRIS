@@ -7,11 +7,11 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20261004b';
-import { workDaySetOn } from '../lib/work-days.js?v=20261004b';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20261004c';
+import { workDaySetOn } from '../lib/work-days.js?v=20261004c';
 import { calcMonthlyWHT, recordTaxLines, buildYTD, taxMonthsFor, whtSummary, ALLOWANCE_FIELDS }
-    from '../lib/wht.js?v=20261004b';
-import { calcSSO } from '../lib/sso.js?v=20261004b';
+    from '../lib/wht.js?v=20261004c';
+import { calcSSO } from '../lib/sso.js?v=20261004c';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -567,9 +567,10 @@ export default {
                     // เก็บค่านี้ลง record ด้วย เพื่อให้ตอนแก้รายคน (prSaveRec) คิดเลขตรงกัน
                     const hourly=otHourlyRate(emp, sc);
                     const taxMode=emp.taxDeduction||'No';
-                    // เพดานค่าจ้างตามวันสิ้นงวด (ดู lib/sso.js) — 2569 ขึ้นเป็น 17,500/875
-                    const dSSO=emp.sso==='Yes'?calcSSO(base,period.endDate):0;
                     const eD=daily*wd;
+                    // ฐานค่าจ้าง = เงินเดือน + ค่าจ้างรายวัน (พนักงานรายวันเงินเดือน 0 เคยถูกหัก 0)
+                    // เพดาน/ขั้นต่ำตามวันสิ้นงวด (ดู lib/sso.js) — 2569 ขึ้นเป็น 17,500/875
+                    const dSSO=emp.sso==='Yes'?calcSSO(base+eD,period.endDate):0;
                     // OT & Commission จาก ot_requests ที่อนุมัติแล้ว
                     const otData=otbu[emp.uid]||{otHours:0,commTotal:0,salesTotal:0};
                     const wh=Math.round(otData.otHours*100)/100;

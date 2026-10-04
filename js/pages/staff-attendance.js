@@ -6,10 +6,10 @@
 // วันหยุด/ประเภทลา/ระยะทาง import จาก module
 // ส่วน officeFor กับ loadBranchLocations ผูกกับแคชพิกัดสาขาใน app.html จึงอยู่บน window
 
-import { isPublicHoliday } from '../lib/holidays.js?v=20261004b';
-import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20261004b';
-import { distanceMeters } from '../lib/geo.js?v=20261004b';
-import { workDaySetOn } from '../lib/work-days.js?v=20261004b';
+import { isPublicHoliday } from '../lib/holidays.js?v=20261004c';
+import { getLeaveTypeInfo } from '../lib/leave-types.js?v=20261004c';
+import { distanceMeters } from '../lib/geo.js?v=20261004c';
+import { workDaySetOn } from '../lib/work-days.js?v=20261004c';
 
 export default {
     title: 'ประวัติเวลา (ทีม)',

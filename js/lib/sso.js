@@ -6,7 +6,10 @@
 //   2569–2571        เพดาน 17,500 → สูงสุด 875
 //   2572–2574        เพดาน 20,000 → สูงสุด 1,000
 //   2575 เป็นต้นไป    เพดาน 23,000 → สูงสุด 1,150
+// ขั้นต่ำ: ค่าจ้างต่ำกว่า 1,650 ให้คิดที่ 1,650 (= 83 บาท)
+// ยกเว้นเดือนที่ไม่มีค่าจ้างเลย → ไม่หัก
 export const SSO_RATE = 0.05;
+export const SSO_WAGE_FLOOR = 1650;
 
 export const SSO_WAGE_CEILINGS = [
     { from: '',           ceiling: 15000 },
@@ -25,5 +28,6 @@ export function ssoWageCeiling(date) {
 
 export function calcSSO(wage, date) {
     const w = Math.max(0, Number(wage) || 0);
-    return Math.round(Math.min(w, ssoWageCeiling(date)) * SSO_RATE);
+    if (w === 0) return 0;
+    return Math.round(Math.max(SSO_WAGE_FLOOR, Math.min(w, ssoWageCeiling(date))) * SSO_RATE);
 }
