@@ -7,11 +7,11 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20261004c';
-import { workDaySetOn } from '../lib/work-days.js?v=20261004c';
-import { calcMonthlyWHT, recordTaxLines, buildYTD, taxMonthsFor, whtSummary, ALLOWANCE_FIELDS }
-    from '../lib/wht.js?v=20261004c';
-import { calcSSO } from '../lib/sso.js?v=20261004c';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20261102a';
+import { workDaySetOn } from '../lib/work-days.js?v=20261102a';
+import { calcMonthlyWHT, recordTaxLines, buildYTD, taxMonthsFor, taxYearOf, ceYear, whtSummary, ALLOWANCE_FIELDS }
+    from '../lib/wht.js?v=20261102a';
+import { calcSSO } from '../lib/sso.js?v=20261102a';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)
@@ -445,7 +445,7 @@ export default {
         window.prCloseCreate = () => sEl('pr-modal-create')?.classList.add('hidden');
 
         window.prDoCreate = async () => {
-            const no=parseInt(gV('pr-no')), yr=parseInt(gV('pr-yr')), s=gV('pr-s'), e=gV('pr-e'), n=gV('pr-note');
+            const no=parseInt(gV('pr-no')), yr=ceYear(parseInt(gV('pr-yr'))), s=gV('pr-s'), e=gV('pr-e'), n=gV('pr-note');
             if(!no||!yr||!s||!e){showToast('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e01\u0e23\u0e2d\u0e01\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e43\u0e2b\u0e49\u0e04\u0e23\u0e1a','error');return;}
             const btn=sEl('pr-create-btn'); btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin mr-2"></i>';
             try {
@@ -471,9 +471,11 @@ export default {
         }
 
         // ── ภาษีแบบ PEAK: ยอดสะสมจากงวดที่สรุปแล้วก่อนงวดนี้ในปีภาษีเดียวกัน
-        // ปีภาษี = ปีปฏิทิน (period.year) ร่างที่ยังไม่สรุปไม่นับ เหมือน PEAK นับเฉพาะรอบที่อนุมัติแล้ว
+        // ปีภาษี = ปีปฏิทิน ค.ศ. ของวันเริ่มงวด (taxYearOf) — ไม่ใช้ช่อง year ตรงๆ เพราะบางงวดกรอกเป็น พ.ศ.
+        // ร่างที่ยังไม่สรุปไม่นับ เหมือน PEAK นับเฉพาะรอบที่อนุมัติแล้ว
         function priorPeriods(period, statuses){
-            return periods.filter(p=>p.id!==period.id && Number(p.year)===Number(period.year)
+            const ty=taxYearOf(period);
+            return periods.filter(p=>p.id!==period.id && taxYearOf(p)===ty
                 && statuses.includes(p.status) && (p.startDate||'') < (period.startDate||''));
         }
 
@@ -536,8 +538,13 @@ export default {
                 const priorIds=new Set(priorPeriods(period,['final','paid']).map(p=>p.id));
                 const pastBy={};
                 if(priorIds.size){
-                    const past=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('year','==',period.year)));
-                    past.docs.forEach(d=>{const r=d.data();if(!priorIds.has(r.periodId)||!r.uid)return;(pastBy[r.uid]||=[]).push(r);});
+                    // ดึงตาม periodId ไม่ใช่ year — record ของงวดที่กรอกปีเป็น พ.ศ. จะได้ไม่หลุด
+                    // ('in' รับได้ทีละ 30 ค่า)
+                    const ids=[...priorIds];
+                    for(let i=0;i<ids.length;i+=30){
+                        const past=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','in',ids.slice(i,i+30))));
+                        past.docs.forEach(d=>{const r=d.data();if(!r.uid)return;(pastBy[r.uid]||=[]).push(r);});
+                    }
                 }
                 const ex=await getDocs(query(collection(db,'artifacts',APP_ID,'public','data','payroll_records'),where('periodId','==',pid)));
                 // ค่าพวกนี้ไม่มีที่มาจากไหน admin พิมพ์เองล้วนๆ — เก็บไว้ก่อนลบแล้วใส่คืน
@@ -586,8 +593,8 @@ export default {
                     // ตัวแปรภาษีแบบ PEAK เก็บไว้ทุกคน (แม้โหมดอื่น) — แก้รายคนแล้วเปลี่ยนเป็น
                     // "ตามขั้นบันได" จะได้คำนวณต่อได้เลยโดยไม่ต้องดึงยอดสะสมใหม่
                     const whtBase={
-                        ytd:buildYTD(pastBy[emp.uid],emp.taxOpening,period.year),
-                        taxMonths:taxMonthsFor(emp.startDate,period.year),
+                        ytd:buildYTD(pastBy[emp.uid],emp.taxOpening,taxYearOf(period)),
+                        taxMonths:taxMonthsFor(emp.startDate,taxYearOf(period)),
                         allowances:emp.taxAllowances||{},
                     };
                     const wht=taxMode==='Yes' ? calcMonthlyWHT({...whtBase,lines:recordTaxLines({

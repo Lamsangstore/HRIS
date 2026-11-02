@@ -2,7 +2,7 @@
 // ถ้าเทสต์นี้พัง = ยอดภาษีในใบเงินเดือนเราจะไม่ตรงกับ PEAK
 import {
     calcMonthlyWHT, progressiveTax, recordTaxLines, recordIncome401,
-    buildYTD, taxMonthsFor, resolveAllowances,
+    buildYTD, taxMonthsFor, resolveAllowances, taxYearOf, ceYear,
 } from '../js/lib/wht.js';
 import { makeChecker } from './extract.mjs';
 
@@ -94,5 +94,13 @@ check('ไม่กรอกอะไรเลย → ผู้มีเงิ�
       resolveAllowances(undefined, 9000).total, 69000);
 check('กรอกประกันสังคมเอง → ใช้ตัวเลขที่กรอก',
       resolveAllowances({ socialSecurity: 5000, lifeInsurance: 10000 }, 9000).total, 75000);
+
+// งวดที่กรอกปีเป็น พ.ศ. ต้องยังนับเป็นปีภาษีเดียวกัน (เคยหลุด → ภาษี ต.ค. ไม่ตรง PEAK)
+check('ปีภาษีจากวันเริ่มงวด แม้ year เป็น พ.ศ.', taxYearOf({ year: 2569, startDate: '2026-02-01' }), 2026);
+check('ไม่มีวันที่ → แปลง พ.ศ. เป็น ค.ศ.', taxYearOf({ year: 2569 }), 2026);
+check('ปี ค.ศ. ไม่เปลี่ยน', ceYear(2026), 2026);
+check('ยอดยกมากรอกปีเป็น พ.ศ. ยังนับ',
+      buildYTD([], { year: 2569, income401: 60000, tax: 400, months: 2 }, 2026).monthsPaid, 2);
+check('เข้างานปีนี้ ส่งปีเป็น พ.ศ. ก็ได้', taxMonthsFor('2026-07-15', 2569), 6);
 
 check.done('WHT แบบ PEAK');
