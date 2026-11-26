@@ -81,12 +81,26 @@ export function recordIncome401(r) {
 }
 
 /**
+ * ปีภาษี (ค.ศ.) ของงวด — ดูจากวันเริ่มงวดก่อน เพราะช่อง year มีงวดที่กรอกเป็น พ.ศ.
+ * (เช่น "งวด 2 / 2569") ทำให้งวดนั้นหลุดจากยอดสะสม → ภาษีเพี้ยนทั้งปี
+ * ไม่มีวันที่ → ใช้ year แต่แปลง พ.ศ. เป็น ค.ศ. ให้
+ */
+export function ceYear(y) {
+    const n = num(y);
+    return n > 2400 ? n - 543 : n;
+}
+export function taxYearOf(period) {
+    const m = /^(\d{4})-/.exec(period?.startDate || '');
+    return m ? ceYear(m[1]) : ceYear(period?.year);
+}
+
+/**
  * ยอดสะสมตั้งแต่ต้นปีภาษี จากใบเงินเดือนของงวดที่ "สรุปแล้ว" ก่อนงวดนี้ + ยอดยกมา
  * opening = emp.taxOpening = { year, income401, income402, tax, sso, months }
  * ใช้ยอดยกมาเฉพาะเมื่อปีตรงกับปีภาษีของงวดนี้ (ขึ้นปีใหม่ = เริ่มนับ 0)
  */
 export function buildYTD(pastRecords, opening, year) {
-    const o = opening && num(opening.year) === num(year) ? opening : {};
+    const o = opening && ceYear(opening.year) === ceYear(year) ? opening : {};
     const ytd = {
         income401:   num(o.income401),
         income402:   num(o.income402),
@@ -111,7 +125,7 @@ export function buildYTD(pastRecords, opening, year) {
  */
 export function taxMonthsFor(startDate, year) {
     const m = /^(\d{4})-(\d{2})/.exec(startDate || '');
-    if (!m || Number(m[1]) !== Number(year)) return 12;
+    if (!m || Number(m[1]) !== ceYear(year)) return 12;
     return 13 - Number(m[2]);
 }
 
