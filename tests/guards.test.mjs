@@ -112,12 +112,17 @@ check('หน้าลามีตัวคำนวณโควตากลา�
 // ต้องมองทั้งก่อนและหลัง เพราะมีสองรูปแบบที่ถูกต้อง:
 //   อ่าน  → `b.totalHours != null ? b.totalHours : (maxDays * hpd)`  (totalHours อยู่ก่อน)
 //   สร้าง → `setDoc(..., { totalHours: defaultTotal })`              (totalHours อยู่หลัง)
+// สูตรโควตาหลักย้ายไป js/lib/leave-balance.js (quotaFor) แล้ว จึงต้องสแกนทั้ง lib ด้วย
 {
-    const uses = [...src.matchAll(/maxDays\s*\*\s*hpd/g)];
+    const libDir = join(ROOT, 'js', 'lib');
+    const libSrc = ['leave-balance.js'].filter(f => existsSync(join(libDir, f)))
+        .map(f => ({ name: `js/lib/${f}`, src: readFileSync(join(libDir, f), 'utf8') }));
+    const uses = [...allPageSrc, ...libSrc].flatMap(f =>
+        [...f.src.matchAll(/maxDays\s*\*\s*(hpd|hoursPerDayOf)/g)].map(m => ({ ...f, index: m.index })));
     check('มีการใช้ maxDays เป็นค่า default อยู่', uses.length > 0, true);
     const noCheck = uses
-        .filter(m => !src.slice(Math.max(0, m.index - 160), m.index + 160).includes('totalHours'))
-        .map(m => src.slice(m.index - 60, m.index + 20).trim().split('\n').pop());
+        .filter(u => !u.src.slice(Math.max(0, u.index - 160), u.index + 160).includes('totalHours'))
+        .map(u => `${u.name}: ` + u.src.slice(u.index - 60, u.index + 20).trim().split('\n').pop());
     check('ทุกจุดที่ใช้ maxDays อ้างอิงสิทธิ์จริง (totalHours) ด้วย', noCheck, []);
 }
 

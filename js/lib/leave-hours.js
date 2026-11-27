@@ -8,8 +8,8 @@
 //     breakStart:'12:00', breakMinutes:60, holidays:['YYYY-MM-DD', ...] }
 // ทุก field มีค่าตั้งต้นให้ — schedule เก่าที่ยังไม่มี breakStart จะถือว่าพัก 12:00
 
-import { isPublicHoliday } from './holidays.js?v=20261102a';
-import { workDaysOn } from './work-days.js?v=20261102a';
+import { isPublicHoliday } from './holidays.js?v=20261127a';
+import { workDaysOn } from './work-days.js?v=20261127a';
 
 /** 'HH:MM' → นาทีนับจากเที่ยงคืน */
 export function hhmmToMins(hhmm) {
@@ -50,13 +50,9 @@ export function calcLeaveHours(startDate, startTime, endDate, endTime, schedule)
     const endDay = new Date(endDate + 'T12:00:00+07:00');
 
     while (cur <= endDay) {
-        const yr = cur.getFullYear();
-        const mo = String(cur.getMonth() + 1).padStart(2, '0');
-        const dy = String(cur.getDate()).padStart(2, '0');
-        const ds = yr + '-' + mo + '-' + dy;
+        const ds = ymdOf(cur);
 
-        // วันทำงานของ "วันนั้น" — ใบลาข้ามช่วงเปลี่ยนวันหยุดต้องนับตามชุดที่ใช้จริงแต่ละวัน
-        if (workDaysOn(schedule, ds).includes(cur.getDay()) && !personalHols.has(ds) && !isPublicHoliday(ds)) {
+        if (isLeaveWorkDay(schedule, ds, cur.getDay(), personalHols)) {
             const isFirstDay = ds === startDate;
             const isLastDay  = ds === endDate;
             const useStartM  = isFirstDay && startTime ? hhmmToMins(startTime) : dayStartM;
@@ -72,6 +68,45 @@ export function calcLeaveHours(startDate, startTime, endDate, endTime, schedule)
         cur.setDate(cur.getDate() + 1);
     }
     return Math.round(total / 60 * 100) / 100; // ปัดเป็น 2 ทศนิยม
+}
+
+function ymdOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// วันทำงานของ "วันนั้น" — ใบลาข้ามช่วงเปลี่ยนวันหยุดต้องนับตามชุดที่ใช้จริงแต่ละวัน
+function isLeaveWorkDay(schedule, ds, dow, personalHols) {
+    return workDaysOn(schedule, ds).includes(dow) && !personalHols.has(ds) && !isPublicHoliday(ds);
+}
+
+/**
+ * จำนวนวันทำงานในช่วง [startDate..endDate] — กฎเดียวกับ calcLeaveHours
+ * (ข้ามวันหยุดประจำสัปดาห์ตามประวัติ, วันหยุดส่วนตัว, วันหยุดตามประเพณี)
+ * ใช้นับใบลาเต็มวันเป็น "วัน" โดยไม่ต้องรู้ว่าตอนนั้น 1 วันกี่ชั่วโมง
+ */
+export function countLeaveWorkDays(startDate, endDate, schedule) {
+    const personalHols = new Set(schedule.holidays || []);
+    let n = 0;
+    const cur = new Date(startDate + 'T12:00:00+07:00');
+    const endDay = new Date(endDate + 'T12:00:00+07:00');
+    while (cur <= endDay) {
+        if (isLeaveWorkDay(schedule, ymdOf(cur), cur.getDay(), personalHols)) n++;
+        cur.setDate(cur.getDate() + 1);
+    }
+    return n;
+}
+
+/**
+ * ชั่วโมงของใบลาหนึ่งใบตาม schedule
+ * ใบเต็มวันใช้เวลาเข้า–ออกงานเต็มของตาราง ไม่ใช้เวลาที่เก็บไว้ในใบ — หน้ายื่นลาเคย
+ * ปัดเป็นชั่วโมงเต็ม (17:30 → 17:00) ใบเต็มวันของกะ 08:30–17:30 เลยได้ 7.5 ชม.
+ * แทนที่จะเป็น 8 (= ชม./วัน) แล้วขึ้นเป็น "7.5 ชม." แทน "1 วัน"
+ * ใบเก่าที่ไม่มี isHourly ใช้เวลาในใบเหมือนเดิม
+ */
+export function requestHours(req, schedule) {
+    const fullDay = req.isHourly === false;
+    return calcLeaveHours(req.startDate, fullDay ? null : req.startTime,
+                          req.endDate,   fullDay ? null : req.endTime, schedule);
 }
 
 /** ชั่วโมงทำงานต่อวันตาม schedule (hpd) */

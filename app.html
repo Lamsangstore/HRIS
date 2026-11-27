@@ -893,18 +893,19 @@
         // ฟังก์ชันบริสุทธิ์ที่แยกออกไปเป็นไฟล์แล้ว — ทดสอบตรงๆ ได้ที่ tests/
         // หมายเหตุ: import แบบนี้ต้องเสิร์ฟผ่าน http(s) เปิดไฟล์ด้วย file:// จะติด CORS
         // ถ้าจะเปิดดูในเครื่อง ใช้ `npx serve .` แล้วเข้า localhost แทนการดับเบิลคลิกไฟล์
-        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20261102a';
-        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20261102a';
-        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20261102a';
-        import { STATUS_MAP } from './js/lib/status-map.js?v=20261102a';
-        import { distanceMeters } from './js/lib/geo.js?v=20261102a';
+        import { isPublicHoliday, getHolidayName } from './js/lib/holidays.js?v=20261127a';
+        import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from './js/lib/leave-types.js?v=20261127a';
+        import { REVIEW_DIMENSIONS, REVIEW_DEFAULT_CRITERIA } from './js/lib/review-dimensions.js?v=20261127a';
+        import { STATUS_MAP } from './js/lib/status-map.js?v=20261127a';
+        import { distanceMeters } from './js/lib/geo.js?v=20261127a';
         import {
             hhmmToMins, getBreakWindow, breakOverlapMins, calcLeaveHours,
             getDayWorkHours, calcAutoOTHours, splitDaysHours,
             hoursToDisplay, balanceToDisplay,
-        } from './js/lib/leave-hours.js?v=20261102a';
-        import { workDaySetOn } from './js/lib/work-days.js?v=20261102a';
-        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20261102a';
+        } from './js/lib/leave-hours.js?v=20261127a';
+        import { quotaFor, usedHoursByType, usedHoursDoc, leaveHoursNow } from './js/lib/leave-balance.js?v=20261127a';
+        import { workDaySetOn } from './js/lib/work-days.js?v=20261127a';
+        import { ALLOWANCE_FIELDS } from './js/lib/wht.js?v=20261127a';
 
         // ================================================================
         // GLOBAL THAILAND TIMEZONE HELPERS (UTC+7)
@@ -1189,7 +1190,7 @@
         // ไม่มีอันนี้: เบราว์เซอร์ cache .js ไว้ พอ deploy แล้ว app.html ใหม่ไปเรียก
         // โมดูลเวอร์ชันเก่า → "does not provide an export named ..." แล้วหน้าขาวทั้งแอป
         // ⚠️ ต้อง bump ทุกครั้งที่แก้ไฟล์ใน js/ (tests/guards คอยเช็คว่าตรงกันทุกที่)
-        const ASSET_V = '20261102a';
+        const ASSET_V = '20261127a';
 
         const PAGE_MODULES = {
             'holidays':         () => import('./js/pages/holidays.js?v=' + ASSET_V),
@@ -2290,9 +2291,12 @@
                 const { doc, getDoc, onSnapshot: onSnapHome } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 const schedDoc = await getDoc(doc(db,'artifacts',APP_ID,'public','data','work_schedules', user.uid));
                 const homeSched = schedDoc.exists() ? schedDoc.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
-                const hpd = getDayWorkHours(homeSched);
 
-                function renderHomeLeaveSummary(bal) {
+                // โควตา (totalHours) จาก leave_balances แต่ "ใช้ไป" คิดจากใบลาที่อนุมัติแล้ว
+                // สูตรเดียวกับหน้าการลาและหน้าหัวหน้า (js/lib/leave-balance.js)
+                let homeBal = {}, homeUsed = null;   // homeUsed = null จนกว่าจะโหลดใบลาได้
+                function renderHomeLeaveSummary() {
+                    const bal = homeBal;
                     const leaveSummaryEl = document.getElementById('leave-summary');
                     if (!leaveSummaryEl) return;
                     const types = [
@@ -2301,10 +2305,7 @@
                         {id:'vacation',label:'ลาพักร้อน', icon:'fa-umbrella-beach',color:'green', maxDays:10},
                     ];
                     leaveSummaryEl.innerHTML = types.map(t => {
-                        const b    = bal[t.id] || {};
-                        const max  = b.totalHours != null ? b.totalHours : (t.maxDays * hpd);
-                        const used = b.usedHours  || 0;
-                        const rem  = Math.max(0, max - used);
+                        const { max, used, rem } = quotaFor(t.id, bal, homeUsed, homeSched);
                         const pct  = max > 0 ? Math.min(100, Math.round(used/max*100)) : 0;
                         const colorMap = {red:'bg-red-400',blue:'bg-blue-400',green:'bg-green-400'};
                         return `<div>
@@ -2325,8 +2326,14 @@
                 // onSnapshot เพื่อ real-time update
                 const unsubHomeBal = onSnapHome(
                     doc(db,'artifacts',APP_ID,'public','data','leave_balances', user.uid),
-                    snap => renderHomeLeaveSummary(snap.exists() ? snap.data() : {}),
+                    snap => { homeBal = snap.exists() ? snap.data() : {}; renderHomeLeaveSummary(); },
                     err => console.warn('home balance listener:', err.message)
+                );
+                const unsubHomeReq = onSnapHome(
+                    query(collection(db,'artifacts',APP_ID,'public','data','leave_requests'),
+                          where('uid','==',user.uid), where('status','==','approved')),
+                    snap => { homeUsed = usedHoursByType(snap.docs.map(d => d.data()), homeSched); renderHomeLeaveSummary(); },
+                    err => console.warn('home leave requests listener:', err.message)
                 );
         
                 // ── วันหยุดที่กำลังจะมาถึง
@@ -2419,7 +2426,11 @@
                     }
                 );
         
-                return () => { unsub(); if (typeof unsubHomeBal === 'function') unsubHomeBal(); };
+                return () => {
+                    unsub();
+                    if (typeof unsubHomeBal === 'function') unsubHomeBal();
+                    if (typeof unsubHomeReq === 'function') unsubHomeReq();
+                };
             }
         };
 
@@ -4314,12 +4325,13 @@
 </div>`,
 
     init: async (user, profile, db, APP_ID) => {
-        const { collection, doc, getDoc, getDocs, addDoc, onSnapshot, query, where, orderBy, updateDoc }
+        const { collection, doc, getDoc, getDocs, addDoc, onSnapshot, query, where, orderBy, updateDoc, setDoc }
             = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
         let mySchedule = { workDays: [1,2,3,4,5], workStart: '08:00', workEnd: '17:00', breakMinutes: 60 };
         let myBalance  = {};
         let myRequests = [];
+        let myRequestsLoaded = false;   // false = ยังโหลดใบลาไม่ได้ → โควตาใช้ตัวนับใน Firestore ไปก่อน
         let selectedLeaveType = null;
         let isHourly = false;
         let editingId = null;   // id ของคำขอ pending ที่กำลังแก้ไข (null = สร้างใหม่)
@@ -4359,6 +4371,7 @@
                           where('uid', '==', user.uid), orderBy('createdAt', 'desc')),
                     snap => {
                         myRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        myRequestsLoaded = true;
                         renderMyRequests();
                         renderCalendar();
                         renderQuota();
@@ -4374,6 +4387,7 @@
                             myRequests = snap2.docs
                                 .map(d => ({ id: d.id, ...d.data() }))
                                 .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                            myRequestsLoaded = true;
                             renderMyRequests();
                             renderCalendar();
                             renderQuota();
@@ -4388,16 +4402,10 @@
         }
         await loadMyRequests();
 
-        // รวมชั่วโมงที่ใช้ไปจากใบลาที่อนุมัติแล้ว
-        // ใช้เป็น source of truth คู่กับ Firestore balance เผื่อ balance ยังอัปเดตไม่ทัน
+        // ชั่วโมงที่ใช้ไปจากใบลาที่อนุมัติแล้ว — source of truth (ตัวนับใน Firestore เป็นแค่สำเนา)
+        // ยังโหลดใบลาไม่ได้ → null แล้ว quotaFor จะใช้ตัวนับแทน
         function usedHoursFromRequests() {
-            const out = {};
-            (myRequests || []).forEach(r => {
-                if (r.status === 'approved' && r.type && r.totalHours > 0) {
-                    out[r.type] = Math.round(((out[r.type] || 0) + r.totalHours) * 100) / 100;
-                }
-            });
-            return out;
+            return myRequestsLoaded ? usedHoursByType(myRequests, mySchedule) : null;
         }
 
         // โควตาของฉันสำหรับการลาประเภทหนึ่ง — ทุกที่ที่แสดงโควตาต้องเรียกตัวนี้
@@ -4406,13 +4414,9 @@
         // ประเภทลาใน modal อ่าน LEAVE_TYPES.maxDays (ค่า default ในโค้ด) พอ admin
         // แก้สิทธิ์ให้ใครเป็นพิเศษ สองที่เลยขึ้นไม่ตรงกัน (การ์ดบอก 15 วัน modal บอก 10)
         // balOverride: ใส่ balance ที่เพิ่งอ่านสดจาก Firestore ได้ (ใช้ตอนเช็คก่อน submit)
+        // (สูตรจริงอยู่ที่ quotaFor ใน js/lib/leave-balance.js — หน้าหัวหน้าใช้ตัวเดียวกัน)
         function myQuotaFor(tid, usedFromReqs, balOverride) {
-            const t   = getLeaveTypeInfo(tid);
-            const bal = (balOverride || myBalance)[tid] || {};
-            const hpd = getDayWorkHours(mySchedule);           // ชม./วัน ของพนักงานคนนี้
-            const max = bal.totalHours ?? (t.maxDays * hpd);   // admin ยังไม่ตั้ง → ใช้ default × hpd
-            const used = Math.max(bal.usedHours || 0, (usedFromReqs || {})[tid] || 0);
-            return { max, used, rem: Math.max(0, max - used) };
+            return quotaFor(tid, balOverride || myBalance, usedFromReqs, mySchedule);
         }
 
         function renderQuota() {
@@ -4600,8 +4604,9 @@
             checkLeaveDates(sd, ed);
             const ws = (mySchedule.workStart || '08:00').substring(0,2) + ':00';
             const we = (mySchedule.workEnd   || '17:00').substring(0,2) + ':00';
-            const st = isHourly ? (document.getElementById('req-start-time')?.value || ws) : ws;
-            const et = isHourly ? (document.getElementById('req-end-time')?.value   || we) : we;
+            // ลาเต็มวันใช้เวลาเข้า–ออกงานจริง ห้ามปัดเป็นชั่วโมงเต็ม (กะ 17:30 จะหายไปครึ่ง ชม.)
+            const st = isHourly ? (document.getElementById('req-start-time')?.value || ws) : (mySchedule.workStart || '08:00');
+            const et = isHourly ? (document.getElementById('req-end-time')?.value   || we) : (mySchedule.workEnd   || '17:00');
             const hrs = calcLeaveHours(sd, st, ed, et, mySchedule);
             const prev = document.getElementById('hours-preview');
             const val  = document.getElementById('hours-preview-val');
@@ -4681,8 +4686,8 @@
             if (sd > ed) { showToast('วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น', 'error'); return; }
             const ws0 = (mySchedule.workStart || '08:00').substring(0,2) + ':00';
             const we0 = (mySchedule.workEnd   || '17:00').substring(0,2) + ':00';
-            const st = isHourly ? (document.getElementById('req-start-time')?.value || ws0) : ws0;
-            const et = isHourly ? (document.getElementById('req-end-time')?.value   || we0) : we0;
+            const st = isHourly ? (document.getElementById('req-start-time')?.value || ws0) : (mySchedule.workStart || '08:00');
+            const et = isHourly ? (document.getElementById('req-end-time')?.value   || we0) : (mySchedule.workEnd   || '17:00');
             const hrs = calcLeaveHours(sd, st, ed, et, mySchedule);
             if (hrs <= 0) {
                 showToast('วันที่เลือกไม่มีชั่วโมงทำงาน (เป็นวันหยุดหรือนอกตารางงาน)', 'error'); return;
@@ -4724,7 +4729,7 @@
                     await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', editingId), {
                         type: selectedLeaveType, typeName: getLeaveTypeInfo(selectedLeaveType).label,
                         startDate: sd, endDate: ed, startTime: st, endTime: et,
-                        isHourly, totalHours: hrs,
+                        isHourly, totalHours: hrs, hoursPerDay: getDayWorkHours(mySchedule),
                         reason, attachment: document.getElementById('req-attachment')?.value.trim() || '',
                         editedAt: new Date().toISOString(),
                     });
@@ -4736,7 +4741,8 @@
                         photoURL: profile.photoURL || '',
                         type: selectedLeaveType, typeName: getLeaveTypeInfo(selectedLeaveType).label,
                         startDate: sd, endDate: ed, startTime: st, endTime: et,
-                        isHourly, totalHours: hrs,
+                        // hoursPerDay = ชม./วัน ตอนยื่น — ตารางงานเปลี่ยนทีหลังก็ยังรู้ว่าใบนี้กี่วัน
+                        isHourly, totalHours: hrs, hoursPerDay: getDayWorkHours(mySchedule),
                         reason, attachment: document.getElementById('req-attachment')?.value.trim() || '',
                         status: 'pending',
                         createdAt: new Date().toISOString(),
@@ -4805,7 +4811,7 @@
                     ${r.approverNote ? `<p class="text-xs text-red-500 mt-1 font-bold"><i class="fa-solid fa-comment mr-1"></i>${r.approverNote}</p>` : ''}
                   </div>
                   <div class="text-right shrink-0">
-                    <p class="font-black text-slate-800 text-lg">${hoursToDisplay(r.totalHours, mySchedule)}</p>
+                    <p class="font-black text-slate-800 text-lg">${hoursToDisplay(leaveHoursNow(r, mySchedule), mySchedule)}</p>
                     <p class="text-[10px] text-slate-400 font-bold uppercase">ชั่วโมงลา</p>
                     <div class="flex gap-1.5 justify-end mt-2">
                       ${r.status === 'pending' ? `<button onclick="editLeaveRequest('${r.id}')" class="text-[10px] text-slate-600 hover:text-slate-900 font-black uppercase bg-slate-100 hover:bg-brand-100 px-3 py-1 rounded-lg transition-all"><i class="fa-solid fa-pen mr-1"></i>แก้ไข</button>` : ''}
@@ -4829,18 +4835,17 @@
                 await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: 'cancelled', cancelledAt: new Date().toISOString()
                 });
-                // คืนชั่วโมงกลับถ้าสถานะ approved
-                if (req.status === 'approved' && req.totalHours > 0) {
-                    const leaveTypeKey = ['sick','personal','vacation'].includes(req.type) ? req.type : null;
-                    if (leaveTypeKey) {
+                // คืนสิทธิ์ถ้าใบนี้อนุมัติแล้ว — เขียนตัวนับใหม่จากใบที่อนุมัติแล้วทั้งหมด (ไม่ใช่ลบออกทีละใบ)
+                // (ตัวนับเป็นแค่สำเนา เขียนไม่สำเร็จก็ไม่กระทบตัวเลขบนจอ ไม่ต้องฟ้องว่ายกเลิกไม่ผ่าน)
+                if (req.status === 'approved' && myRequestsLoaded) {
+                    try {
                         const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', user.uid);
                         const bs = await getDoc(balRef);
                         if (bs.exists()) {
-                            const bal = bs.data();
-                            const newUsed = Math.max(0, (bal[leaveTypeKey]?.usedHours || 0) - req.totalHours);
-                            await updateDoc(balRef, { [leaveTypeKey + '.usedHours']: newUsed });
+                            const after = myRequests.map(r => r.id === id ? { ...r, status: 'cancelled' } : r);
+                            await setDoc(balRef, usedHoursDoc(after, mySchedule), { merge: true });
                         }
-                    }
+                    } catch (e) { console.warn('sync usedHours:', e.message); }
                 }
                 showToast('ยกเลิกคำขอลาแล้ว', 'info');
             } catch (e) { showToast('❌ ' + e.message, 'error'); }

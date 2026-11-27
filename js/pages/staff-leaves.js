@@ -5,9 +5,10 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261102a';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours } from '../lib/leave-hours.js?v=20261102a';
-import { STATUS_MAP } from '../lib/status-map.js?v=20261102a';
+import { LEAVE_TYPES, getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261127a';
+import { hoursToDisplay, balanceToDisplay } from '../lib/leave-hours.js?v=20261127a';
+import { QUOTA_TYPES, quotaFor, usedHoursByType, leaveHoursNow } from '../lib/leave-balance.js?v=20261127a';
+import { STATUS_MAP } from '../lib/status-map.js?v=20261127a';
 
 export default {
     title: 'ประวัติการลา (ทีม)',
@@ -141,9 +142,11 @@ export default {
 
         // โหลด leave requests ทั้งหมด
         let allReqs = [];
+        let reqsLoaded = false;
         try {
             const snap = await getDocs(query(col('leave_requests'), orderBy('createdAt','desc')));
             allReqs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            reqsLoaded = true;
         } catch (e) {
             console.error('load leaves:', e);
             showToast('โหลดข้อมูลไม่ได้: '+e.message, 'error');
@@ -200,16 +203,14 @@ export default {
 
             const bal = await getEmpBalance(uid);
             const sched = schedMap[uid] || null;
-            const hpd = sched ? getDayWorkHours(sched) : 8;
-            const trackable = ['sick','personal','vacation','maternity','ordain','military'];
+            // "ใช้ไป" คิดจากใบลาที่อนุมัติแล้วทั้งหมดของคนนี้ (ไม่ขึ้นกับตัวกรองวันที่/ประเภท)
+            // ไม่ใช่ตัวนับ usedHours ใน Firestore — ตัวนับเคยพลาดจนการ์ดไม่ตรงกับรายการข้างล่าง
+            const usedMap = reqsLoaded ? usedHoursByType(allReqs.filter(r => r.uid === uid), sched) : null;
 
-            const cards = trackable.map(tid => {
+            const cards = QUOTA_TYPES.map(tid => {
                 const t   = getLeaveTypeInfo(tid);
                 const cv  = colorVariants(t.color);
-                const b   = bal[tid] || {};
-                const totalH = b.totalHours != null ? b.totalHours : Math.round(t.maxDays * hpd * 100) / 100;
-                const usedH  = b.usedHours  || 0;
-                const remH   = Math.max(0, totalH - usedH);
+                const { max: totalH, used: usedH, rem: remH } = quotaFor(tid, bal, usedMap, sched);
                 const pct    = totalH > 0 ? Math.min(100, Math.round(usedH/totalH*100)) : 0;
                 const barColor = pct >= 100 ? 'bg-red-400' : pct > 80 ? 'bg-orange-400' : 'bg-green-400';
                 return `<div class="border border-slate-200 rounded-xl p-3.5">
@@ -282,7 +283,9 @@ export default {
             setT('sl-stat-total', list.length);
             setT('sl-stat-pending', list.filter(r=>r.status==='pending').length);
             setT('sl-stat-approved', list.filter(r=>r.status==='approved').length);
-            const totalHrs = list.filter(r=>r.status==='approved').reduce((s,r)=>s+(r.totalHours||0),0);
+            // รวมตามที่แสดงในแต่ละใบ (ใบเต็มวันนับเป็นวันตามตารางปัจจุบัน) ให้บวกแล้วตรงกับรายการ
+            const totalHrs = list.filter(r=>r.status==='approved')
+                .reduce((s,r)=>s+leaveHoursNow(r, schedMap[r.uid] || null),0);
             setT('sl-stat-hours', totalHrs.toFixed(1));
         }
 
@@ -302,7 +305,7 @@ export default {
                 const dateRange = r.startDate === r.endDate ? fmtDate(r.startDate) : `${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}`;
                 const timeRange = r.isHourly ? ` เวลา ${r.startTime}–${r.endTime}` : ' (เต็มวัน)';
                 const sched = schedMap[r.uid] || null;
-                const hrsDisplay = hoursToDisplay(r.totalHours, sched);
+                const hrsDisplay = hoursToDisplay(leaveHoursNow(r, sched), sched);
                 const avatar = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.employeeName||'?')}&background=f4f4f5&color=27272a&bold=true`;
                 return `
                 <div class="bg-white rounded-2xl border border-slate-200 p-4 lg:p-5">

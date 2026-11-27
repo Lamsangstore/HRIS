@@ -7,11 +7,11 @@
 // export XLSX/KBIZ และส่งสลิปทาง LINE
 // sendLineMessage ผูกกับ fbApp (Cloud Function client) ใน app.html จึงเรียกผ่าน window
 
-import { getDayWorkHours } from '../lib/leave-hours.js?v=20261102a';
-import { workDaySetOn } from '../lib/work-days.js?v=20261102a';
+import { getDayWorkHours } from '../lib/leave-hours.js?v=20261127a';
+import { workDaySetOn } from '../lib/work-days.js?v=20261127a';
 import { calcMonthlyWHT, recordTaxLines, buildYTD, taxMonthsFor, taxYearOf, ceYear, whtSummary, ALLOWANCE_FIELDS }
-    from '../lib/wht.js?v=20261102a';
-import { calcSSO } from '../lib/sso.js?v=20261102a';
+    from '../lib/wht.js?v=20261127a';
+import { calcSSO } from '../lib/sso.js?v=20261127a';
 
 // อัตราค่าจ้างต่อชั่วโมงที่ใช้คิดเงิน OT
 // ถ้าพนักงานตั้ง hourlyWage ไว้ ใช้ค่านั้น; ถ้าไม่ (พนักงานเงินเดือน = 0)

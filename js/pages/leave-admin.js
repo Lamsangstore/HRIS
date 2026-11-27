@@ -5,9 +5,10 @@
 //
 // ประเภทลา + ตัวคำนวณชั่วโมง import จาก module / ที่เหลือเป็น global บน window
 
-import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20261102a';
-import { calcLeaveHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20261102a';
-import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20261102a';
+import { LEAVE_TYPES, colorVariants } from '../lib/leave-types.js?v=20261127a';
+import { requestHours, getDayWorkHours, balanceToDisplay, hhmmToMins } from '../lib/leave-hours.js?v=20261127a';
+import { QUOTA_TYPES, usedHoursByType, usedHoursDoc, rescaleQuotaDoc } from '../lib/leave-balance.js?v=20261127a';
+import { workDaysOn, workDaysHistoryOf, normalizeWorkDaysHistory } from '../lib/work-days.js?v=20261127a';
 
 export default {
     title: 'ตั้งค่าการลา',
@@ -154,22 +155,12 @@ export default {
             const sched = schedSnap.exists() ? schedSnap.data() : { workDays:[1,2,3,4,5], workStart:'08:00', workEnd:'17:00', breakMinutes:60, holidays:[] };
             const balRaw = balSnap.exists() ? balSnap.data() : {};
 
-            // คำนวณ usedHours จาก approved requests (source of truth)
-            const usedFromReqs = {};
-            reqSnap.docs.forEach(d => {
-                const r = d.data();
-                if (r.type && r.totalHours > 0)
-                    usedFromReqs[r.type] = Math.round(((usedFromReqs[r.type]||0) + r.totalHours) * 100) / 100;
-            });
-
-            // merge: ใช้ค่าที่มากกว่าระหว่าง Firestore กับที่คำนวณได้
+            // "ใช้ไป" คิดจากใบลาที่อนุมัติแล้วเท่านั้น (source of truth) — ตัวนับ usedHours
+            // ใน Firestore เป็นแค่สำเนา เดิมเอาค่าที่มากกว่า ตัวนับที่เพี้ยนสูงเลยไม่เคยหาย
+            const usedMap = usedHoursByType(reqSnap.docs.map(d => d.data()), sched);
             const bal = { ...balRaw };
-            Object.keys(usedFromReqs).forEach(tid => {
-                if (!bal[tid]) bal[tid] = {};
-                bal[tid] = {
-                    ...bal[tid],
-                    usedHours: Math.max(bal[tid]?.usedHours || 0, usedFromReqs[tid]),
-                };
+            QUOTA_TYPES.forEach(tid => {
+                bal[tid] = { ...(bal[tid] || {}), usedHours: usedMap[tid] || 0 };
             });
 
             wdHist = workDaysHistoryOf(sched);
@@ -272,6 +263,10 @@ export default {
                     // แปลง ชม. → วัน เพื่อแสดงใน input (ช่องนี้ต้องเป็นตัวเลขวันล้วน เพราะอ่านค่ากลับไปคำนวณ)
                     const totalDays = Math.round(totalHrs / hpd * 10) / 10;
                     const remHrs    = Math.max(0, totalHrs - usedHrs);
+                    // สิทธิ์ที่ตั้งเป็นวันต้องหารลงตัวทีละครึ่งวัน ถ้าไม่ลงตัว = ตั้งไว้ตอน ชม./วัน
+                    // ยังเป็นค่าอื่น แล้วตารางงานถูกแก้ทีหลังโดยไม่ได้ปรับโควต้าตาม
+                    const oddDays = b.totalHours != null && totalHrs > 0
+                        && Math.abs(totalHrs / hpd * 2 - Math.round(totalHrs / hpd * 2)) > 0.02;
                     return `
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <div class="flex items-center gap-3 mb-2">
@@ -294,6 +289,10 @@ export default {
                             class="w-20 border-2 border-slate-200 rounded-lg px-2 py-1.5 text-sm font-black text-center focus:border-brand-500 focus:outline-none">
                         </div>
                       </div>
+                      ${oddDays ? `<p class="text-[10px] text-orange-600 font-bold mb-2">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>สิทธิ์ไม่ลงตัวเป็นวัน (${balanceToDisplay(totalHrs, sched)})
+                        — น่าจะตั้งไว้ตอนที่ ชม./วัน ยังไม่ใช่ ${hpd.toFixed(1)} ให้กรอกจำนวนวันที่ถูกต้องแล้วกด "บันทึกโควต้าวันลา"
+                      </p>` : ''}
                       ${totalHrs > 0 ? (() => {
                         const pct2 = Math.min(100, Math.round(usedHrs/totalHrs*100));
                         const barC = pct2 >= 100 ? 'bg-red-400' : pct2 >= 80 ? 'bg-orange-400' : 'bg-green-400';
@@ -420,10 +419,39 @@ export default {
                 }
             }
             try {
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', selectedEmpUid), payload, { merge: true });
+                const uid      = selectedEmpUid;
+                const schedRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', uid);
+                const balRef   = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', uid);
+                const [oldSnap, balSnap] = await Promise.all([getDoc(schedRef), getDoc(balRef)]);
+                const oldSched = oldSnap.exists() ? oldSnap.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                const newSched = { ...oldSched, ...payload };
+                const oldHpd = getDayWorkHours(oldSched);
+                const newHpd = getDayWorkHours(newSched);
+
+                // ชม./วัน เปลี่ยน → โควตาที่เก็บเป็นชั่วโมงต้องปรับตาม ให้จำนวน "วัน" เท่าเดิม
+                // (เคยพัง: เอาเวลาพักออก 7 → 8 ชม./วัน สิทธิ์ลากิจ 3 วันกลายเป็น "2 วัน 5 ชม.")
+                // ตัวนับ usedHours ก็คิดใหม่ตามตารางใหม่ไปพร้อมกัน — เขียนใน batch เดียวกับตาราง
+                const rescaled = balSnap.exists() ? rescaleQuotaDoc(balSnap.data(), oldHpd, newHpd) : null;
+                const b = writeBatch(db);
+                b.set(schedRef, payload, { merge: true });
+                if (rescaled) {
+                    const apprSnap = await getDocs(query(
+                        collection(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests'),
+                        where('uid', '==', uid), where('status', '==', 'approved')));
+                    const used = usedHoursDoc(apprSnap.docs.map(d => d.data()), newSched);
+                    const balDoc = {};
+                    QUOTA_TYPES.forEach(t => { balDoc[t] = { ...used[t], ...(rescaled[t] || {}) }; });
+                    b.set(balRef, balDoc, { merge: true });
+                }
+                await b.commit();
                 wdHist = workDaysHistoryOf(payload);
                 renderWorkDayHistory();
-                showToast('✅ บันทึกตารางงานแล้ว', 'success');
+                if (rescaled) {
+                    showToast(`✅ บันทึกตารางงานแล้ว · ชม./วัน ${oldHpd.toFixed(1)} → ${newHpd.toFixed(1)} ปรับโควต้าให้จำนวนวันเท่าเดิม`, 'success');
+                    if (selectedEmpUid === uid) await selectAdminEmp(uid);   // ตัวเลขโควต้าบนจอเป็นของเก่า
+                } else {
+                    showToast('✅ บันทึกตารางงานแล้ว', 'success');
+                }
             } catch (e) { showToast('❌ ' + e.message, 'error'); }
         };
 
@@ -439,43 +467,28 @@ export default {
                     where('uid', '==', selectedEmpUid),
                     where('status', '==', 'approved')
                 ));
-                // รวม totalHours แยกตาม type
-                const usedMap = {};
-                reqSnap.docs.forEach(d => {
-                    const r = d.data();
-                    const tid = r.type;
-                    if (!tid) return;
-                    usedMap[tid] = Math.round(((usedMap[tid] || 0) + (r.totalHours || 0)) * 100) / 100;
-                });
+                // รวมแยกตามประเภท — สูตรเดียวกับทุกหน้า (leave-balance.js)
+                const schedSnap2 = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', selectedEmpUid));
+                const empSched2 = schedSnap2.exists() ? schedSnap2.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
+                const usedDoc = usedHoursDoc(reqSnap.docs.map(d => d.data()), empSched2);
                 // อ่าน balance ปัจจุบัน
                 const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', selectedEmpUid);
                 const balSnap = await getDoc(balRef);
-                // สร้าง update payload ด้วย dotted path
-                const updatePayload = {};
-                Object.entries(usedMap).forEach(([tid, hrs]) => {
-                    updatePayload[`${tid}.usedHours`] = hrs;
-                });
-                // ถ้า type ไม่มีใน usedMap แปลว่า usedHours = 0
-                ['sick','personal','vacation','maternity','ordain','military'].forEach(tid => {
-                    if (!(tid in usedMap)) updatePayload[`${tid}.usedHours`] = 0;
-                });
                 if (balSnap.exists()) {
-                    await updateDoc(balRef, updatePayload);
+                    await setDoc(balRef, usedDoc, { merge: true });   // merge = แตะแค่ usedHours
                 } else {
                     // doc ไม่มีเลย — สร้างใหม่
-                    const schedSnap2 = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'work_schedules', selectedEmpUid));
-                    const empSched2 = schedSnap2.exists() ? schedSnap2.data() : { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
                     const hpd2 = getDayWorkHours(empSched2);
                     const initDoc = {};
                     LEAVE_TYPES.filter(t => t.maxDays > 0).forEach(t => {
-                        initDoc[t.id] = { totalHours: Math.round(t.maxDays * hpd2 * 100)/100, usedHours: usedMap[t.id] || 0 };
+                        initDoc[t.id] = { totalHours: Math.round(t.maxDays * hpd2 * 100)/100, usedHours: usedDoc[t.id]?.usedHours || 0 };
                     });
                     await setDoc(balRef, initDoc);
                 }
                 // reload panel
                 const emp = allEmps.find(e => e.uid === selectedEmpUid);
                 if (emp) await selectAdminEmp(selectedEmpUid);
-                const total = Object.values(usedMap).reduce((a,b)=>a+b,0);
+                const total = Object.values(usedDoc).reduce((a,b)=>a+b.usedHours,0);
                 showToast(`✅ คำนวณจาก ${reqSnap.size} คำขอ รวม ${total.toFixed(1)} ชม.`, 'success');
             } catch(e) {
                 showToast('❌ ' + e.message, 'error');
@@ -516,7 +529,7 @@ export default {
                     const r = d.data();
                     if (!r.uid || !r.startDate || !r.endDate) return;
                     const sched = schedOf[r.uid];
-                    const fresh = calcLeaveHours(r.startDate, r.startTime, r.endDate, r.endTime, sched);
+                    const fresh = requestHours(r, sched);
                     const old = r.totalHours ?? 0;
                     if (Math.abs(fresh - old) <= 0.005) return;
 
@@ -602,7 +615,7 @@ export default {
                     const b = writeBatch(db);
                     diffs.slice(i, i + 450).forEach(x => {
                         b.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', x.id),
-                                 { totalHours: x.fresh, backfilledAt: stamp });
+                                 { totalHours: x.fresh, hoursPerDay: getDayWorkHours(schedOf[x.uid]), backfilledAt: stamp });
                     });
                     await b.commit();
                 }
@@ -610,21 +623,14 @@ export default {
                 // ปรับ usedHours ของคนที่ได้รับผลกระทบ — รวมใหม่จากใบที่อนุมัติแล้วทั้งหมด
                 const affected = [...new Set(diffs.map(x => x.uid))];
                 for (const uid of affected) {
-                    const usedMap = {};
-                    reqSnap.docs.forEach(d => {
-                        const r = d.data();
-                        if (r.uid !== uid || r.status !== 'approved' || !r.type) return;
-                        const hrs = diffs.find(x => x.id === d.id)?.fresh ?? (r.totalHours || 0);
-                        usedMap[r.type] = Math.round(((usedMap[r.type] || 0) + hrs) * 100) / 100;
+                    const fixed = reqSnap.docs.filter(d => d.data().uid === uid).map(d => {
+                        const x = diffs.find(y => y.id === d.id);
+                        return x ? { ...d.data(), totalHours: x.fresh, hoursPerDay: getDayWorkHours(schedOf[uid]) } : d.data();
                     });
                     const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', uid);
                     const balSnap = await getDoc(balRef);
                     if (!balSnap.exists()) continue; // ไม่มี balance ก็ข้าม ให้ไปกด "คำนวณจากประวัติการลา" ทีหลัง
-                    const payload = {};
-                    ['sick','personal','vacation','maternity','ordain','military'].forEach(tid => {
-                        payload[`${tid}.usedHours`] = usedMap[tid] || 0;
-                    });
-                    await updateDoc(balRef, payload);
+                    await setDoc(balRef, usedHoursDoc(fixed, schedOf[uid]), { merge: true });
                 }
 
                 showToast(`✅ แก้ ${diffs.length} ใบ · ปรับโควต้า ${affected.length} คน`, 'success');

@@ -5,9 +5,10 @@
 //
 // scheduleCache / balanceCache เป็นแคชเฉพาะหน้านี้ (ไม่มีใครนอกหน้าใช้) จึงย้ายมาด้วยได้
 
-import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261102a';
-import { hoursToDisplay, balanceToDisplay, getDayWorkHours, calcLeaveHours } from '../lib/leave-hours.js?v=20261102a';
-import { STATUS_MAP } from '../lib/status-map.js?v=20261102a';
+import { getLeaveTypeInfo, colorVariants } from '../lib/leave-types.js?v=20261127a';
+import { hoursToDisplay, balanceToDisplay, getDayWorkHours, requestHours } from '../lib/leave-hours.js?v=20261127a';
+import { QUOTA_TYPES, quotaFor, usedHoursByType, usedHoursDoc, leaveHoursNow } from '../lib/leave-balance.js?v=20261127a';
+import { STATUS_MAP } from '../lib/status-map.js?v=20261127a';
 
 export default {
     title: 'อนุมัติการลา',
@@ -134,14 +135,30 @@ export default {
         //  เปลี่ยนเป็นไม่มีพัก ค่าควรเป็น 3 แต่ record ยังเก็บ 2)
         // ใบที่อนุมัติ/ปฏิเสธ/ยกเลิกแล้ว = freeze ค่าเดิม ไม่คำนวณใหม่
         function effectiveHours(r) {
-            if (r.status === 'pending' && r.startDate && r.startTime && scheduleCache[r.uid]) {
-                return calcLeaveHours(r.startDate, r.startTime, r.endDate, r.endTime, scheduleCache[r.uid]);
+            if (r.status === 'pending' && r.startDate && (r.startTime || r.isHourly === false) && scheduleCache[r.uid]) {
+                return requestHours(r, scheduleCache[r.uid]);
             }
             return r.totalHours || 0;
         }
+        // ใบที่ปิดแล้วแสดงเป็นวันตาม ชม./วัน ของตอนที่ลา (ดู leave-balance.js)
+        // ไม่งั้นใบเต็มวันที่ลาตอนวันละ 7 ชม. จะขึ้น "7 ชม." หลังตารางเปลี่ยนเป็น 8
         function dispHoursForReq(r) {
-            const s = scheduleCache[r.uid];
-            return hoursToDisplay(effectiveHours(r), s || null);
+            const s = scheduleCache[r.uid] || null;
+            return hoursToDisplay(r.status === 'pending' ? effectiveHours(r) : leaveHoursNow(r, s), s);
+        }
+        // ใช้ไปของพนักงานคนหนึ่ง จากใบที่อนุมัติแล้ว (allRequests มีทุกใบของทุกคน)
+        function usedMapOf(uid, reqs = allRequests) {
+            return usedHoursByType(reqs.filter(x => x.uid === uid), scheduleCache[uid] || null);
+        }
+        // เขียนตัวนับ usedHours ใน Firestore ให้ตรงกับใบลาที่อนุมัติแล้ว (เขียนทับทั้งก้อน
+        // ไม่ใช่ +/- จากค่าเดิม ตัวนับที่เคยเพี้ยนจะกลับมาถูกเองในการอนุมัติ/ยกเลิกครั้งถัดไป)
+        // เขียนไม่สำเร็จไม่ต้องฟ้องว่าอนุมัติไม่ผ่าน — ทุกหน้าแสดงโควตาจากใบลาอยู่แล้ว
+        async function syncUsedHours(uid, reqs) {
+            try {
+                const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', uid);
+                await setDoc(balRef, usedHoursDoc(reqs.filter(x => x.uid === uid), scheduleCache[uid] || null), { merge: true });
+            } catch (e) { console.warn('sync usedHours:', e.message); }
+            invalidateBalance(uid);
         }
 
         // ประกาศแบบ function เพื่อให้ hoist ได้ — onSnapshot อาจ callback ทันที
@@ -259,17 +276,13 @@ export default {
                 // โหลด balance แบบ async แล้วอัปเดต
                 try {
                     const bal  = await getEmpBalance(r.uid);
-                    const hpd  = sched ? getDayWorkHours(sched) : 8;
                     const tid  = r.type;
-                    const isTrackable = ['sick','personal','vacation'].includes(tid);
+                    const isTrackable = QUOTA_TYPES.includes(tid);
                     const loadingEl = document.getElementById('quota-loading');
                     if (!loadingEl) return; // modal ปิดไปแล้ว
 
                     if (isTrackable) {
-                        const b       = bal[tid] || {};
-                        const totalH  = b.totalHours != null ? b.totalHours : (getLeaveTypeInfo(tid).maxDays * hpd);
-                        const usedH   = b.usedHours  || 0;
-                        const remH    = Math.max(0, totalH - usedH);
+                        const { max: totalH, used: usedH, rem: remH } = quotaFor(tid, bal, usedMapOf(r.uid), sched);
                         const reqH    = effectiveHours(r);   // ใบ pending คิดสดจากตารางล่าสุด
                         const afterH  = Math.max(0, remH - reqH);
                         const pct     = totalH > 0 ? Math.min(100, Math.round(usedH/totalH*100)) : 0;
@@ -332,33 +345,19 @@ export default {
                 // freeze ชั่วโมงลาด้วยค่าที่คิดจากตารางล่าสุด ณ จุดอนุมัติ
                 // (ใบ pending อาจถูกยื่นตอนตารางงานยังเป็นแบบเก่า) จากนั้นค่าจะไม่เปลี่ยนอีก
                 const frozenHours = r ? effectiveHours(r) : 0;
-                await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
+                const decided = {
                     status: action === 'approve' ? 'approved' : 'rejected',
                     totalHours: frozenHours,
                     approvedBy: profile.name,
                     approvedAt: new Date().toISOString(),
                     approverNote: note || '',
-                });
-                if (action === 'approve' && r) {
-                    const tid = r.type;
-                    if (['sick','personal','vacation','maternity','ordain','military'].includes(tid)) {
-                        const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', r.uid);
-                        const balSnap = await getDoc(balRef);
-                        const bal = balSnap.exists() ? balSnap.data() : {};
-                        const prev = (bal[tid]?.usedHours) || 0;
-                        const newUsed = Math.round((prev + frozenHours) * 100) / 100;
-                        // ใช้ dotted path เพื่อ update แค่ usedHours ไม่แตะ totalHours
-                        if (balSnap.exists()) {
-                            await updateDoc(balRef, { [`${tid}.usedHours`]: newUsed });
-                        } else {
-                            // doc ยังไม่มี — สร้างใหม่ โดยใช้ hpd จาก schedule จริง
-                            const empSched2 = scheduleCache[r.uid] || { workStart:'08:00', workEnd:'17:00', breakMinutes:60 };
-                            const hpd2 = getDayWorkHours(empSched2);
-                            const defaultTotal = Math.round(getLeaveTypeInfo(tid).maxDays * hpd2 * 100) / 100;
-                            await setDoc(balRef, { [tid]: { totalHours: defaultTotal, usedHours: newUsed } }, { merge: true });
-                        }
-                        invalidateBalance(r.uid);
-                    }
+                };
+                // เก็บ ชม./วัน ที่ใช้คิด totalHours ไว้คู่กัน — ตารางงานเปลี่ยนทีหลังก็ยังรู้ว่าใบนี้กี่วัน
+                if (r && scheduleCache[r.uid]) decided.hoursPerDay = getDayWorkHours(scheduleCache[r.uid]);
+                await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), decided);
+                if (action === 'approve' && r && QUOTA_TYPES.includes(r.type)) {
+                    // allRequests ยังไม่ได้รับสถานะใหม่จาก onSnapshot — ใส่ใบนี้เองก่อนคิด
+                    await syncUsedHours(r.uid, allRequests.map(x => x.id === id ? { ...x, ...decided } : x));
                 }
                 showToast(action === 'approve' ? '✅ อนุมัติคำขอลาแล้ว' : '❌ ไม่อนุมัติคำขอลา', action === 'approve' ? 'success' : 'info');
                 // แจ้งพนักงานผ่าน LINE
@@ -373,7 +372,7 @@ export default {
         window.mgrCancelLeave = async (id) => {
             const r = allRequests.find(x => x.id === id);
             if (!r) return;
-            if (!await lsgConfirm(`ยกเลิกการลาของ "${r.employeeName}" และคืนสิทธิ์ ${r.totalHours} ชม. ใช่หรือไม่?`)) return;
+            if (!await lsgConfirm(`ยกเลิกการลาของ "${r.employeeName}" และคืนสิทธิ์ ${dispHoursForReq(r)} ใช่หรือไม่?`)) return;
             try {
                 await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_requests', id), {
                     status: 'cancelled',
@@ -381,17 +380,10 @@ export default {
                     cancelledBy: profile.name,
                     cancelNote: 'ยกเลิกโดยหัวหน้า'
                 });
-                const leaveKey = ['sick','personal','vacation'].includes(r.type) ? r.type : null;
-                if (leaveKey && r.totalHours > 0) {
-                    const balRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'leave_balances', r.uid);
-                    const bs = await getDoc(balRef);
-                    if (bs.exists()) {
-                        const bal = bs.data();
-                        const newUsed = Math.max(0, (bal[leaveKey]?.usedHours || 0) - r.totalHours);
-                        await updateDoc(balRef, { [leaveKey + '.usedHours']: newUsed });
-                    }
+                // เดิมคืนสิทธิ์แค่ ป่วย/กิจ/พักร้อน — ยกเลิกลาคลอด/บวช/ทหาร แล้วตัวนับค้าง
+                if (QUOTA_TYPES.includes(r.type)) {
+                    await syncUsedHours(r.uid, allRequests.map(x => x.id === id ? { ...x, status: 'cancelled' } : x));
                 }
-                invalidateBalance(r.uid);
                 showToast('✅ ยกเลิกการลาและคืนสิทธิ์แล้ว', 'success');
             } catch(e) { showToast('❌ ' + e.message, 'error'); }
         };
